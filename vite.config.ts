@@ -6,11 +6,10 @@
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-// Disabled Cloudflare for Dokku deployment
+// Configure for static SPA deployment on Dokku (no SSR)
 export default defineConfig({
   tanstackStart: {
-    server: { entry: "server" },
+    ssr: false,
   },
   vite: {
     define: {
