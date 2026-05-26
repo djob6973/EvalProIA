@@ -10,7 +10,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "preview": "vite preview",
+    "preview": "vite preview --port $PORT",
     "lint": "eslint .",
     "format": "prettier --write .",
     "start": "node server-node.js"
