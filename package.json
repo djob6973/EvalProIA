@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "start": "node dist/server/index.js"
+    "start": "node server-node.js"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

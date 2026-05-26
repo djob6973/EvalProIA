@@ -7,15 +7,17 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-// @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
+// Disabled Cloudflare for Dokku deployment
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
   vite: {
     define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || 'https://zfpvgaswrjdhmplqitbx.supabase.co'),
-      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_vnho8oZPGYTDmRHATEcV5w_83LOBbhM'),
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://zfpvgaswrjdhmplqitbx.supabase.co'),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_vnho8oZPGYTDmRHATEcV5w_83LOBbhM'),
     },
   },
+  // Disable Cloudflare plugin for Dokku
+  cloudflare: false,
 });
