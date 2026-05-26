@@ -1,49 +1,37 @@
 import { createServer } from 'http';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { handler } from './dist/server/server.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const port = process.env.PORT || 3000;
 
-const mimeTypes = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon',
-  '.woff': 'font/woff',
-  '.woff2': 'font/woff2',
-  '.ttf': 'font/ttf',
-  '.eot': 'application/vnd.ms-fontobject',
-};
-
-const server = createServer((req, res) => {
-  console.log(`${req.method} ${req.url}`);
-  
-  // Serve index.html for all routes (SPA)
-  let filePath = join(__dirname, 'dist/client', req.url === '/' ? 'index.html' : req.url);
-  
-  // If file doesn't exist, serve index.html
-  if (!existsSync(filePath)) {
-    filePath = join(__dirname, 'dist/client/index.html');
-  }
-  
-  const extname = String(filePath).split('.').pop();
-  const contentType = mimeTypes[`.${extname}`] || 'application/octet-stream';
-  
+const server = createServer(async (req, res) => {
   try {
-    const content = readFileSync(filePath);
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(content, 'utf-8');
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const request = new Request(url, {
+      method: req.method,
+      headers: req.headers,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+    });
+
+    const response = await handler.fetch(request, {}, {});
+    
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
+    
+    if (response.body) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(decoder.decode(value, { stream: true }));
+      }
+    }
+    
+    res.end();
   } catch (error) {
-    console.error('Error serving file:', error);
-    res.writeHead(500);
-    res.end('Server Error');
+    console.error('Server error:', error);
+    res.writeHead(500, { 'Content-Type': 'text/plain' });
+    res.end('Internal Server Error');
   }
 });
 
