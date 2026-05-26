@@ -16,6 +16,9 @@ export default defineConfig({
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://zfpvgaswrjdhmplqitbx.supabase.co'),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_vnho8oZPGYTDmRHATEcV5w_83LOBbhM'),
     },
+    server: {
+      allowedHosts: ['evalpro.apps.dataico.world'],
+    },
   },
   // Disable Cloudflare plugin for Dokku
   cloudflare: false,
