@@ -430,8 +430,9 @@ function GeneratePage() {
             <div className="rounded-xl border border-border bg-card p-6">
               <h3 className="font-bold">Recomendaciones</h3>
               <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
-                <li>· Usa PDFs limpios para mejores resultados de OCR.</li>
-                <li>· Los documentos escaneados se procesan con OCR de visión.</li>
+                <li>· Los archivos PDF y DOCX se procesan directamente para extraer texto.</li>
+                <li>· Las imágenes (.jpg, .png) se procesan con IA de visión de OpenAI.</li>
+                <li>· Los archivos de texto (.txt) se leen directamente sin procesamiento adicional.</li>
                 <li>
                   · Personaliza los prompts en{" "}
                   <Link to="/settings" className="text-foreground hover:underline">
