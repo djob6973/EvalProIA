@@ -3,9 +3,9 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
-"engines": {
-  "node": ">=22.12"
-},
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
@@ -56,6 +56,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "express": "^5.2.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
     "openai": "^6.39.0",

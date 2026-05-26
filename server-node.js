@@ -1,5 +1,5 @@
 import { createServer } from 'http';
-import { handler } from './dist/server/server.js';
+const { handler } = await import('./dist/server/server.js');
 
 const port = process.env.PORT || 3000;
 
