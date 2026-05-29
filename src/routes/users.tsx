@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Search, X, Edit2, Trash2, Ban } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { areasService, Area } from "@/lib/services/evaluations";
+import { createUserFn } from "@/lib/services/auth-server";
 
 export const Route = createFileRoute("/users")({
   head: () => ({ meta: [{ title: "Usuarios — EvalPro" }] }),
@@ -17,15 +20,16 @@ interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
-  role: 'admin' | 'participant';
+  role: 'admin' | 'participant' | 'both';
   created_at: string;
   evaluation_count?: number;
   is_active?: boolean;
+  area_id?: string | null;
 }
 
 function UsersPage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
   const navigate = useNavigate();
 
   // Redirigir a participantes a /participant solo si el perfil está cargado
@@ -40,7 +44,7 @@ function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<'admin' | 'participant'>('participant');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'participant' | 'both'>('participant');
   const [inviteFullName, setInviteFullName] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
   const [isInviting, setIsInviting] = useState(false);
@@ -49,16 +53,23 @@ function UsersPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [editFullName, setEditFullName] = useState("");
-  const [editRole, setEditRole] = useState<'admin' | 'participant'>('participant');
+  const [editRole, setEditRole] = useState<'admin' | 'participant' | 'both'>('participant');
   const [isUpdating, setIsUpdating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showInviteConfirm, setShowInviteConfirm] = useState(false);
+  const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
+
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [inviteAreaId, setInviteAreaId] = useState<string>("");
+  const [editAreaId, setEditAreaId] = useState<string>("");
 
   useEffect(() => {
     fetchUsers();
+    areasService.getAll().then(setAreas).catch(console.error);
   }, []);
 
   const fetchUsers = async () => {
@@ -80,7 +91,8 @@ function UsersPage() {
 
       const usersWithCount = data?.map(user => ({
         ...user,
-        evaluation_count: user.results?.[0]?.count || 0
+        evaluation_count: user.results?.[0]?.count || 0,
+        area_id: user.area_id ?? null,
       })) || [];
 
       setUsers(usersWithCount);
@@ -96,54 +108,46 @@ function UsersPage() {
     user.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     setInviteError(null);
-    setIsInviting(true);
 
     if (!inviteEmail || !inviteFullName || !invitePassword) {
       setInviteError("Por favor, completa todos los campos");
-      setIsInviting(false);
       return;
     }
 
     if (!supabase) {
       setInviteError("Error de conexión con Supabase");
-      setIsInviting(false);
       return;
     }
 
+    setShowInviteConfirm(true);
+  };
+
+  const executeInvite = async () => {
+    setIsInviting(true);
     try {
-      // Usar signUp estándar de Supabase
-      const { data, error } = await supabase.auth.signUp({
-        email: inviteEmail,
-        password: invitePassword,
-        options: {
-          data: {
-            full_name: inviteFullName,
-            role: inviteRole
-          },
-          emailRedirectTo: `${window.location.origin}/login`
-        }
+      await createUserFn({
+        data: {
+          email: inviteEmail,
+          password: invitePassword,
+          fullName: inviteFullName,
+          role: inviteRole,
+          areaId: inviteAreaId || null,
+        },
       });
 
-      if (error) {
-        throw error;
-      }
-
+      setShowInviteConfirm(false);
       setInviteSuccess(true);
       setInviteEmail("");
       setInviteFullName("");
       setInvitePassword("");
       setInviteRole('participant');
 
-      // Recargar la lista de usuarios
-      setTimeout(() => {
-        fetchUsers();
-      }, 1000);
-
+      setTimeout(() => { fetchUsers(); }, 1000);
     } catch (error: any) {
-      setInviteError(error.message || "Error al invitar usuario");
+      setInviteError(error.message || "Error al crear usuario");
     } finally {
       setIsInviting(false);
     }
@@ -155,59 +159,48 @@ function UsersPage() {
     setInviteFullName("");
     setInvitePassword("");
     setInviteRole('participant');
+    setInviteAreaId("");
     setInviteError(null);
     setInviteSuccess(false);
   };
 
   const handleEditUser = (user: UserProfile) => {
-    console.log('handleEditUser called with user:', user);
     setEditingUser(user);
     setEditFullName(user.full_name || "");
     setEditRole(user.role);
+    setEditAreaId(user.area_id || "");
     setShowEditModal(true);
   };
 
-  const handleUpdateUser = async (e: React.FormEvent) => {
-    console.log('handleUpdateUser called');
+  const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted, preventing default');
     setUpdateError(null);
-    setIsUpdating(true);
-
     if (!supabase || !editingUser) {
-      console.log('Error: supabase or editingUser is null');
       setUpdateError("Error de conexión con Supabase");
-      setIsUpdating(false);
       return;
     }
+    setShowUpdateConfirm(true);
+  };
 
-    console.log('Updating user:', editingUser.id, 'with data:', { full_name: editFullName, role: editRole });
-
+  const executeUpdateUser = async () => {
+    if (!supabase || !editingUser) return;
+    setIsUpdating(true);
     try {
-      console.log('Calling Supabase update...');
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: editFullName,
-          role: editRole,
-          updated_at: new Date().toISOString()
-        })
+        .update({ full_name: editFullName, role: editRole, area_id: editAreaId || null, updated_at: new Date().toISOString() })
         .eq('id', editingUser.id);
-
-      console.log('Update response:', { data, error });
 
       if (error) throw error;
 
-      console.log('User updated successfully');
+      setShowUpdateConfirm(false);
       setShowEditModal(false);
       setEditingUser(null);
       setUpdateError(null);
       fetchUsers();
     } catch (error: any) {
-      console.error('Error updating user:', error);
       setUpdateError(error.message || "Error al actualizar usuario");
     } finally {
-      console.log('Finally block, setting isUpdating to false');
       setIsUpdating(false);
     }
   };
@@ -287,6 +280,7 @@ function UsersPage() {
                 <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                   <th className="px-6 py-3">Usuario</th>
                   <th className="px-6 py-3">Rol</th>
+                  {areas.length > 0 && <th className="px-6 py-3">Área</th>}
                   <th className="px-6 py-3">Evaluaciones</th>
                   <th className="px-6 py-3">Ingreso</th>
                   <th className="px-6 py-3">Acciones</th>
@@ -314,12 +308,21 @@ function UsersPage() {
                         className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                           u.role === "admin"
                             ? "bg-accent/10 text-accent"
+                            : u.role === "both"
+                            ? "bg-violet-100 text-violet-700"
                             : "bg-secondary text-muted-foreground"
                         }`}
                       >
-                        {u.role === "admin" ? "Administrador" : "Participante"}
+                        {u.role === "admin" ? "Administrador" : u.role === "both" ? "Admin + Part." : "Participante"}
                       </span>
                     </td>
+                    {areas.length > 0 && (
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {u.area_id
+                          ? areas.find((a) => a.id === u.area_id)?.name ?? "—"
+                          : <span className="text-muted-foreground/40">—</span>}
+                      </td>
+                    )}
                     <td className="px-6 py-4 font-mono text-muted-foreground">{u.evaluation_count || 0}</td>
                     <td className="px-6 py-4 text-muted-foreground">
                       {new Date(u.created_at).toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })}
@@ -431,14 +434,35 @@ function UsersPage() {
                   <select
                     id="invite-role"
                     value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as 'admin' | 'participant')}
+                    onChange={(e) => setInviteRole(e.target.value as 'admin' | 'participant' | 'both')}
                     disabled={isInviting}
                     className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
                   >
                     <option value="participant">Participante</option>
                     <option value="admin">Administrador</option>
+                    <option value="both">Administrador + Participante</option>
                   </select>
                 </div>
+
+                {areas.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-area" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Área
+                    </Label>
+                    <select
+                      id="invite-area"
+                      value={inviteAreaId}
+                      onChange={(e) => setInviteAreaId(e.target.value)}
+                      disabled={isInviting}
+                      className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                    >
+                      <option value="">Sin área</option>
+                      {areas.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="flex gap-2">
                   <Button
@@ -454,6 +478,16 @@ function UsersPage() {
                     {isInviting ? "Invitando..." : "Invitar"}
                   </Button>
                 </div>
+
+                <ConfirmDialog
+                  open={showInviteConfirm}
+                  title="¿Registrar nuevo usuario?"
+                  description={`Se enviará una invitación a "${inviteEmail}" con el rol ${inviteRole === 'admin' ? 'Administrador' : 'Participante'}.`}
+                  confirmLabel="Registrar"
+                  loading={isInviting}
+                  onConfirm={executeInvite}
+                  onCancel={() => setShowInviteConfirm(false)}
+                />
               </form>
             )}
           </div>
@@ -504,12 +538,33 @@ function UsersPage() {
                   <select
                     id="edit-role"
                     value={editRole}
-                    onChange={(e) => setEditRole(e.target.value as 'admin' | 'participant')}
+                    onChange={(e) => setEditRole(e.target.value as 'admin' | 'participant' | 'both')}
                     disabled={isUpdating}
                     className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
                   >
                     <option value="participant">Participante</option>
                     <option value="admin">Administrador</option>
+                    <option value="both">Administrador + Participante</option>
+                  </select>
+                </div>
+              )}
+
+              {areas.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-area" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Área
+                  </Label>
+                  <select
+                    id="edit-area"
+                    value={editAreaId}
+                    onChange={(e) => setEditAreaId(e.target.value)}
+                    disabled={isUpdating}
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                  >
+                    <option value="">Sin área</option>
+                    {areas.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
                   </select>
                 </div>
               )}
@@ -531,6 +586,16 @@ function UsersPage() {
                   {isUpdating ? "Guardando..." : "Guardar"}
                 </Button>
               </div>
+
+              <ConfirmDialog
+                open={showUpdateConfirm}
+                title="¿Guardar cambios?"
+                description={`Confirma que deseas actualizar los datos de "${editingUser?.email}".`}
+                confirmLabel="Guardar cambios"
+                loading={isUpdating}
+                onConfirm={executeUpdateUser}
+                onCancel={() => setShowUpdateConfirm(false)}
+              />
             </form>
           </div>
         </div>

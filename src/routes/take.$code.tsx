@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ArrowLeft, ArrowRight, Clock, FileText, Play, Tag, CheckCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { evaluationsService, questionsService, resultsService, calculateEvaluationScore, evaluationProgressService } from "@/lib/services/evaluations";
+import { evaluationsService, questionsService, resultsService, calculateEvaluationScore, evaluationProgressService, evaluationParticipantsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/take/$code")({
   head: () => ({ meta: [{ title: "Realizar Evaluación — EvalPro" }] }),
@@ -46,8 +47,36 @@ function TakeEvaluationRoute() {
         // Cargar evaluación
         const evalData = await evaluationsService.getById(code);
         console.log('Evaluation loaded:', evalData);
+
+        // Verificar si la evaluación está activa y no ha vencido
+        const expired = evalData.fecha_vencimiento && new Date(evalData.fecha_vencimiento) < new Date();
+        if (evalData.activa === false) {
+          setError('Esta evaluación no está disponible en este momento.');
+          setLoading(false);
+          return;
+        }
+        if (expired) {
+          setError(`Esta evaluación venció el ${new Date(evalData.fecha_vencimiento!).toLocaleString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`);
+          setLoading(false);
+          return;
+        }
+
+        // Verificar autorización del participante
+        const isAdminUser = profile.role === 'admin' || profile.role === 'both';
+        if (!isAdminUser) {
+          const assignedIds = await evaluationParticipantsService.getByUserId(profile.id);
+          const isDirectlyAssigned = assignedIds.includes(code);
+          const isAreaMatch = evalData.area_id && evalData.area_id === profile.area_id;
+
+          if (!isDirectlyAssigned && !isAreaMatch) {
+            setError('No tienes autorización para realizar esta evaluación.');
+            setLoading(false);
+            return;
+          }
+        }
+
         setEvaluation(evalData);
-        
+
         // Verificar si existe progreso previo
         const progress = await evaluationProgressService.getByUserAndEvaluation(profile.id, code);
         console.log('Existing progress:', progress);
@@ -177,6 +206,10 @@ function TakeEvaluationRoute() {
       // Crear registro de progreso inicial
       if (profile?.id && code) {
         try {
+          // Si hay progreso previo (reinicio), eliminarlo antes de crear el nuevo
+          if (existingProgress) {
+            await evaluationProgressService.delete(profile.id, code);
+          }
           await evaluationProgressService.create({
             user_id: profile.id,
             evaluation_id: code,
@@ -321,9 +354,17 @@ function TakeEvaluationRoute() {
               </div>
             </div>
 
-            <div className="mt-6 rounded-lg bg-accent/10 p-4 text-sm">
-              <div className="mb-1 font-medium text-foreground">Peso por pregunta</div>
-              <div className="font-mono font-bold text-accent">{pesoPorPregunta}% cada una</div>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-accent/10 p-4 text-sm">
+                <div className="mb-1 font-medium text-foreground">Peso por pregunta</div>
+                <div className="font-mono font-bold text-accent">{pesoPorPregunta}% cada una</div>
+              </div>
+              {evaluation.config?.porcentaje_aprobacion != null && (
+                <div className="rounded-lg bg-emerald-500/10 p-4 text-sm">
+                  <div className="mb-1 font-medium text-foreground">Puntaje para aprobar</div>
+                  <div className="font-mono font-bold text-emerald-600">{evaluation.config.porcentaje_aprobacion}% o más</div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 rounded-lg bg-secondary/60 p-4 text-sm text-muted-foreground">
@@ -415,8 +456,16 @@ function QuizRunner({
   const [i, setI] = useState(initialState?.currentQuestionIndex || 0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialState?.answers || {});
   const [timeRemaining, setTimeRemaining] = useState<number>(initialState?.timeRemaining || (tiempoLimite ? tiempoLimite * 60 : 0));
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const q = questions[i];
   const progress = ((i + 1) / questions.length) * 100;
+
+  // Refs para que el intervalo del timer siempre acceda a los valores más recientes
+  // sin necesitar estar en sus dependencias (evita reiniciar el countdown en cada respuesta)
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const onSubmitRef = useRef(onSubmit);
+  onSubmitRef.current = onSubmit;
 
   // Timer effect
   useEffect(() => {
@@ -426,7 +475,7 @@ function QuizRunner({
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          onSubmit(answers);
+          onSubmitRef.current(answersRef.current);
           return 0;
         }
         return prev - 1;
@@ -434,7 +483,7 @@ function QuizRunner({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [tiempoLimite, answers, onSubmit]);
+  }, [tiempoLimite]);
 
   // Save progress periodically
   useEffect(() => {
@@ -596,9 +645,9 @@ function QuizRunner({
         </div>
 
         <div className="flex items-center justify-between">
-          <Button 
-            variant="ghost" 
-            onClick={() => setI(Math.max(0, i - 1))} 
+          <Button
+            variant="ghost"
+            onClick={() => setI(Math.max(0, i - 1))}
             disabled={i === 0 || submitting}
           >
             <ArrowLeft className="size-4" /> Anterior
@@ -608,8 +657,8 @@ function QuizRunner({
               Siguiente <ArrowRight className="size-4" />
             </Button>
           ) : (
-            <Button 
-              onClick={handleSubmitEvaluation} 
+            <Button
+              onClick={() => setShowSubmitConfirm(true)}
               disabled={!hasAnswer || submitting}
             >
               {submitting ? (
@@ -626,6 +675,16 @@ function QuizRunner({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showSubmitConfirm}
+        title="¿Enviar evaluación?"
+        description="Una vez enviada no podrás modificar tus respuestas. ¿Deseas continuar?"
+        confirmLabel="Enviar Evaluación"
+        loading={submitting}
+        onConfirm={() => { setShowSubmitConfirm(false); onSubmit(answers); }}
+        onCancel={() => setShowSubmitConfirm(false)}
+      />
     </AppShell>
   );
 }

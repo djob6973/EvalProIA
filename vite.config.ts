@@ -5,6 +5,16 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import dotenv from 'dotenv';
+
+// Load .env file explicitly
+dotenv.config();
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl) throw new Error('Falta la variable de entorno VITE_SUPABASE_URL o SUPABASE_URL');
+if (!supabaseAnonKey) throw new Error('Falta la variable de entorno VITE_SUPABASE_ANON_KEY o SUPABASE_ANON_KEY');
 
 // Configure for Dokku deployment with SSR
 export default defineConfig({
@@ -13,8 +23,8 @@ export default defineConfig({
   },
   vite: {
     define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://zfpvgaswrjdhmplqitbx.supabase.co'),
-      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'sb_publishable_vnho8oZPGYTDmRHATEcV5w_83LOBbhM'),
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
     },
     server: {
       allowedHosts: ['evalpro.apps.dataico.world'],

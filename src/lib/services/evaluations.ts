@@ -1,5 +1,13 @@
 import { supabase } from '@/lib/supabase'
 
+export interface Area {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Evaluation {
   id: string
   title: string
@@ -12,6 +20,8 @@ export interface Evaluation {
   activa?: boolean
   categorias?: string[]
   config?: any
+  fecha_vencimiento?: string | null
+  area_id?: string | null
 }
 
 export interface Question {
@@ -188,24 +198,38 @@ export const questionsService = {
 
   async delete(id: string) {
     if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { error } = await supabase
+
+    const { data, error } = await supabase
       .from('questions')
       .delete()
       .eq('id', id)
-    
+      .select()
+
     if (error) throw error
+    if (!data || data.length === 0) throw new Error('No se pudo eliminar la pregunta. Verifica los permisos en Supabase (RLS).')
   },
 
   async createBatch(questions: Omit<Question, 'id' | 'created_at'>[]) {
     if (!supabase) throw new Error('Supabase client not initialized')
-    
+
+    console.log('[createBatch] Insertando', questions.length, 'preguntas en Supabase...')
+
     const { data, error } = await supabase
       .from('questions')
       .insert(questions)
       .select()
-    
+
+    console.log('[createBatch] Respuesta Supabase → data:', data, '| error:', error)
+
     if (error) throw error
+
+    if (!data || data.length === 0) {
+      throw new Error(
+        'Supabase no insertó ninguna pregunta (data vacío). ' +
+        'Verifica que las políticas RLS de la tabla "questions" permitan INSERT al rol autenticado.'
+      )
+    }
+
     return data as Question[]
   },
 
@@ -226,34 +250,34 @@ export const questionsService = {
 export const resultsService = {
   async getAll() {
     if (!supabase) throw new Error('Supabase client not initialized')
-    
+
     const { data, error } = await supabase
       .from('results')
       .select(`
         *,
-        evaluations(title),
+        evaluations(title, area_id),
         profiles(full_name, email)
       `)
       .order('completed_at', { ascending: false })
-    
+
     if (error) throw error
-    return data as (Result & { evaluations: { title: string }, profiles: { full_name: string | null, email: string } })[]
+    return data as (Result & { evaluations: { title: string; area_id: string | null }, profiles: { full_name: string | null, email: string } })[]
   },
 
   async getByUserId(userId: string) {
     if (!supabase) throw new Error('Supabase client not initialized')
-    
+
     const { data, error } = await supabase
       .from('results')
       .select(`
         *,
-        evaluations(title)
+        evaluations(title, created_at, categorias)
       `)
       .eq('user_id', userId)
       .order('completed_at', { ascending: false })
-    
+
     if (error) throw error
-    return data as (Result & { evaluations: { title: string } })[]
+    return data as (Result & { evaluations: { title: string; created_at: string; categorias: string[] | null } })[]
   },
 
   async getByEvaluationId(evaluationId: string) {
@@ -297,6 +321,119 @@ export const resultsService = {
     if (error) throw error
     return data as Result
   }
+}
+
+// Areas CRUD
+export const areasService = {
+  async getAll() {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    const { data, error } = await supabase
+      .from('areas')
+      .select('*')
+      .order('name', { ascending: true })
+
+    if (error) throw error
+    return data as Area[]
+  },
+
+  async create(area: Omit<Area, 'id' | 'created_at' | 'updated_at'>) {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    const { data, error } = await supabase
+      .from('areas')
+      .insert(area)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data as Area
+  },
+
+  async update(id: string, area: Partial<Pick<Area, 'name' | 'description'>>) {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    const { data, error } = await supabase
+      .from('areas')
+      .update({ ...area, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data as Area
+  },
+
+  async delete(id: string) {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    const { error } = await supabase
+      .from('areas')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  },
+}
+
+// Direct participant assignment per evaluation
+export interface ParticipantProfile {
+  id: string
+  email: string
+  full_name: string | null
+  area_id: string | null
+  role: 'participant' | 'both'
+}
+
+export const evaluationParticipantsService = {
+  async getByEvaluationId(evaluationId: string): Promise<string[]> {
+    if (!supabase) throw new Error('Supabase client not initialized')
+    const { data, error } = await supabase
+      .from('evaluation_participants')
+      .select('user_id')
+      .eq('evaluation_id', evaluationId)
+    if (error) throw error
+    return (data || []).map((r: any) => r.user_id)
+  },
+
+  async getByUserId(userId: string): Promise<string[]> {
+    if (!supabase) throw new Error('Supabase client not initialized')
+    const { data, error } = await supabase
+      .from('evaluation_participants')
+      .select('evaluation_id')
+      .eq('user_id', userId)
+    if (error) throw error
+    return (data || []).map((r: any) => r.evaluation_id)
+  },
+
+  async assign(evaluationId: string, userId: string): Promise<void> {
+    if (!supabase) throw new Error('Supabase client not initialized')
+    const { error } = await supabase
+      .from('evaluation_participants')
+      .insert({ evaluation_id: evaluationId, user_id: userId })
+    if (error) throw error
+  },
+
+  async unassign(evaluationId: string, userId: string): Promise<void> {
+    if (!supabase) throw new Error('Supabase client not initialized')
+    const { error } = await supabase
+      .from('evaluation_participants')
+      .delete()
+      .eq('evaluation_id', evaluationId)
+      .eq('user_id', userId)
+    if (error) throw error
+  },
+}
+
+export async function getAllParticipants(): Promise<ParticipantProfile[]> {
+  if (!supabase) throw new Error('Supabase client not initialized')
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, full_name, area_id, role')
+    .in('role', ['participant', 'both'])
+    .order('full_name', { ascending: true })
+  if (error) throw error
+  return (data || []) as ParticipantProfile[]
 }
 
 // Get unique categories from questions table
@@ -395,34 +532,17 @@ export async function calculateEvaluationScore(
   if (providedQuestions && providedQuestions.length > 0) {
     questions = providedQuestions;
   } else {
-    // Obtener la evaluación
-    const evaluation = await evaluationsService.getById(evaluationId);
-    
-    // Cargar preguntas usando la misma lógica que el quiz
+    // Cargar preguntas directamente asociadas a la evaluación
     questions = await questionsService.getByEvaluationId(evaluationId);
-    
-    // Si no hay preguntas asociadas, cargar del banco de preguntas
+
+    // Si no hay preguntas asociadas, recuperar solo las que el usuario respondió.
+    // Los IDs en userAnswers son exactamente las preguntas que se mostraron durante
+    // el quiz (incluido su orden aleatorio), por lo que son la fuente de verdad.
     if (questions.length === 0) {
-      const allQuestions = await questionsService.getAll();
-      
-      // Filtrar por categorías si están especificadas
-      let filteredQuestions = allQuestions;
-      if (evaluation.categorias && evaluation.categorias.length > 0) {
-        filteredQuestions = allQuestions.filter(q => 
-          q.categoria && evaluation.categorias.includes(q.categoria)
-        );
+      const answeredIds = Object.keys(userAnswers);
+      if (answeredIds.length > 0) {
+        questions = await questionsService.getByIds(answeredIds);
       }
-      
-      // Filtrar por dificultad si no es "mixto"
-      if (evaluation.config?.dificultad && evaluation.config.dificultad !== 'mixto') {
-        filteredQuestions = filteredQuestions.filter(q => 
-          q.dificultad === evaluation.config.dificultad
-        );
-      }
-      
-      // Limitar según num_preguntas
-      const numPreguntas = evaluation.config?.num_preguntas || filteredQuestions.length;
-      questions = filteredQuestions.slice(0, numPreguntas);
     }
   }
   
