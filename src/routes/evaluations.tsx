@@ -742,8 +742,10 @@ function EvaluationsPage() {
       <ConfirmDialog
         open={showDeleteConfirm}
         title="¿Eliminar evaluación?"
-        description={`Se eliminará permanentemente la evaluación "${items.find((e) => e.id === deletingId)?.nombre ?? ""}". Esta acción no se puede deshacer.`}
+        description={`Se eliminará permanentemente "${items.find((e) => e.id === deletingId)?.nombre ?? "esta evaluación"}". Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar"
+        loadingLabel="Eliminando…"
+        variant="destructive"
         loading={isDeleting}
         onConfirm={executeDelete}
         onCancel={() => { setShowDeleteConfirm(false); setDeletingId(null); }}

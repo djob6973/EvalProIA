@@ -56,5 +56,18 @@ export const createUserFn = createServerFn({ method: 'POST' })
 
     if (error) throw new Error(error.message);
 
+    // Upsert the profile explicitly in case the trigger didn't include area_id
+    const { error: profileError } = await adminClient
+      .from('profiles')
+      .upsert({
+        id: result.user.id,
+        email: data.email,
+        full_name: data.fullName,
+        role: data.role,
+        area_id: data.areaId ?? null,
+      });
+
+    if (profileError) throw new Error(profileError.message);
+
     return { id: result.user.id, email: result.user.email };
   });

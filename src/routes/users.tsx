@@ -153,6 +153,7 @@ function UsersPage() {
 
       setTimeout(() => { fetchUsers(); }, 1000);
     } catch (error: any) {
+      setShowInviteConfirm(false);
       setInviteError(error.message || "Error al crear usuario");
     } finally {
       setIsInviting(false);

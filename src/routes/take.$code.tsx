@@ -170,18 +170,9 @@ function TakeEvaluationRoute() {
       // Combinar: respondidas en orden original + no respondidas mezcladas
       limitedQuestions = [...answeredQuestions, ...shuffledUnanswered];
 
-      // Actualizar el índice actual para que apunte a la primera pregunta no respondida
-      // o mantener el índice si la pregunta actual aún existe
-      const currentQuestionId = savedOrder[initialQuestionIndex];
-      const newIndex = limitedQuestions.findIndex(q => q.id === currentQuestionId);
-      
-      if (newIndex !== -1) {
-        // La pregunta actual aún existe, mantener el índice
-        initialQuestionIndex = newIndex;
-      } else {
-        // La pregunta actual ya no existe, ir a la primera no respondida
-        initialQuestionIndex = answeredQuestions.length;
-      }
+      // Siempre apuntar a la primera pregunta no respondida para evitar saltar
+      // preguntas que quedaron antes en el nuevo orden mezclado
+      initialQuestionIndex = answeredQuestions.length;
 
     } else {
       // Iniciar nueva evaluación
@@ -473,7 +464,7 @@ function QuizRunner({
 
   // Save progress periodically
   useEffect(() => {
-    if (!userId || !code || !tiempoLimite) return;
+    if (!userId || !code) return;
 
     const saveProgress = async () => {
       try {
