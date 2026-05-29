@@ -13,13 +13,6 @@ export const APIRoute = createAPIFileRoute('/api/generate-questions')({
         distribucion: Record<string, number>;
       };
 
-      console.log('[API] POST /api/generate-questions');
-      console.log('[API] Input:', {
-        textLength: input.extractedText.length,
-        numPreguntas: input.numPreguntas,
-        dificultad: input.dificultad,
-      });
-
       const result = await generateQuestionsServer(
         input.extractedText,
         input.numPreguntas,
@@ -27,8 +20,6 @@ export const APIRoute = createAPIFileRoute('/api/generate-questions')({
         input.categoria,
         input.distribucion
       );
-
-      console.log('[API] Resultado:', result.length, 'preguntas');
       
       return new Response(JSON.stringify(result), {
         status: 200,

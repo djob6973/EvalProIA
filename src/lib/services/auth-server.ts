@@ -7,6 +7,7 @@ type CreateUserInput = {
   fullName: string;
   role: 'admin' | 'participant' | 'both';
   areaId: string | null;
+  _token: string;
 };
 
 export const createUserFn = createServerFn({ method: 'POST' })
@@ -25,6 +26,22 @@ export const createUserFn = createServerFn({ method: 'POST' })
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    // Verify caller identity and role server-side
+    const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(data._token);
+    if (authError || !caller) {
+      throw new Error('No autorizado');
+    }
+
+    const { data: callerProfile } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', caller.id)
+      .single();
+
+    if (!callerProfile || !['admin', 'both'].includes(callerProfile.role)) {
+      throw new Error('No autorizado: se requiere rol de administrador');
+    }
 
     const { data: result, error } = await adminClient.auth.admin.createUser({
       email: data.email,

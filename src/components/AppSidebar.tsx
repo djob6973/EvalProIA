@@ -42,9 +42,6 @@ export function AppSidebar() {
   const nav = isParticipantPath ? participantNav : adminNav;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
-  // Debug: verificar datos del perfil
-  console.log('AppSidebar - profile:', profile);
-  
   // Obtener iniciales del nombre del usuario
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Usuario';
   const userInitials = profile?.full_name

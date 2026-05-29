@@ -42,11 +42,8 @@ function TakeEvaluationRoute() {
       
       try {
         setLoading(true);
-        console.log('Loading evaluation with code:', code);
-        
         // Cargar evaluación
         const evalData = await evaluationsService.getById(code);
-        console.log('Evaluation loaded:', evalData);
 
         // Verificar si la evaluación está activa y no ha vencido
         const expired = evalData.fecha_vencimiento && new Date(evalData.fecha_vencimiento) < new Date();
@@ -79,44 +76,36 @@ function TakeEvaluationRoute() {
 
         // Verificar si existe progreso previo
         const progress = await evaluationProgressService.getByUserAndEvaluation(profile.id, code);
-        console.log('Existing progress:', progress);
         if (progress) {
           setExistingProgress(progress);
         }
         
         // Cargar preguntas asociadas a la evaluación
         let questionsData = await questionsService.getByEvaluationId(code);
-        console.log('Questions loaded for evaluation', code, ':', questionsData);
-        console.log('Questions count:', questionsData.length);
-        
+
         // Si no hay preguntas asociadas, cargar del banco de preguntas
         if (questionsData.length === 0) {
-          console.log('No questions associated, loading from question bank');
           const allQuestions = await questionsService.getAll();
-          console.log('Total questions in bank:', allQuestions.length);
-          
+
           // Filtrar por categorías si están especificadas
           let filteredQuestions = allQuestions;
           if (evalData.categorias && evalData.categorias.length > 0) {
-            filteredQuestions = allQuestions.filter(q => 
+            filteredQuestions = allQuestions.filter(q =>
               q.categoria && evalData.categorias.includes(q.categoria)
             );
-            console.log('Questions after category filter:', filteredQuestions.length);
           }
-          
+
           // Filtrar por dificultad si no es "mixto"
           if (evalData.config?.dificultad && evalData.config.dificultad !== 'mixto') {
-            filteredQuestions = filteredQuestions.filter(q => 
+            filteredQuestions = filteredQuestions.filter(q =>
               q.dificultad === evalData.config.dificultad
             );
-            console.log('Questions after difficulty filter:', filteredQuestions.length);
           }
-          
+
           // Mezclar y limitar según num_preguntas
           const shuffled = shuffleArray(filteredQuestions);
           const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
           questionsData = shuffled.slice(0, numPreguntas);
-          console.log('Final questions selected from bank:', questionsData.length);
         }
         
         setQuestions(questionsData);
@@ -139,7 +128,6 @@ function TakeEvaluationRoute() {
 
     if (isResume && existingProgress) {
       // Reanudar desde progreso existente
-      console.log('Resuming from progress:', existingProgress);
       initialAnswers = existingProgress.answers;
       initialQuestionIndex = existingProgress.current_question_index;
       initialTimeRemaining = existingProgress.time_remaining;
@@ -195,13 +183,11 @@ function TakeEvaluationRoute() {
         initialQuestionIndex = answeredQuestions.length;
       }
 
-      console.log('Resumed questions:', answeredQuestions.length, 'answered (in order),', shuffledUnanswered.length, 'unanswered (shuffled), current index:', initialQuestionIndex);
     } else {
       // Iniciar nueva evaluación
       const shuffled = shuffleArray(questions);
       const numPreguntas = evaluation.config?.num_preguntas || questions.length;
       limitedQuestions = shuffled.slice(0, numPreguntas);
-      console.log('Total questions:', questions.length, 'Configured limit:', numPreguntas, 'Selected:', limitedQuestions.length);
 
       // Crear registro de progreso inicial
       if (profile?.id && code) {
@@ -394,22 +380,22 @@ function TakeEvaluationRoute() {
               </div>
               {existingProgress ? (
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => { console.log('Resume button clicked'); handleStart(true); }} 
+                  <Button
+                    variant="outline"
+                    onClick={() => handleStart(true)}
                     disabled={questions.length === 0}
                   >
                     <RefreshCw className="size-4" /> Reanudar
                   </Button>
-                  <Button 
-                    onClick={() => { console.log('Start new button clicked'); handleStart(false); }} 
+                  <Button
+                    onClick={() => handleStart(false)}
                     disabled={questions.length === 0}
                   >
                     <Play className="size-4" /> Iniciar de nuevo
                   </Button>
                 </div>
               ) : (
-                <Button onClick={() => { console.log('Start button clicked, questions.length:', questions.length); handleStart(); }} disabled={questions.length === 0}>
+                <Button onClick={() => handleStart()} disabled={questions.length === 0}>
                   <Play className="size-4" /> Iniciar evaluación
                 </Button>
               )}

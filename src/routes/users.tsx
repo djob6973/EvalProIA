@@ -128,6 +128,11 @@ function UsersPage() {
   const executeInvite = async () => {
     setIsInviting(true);
     try {
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) {
+        setInviteError("Sesión expirada. Recarga la página.");
+        return;
+      }
       await createUserFn({
         data: {
           email: inviteEmail,
@@ -135,6 +140,7 @@ function UsersPage() {
           fullName: inviteFullName,
           role: inviteRole,
           areaId: inviteAreaId || null,
+          _token: session.access_token,
         },
       });
 
@@ -206,36 +212,25 @@ function UsersPage() {
   };
 
   const handleDeleteUser = (user: UserProfile) => {
-    console.log('handleDeleteUser called with user:', user);
     setDeletingUser(user);
     setShowDeleteModal(true);
     setDeleteError(null);
   };
 
   const handleConfirmDelete = async () => {
-    console.log('handleConfirmDelete called');
-    if (!supabase || !deletingUser) {
-      console.log('Error: supabase or deletingUser is null');
-      return;
-    }
+    if (!supabase || !deletingUser) return;
 
     setDeleteError(null);
     setIsDeleting(true);
 
-    console.log('Deleting user:', deletingUser.id);
-
     try {
-      // Intentar eliminar solo el perfil de public.profiles
-      const { data, error: profileError } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .delete()
         .eq('id', deletingUser.id);
 
-      console.log('Delete response:', { data, error: profileError });
-
       if (profileError) throw profileError;
 
-      console.log('User deleted successfully');
       setShowDeleteModal(false);
       setDeletingUser(null);
       setDeleteError(null);

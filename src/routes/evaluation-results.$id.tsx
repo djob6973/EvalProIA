@@ -26,15 +26,17 @@ function EvaluationResultsPage() {
   const [stats, setStats] = useState({ totalParticipants: 0, averageScore: 0, passRate: 0, bestScore: 0 });
 
   useEffect(() => {
-    if (profile && !isAdmin) {
-      navigate({ to: "/participant" });
-    }
-  }, [profile, isAdmin, navigate]);
-
-  useEffect(() => {
     async function loadData() {
-      if (!isAdmin || !id) return;
-      
+      // Wait for profile to resolve before acting
+      if (!profile) return;
+
+      if (!isAdmin) {
+        navigate({ to: "/participant" });
+        return;
+      }
+
+      if (!id) return;
+
       try {
         setLoading(true);
         
@@ -87,7 +89,7 @@ function EvaluationResultsPage() {
     }
 
     loadData();
-  }, [isAdmin, id]);
+  }, [profile, isAdmin, id, navigate]);
 
   if (loading) {
     return (

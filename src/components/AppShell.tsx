@@ -13,6 +13,8 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
+  // Handles runtime session expiry (token revoked while already on a page).
+  // The router-level beforeLoad covers the initial navigation guard.
   useEffect(() => {
     if (!loading && !user) {
       navigate({ to: "/login" });
@@ -27,9 +29,7 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground">

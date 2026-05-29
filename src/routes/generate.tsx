@@ -92,15 +92,6 @@ function GeneratePage() {
     getUniqueCategories().then(setCategorias).catch(console.error);
   }, []);
 
-  // Debug log
-  useEffect(() => {
-    console.log('📊 Estado del componente:', {
-      total,
-      distribucion,
-      extractedText: !!extractedText,
-      extractedTextLength: extractedText?.length || 0
-    });
-  }, [total, distribucion, extractedText]);
 
   function handleFile(f: File | null) {
     if (!f) return;
@@ -153,13 +144,6 @@ function GeneratePage() {
   }
 
   async function generate() {
-    console.log('🔄 Iniciando generación de preguntas...');
-    console.log('extractedText:', extractedText?.substring(0, 100) + '...');
-    console.log('numPreguntas:', numPreguntas);
-    console.log('dificultad:', dificultad);
-    console.log('categoria:', categoria);
-    console.log('distribucion:', distribucion);
-    
     setGenerating(true);
     setQuestions([]);
     setSelected(new Set());
@@ -167,9 +151,9 @@ function GeneratePage() {
     
     try {
       const customSystemPrompt = localStorage.getItem("evalpro_system_prompt") ?? undefined;
-      const { model, temperature, maxTokens } = getModelConfig();
+      const { model, temperature, maxTokens, retries } = getModelConfig();
       const questionsArray = await generateQuestionsFn({
-        data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens },
+        data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries },
       });
 
       setQuestions(questionsArray);
@@ -190,7 +174,6 @@ function GeneratePage() {
   }
 
   async function saveSelected() {
-    console.log('💾 saveSelected iniciado — seleccionadas:', selected.size);
     if (selected.size === 0) {
       alert("Selecciona al menos una pregunta para guardar");
       return;
@@ -199,7 +182,6 @@ function GeneratePage() {
 
     try {
       const selectedQuestions = questions.filter(q => selected.has(q.id));
-      console.log('📋 Preguntas a guardar:', selectedQuestions.length);
 
       const validQuestions = selectedQuestions.filter(q =>
         q.pregunta?.trim() &&
@@ -231,7 +213,6 @@ function GeneratePage() {
       }));
 
       const savedResult = await questionsService.createBatch(questionsToSave);
-      console.log('✅ Guardadas correctamente:', savedResult.length, 'preguntas');
 
       // Eliminar del estado las preguntas ya guardadas para evitar duplicados
       const savedIds = new Set(validQuestions.map(q => q.id));
@@ -485,16 +466,7 @@ function GeneratePage() {
               </div>
 
               <Button
-                onClick={() => {
-                  console.log('🖱️ Click en botón Generar Preguntas');
-                  console.log('Estado del botón:', {
-                    extractedText: !!extractedText,
-                    generating,
-                    total,
-                    extractedTextLength: extractedText?.length || 0
-                  });
-                  generate();
-                }}
+                onClick={() => generate()}
                 disabled={!extractedText || generating || total !== 100}
                 size="lg"
                 className="mt-6 w-full"

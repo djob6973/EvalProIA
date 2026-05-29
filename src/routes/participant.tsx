@@ -179,7 +179,7 @@ function ParticipantHome() {
                       {e.lockMsg}
                     </div>
                   ) : (
-                    <Button asChild className="w-full" onClick={() => console.log('Navigating to evaluation:', e.id)}>
+                    <Button asChild className="w-full">
                       <Link to="/take/$code" params={{ code: e.id }}>
                         Comenzar <ArrowRight className="size-4" />
                       </Link>

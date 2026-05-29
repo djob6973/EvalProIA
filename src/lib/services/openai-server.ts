@@ -15,26 +15,32 @@ export type GeneratedQuestion = {
   categoria: string;
 };
 
-export async function generateQuestionsServer(
-  extractedText: string,
+const BATCH_SIZE = 20;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetryableError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes('timeout') ||
+    msg.includes('rate limit') ||
+    msg.includes('503') ||
+    msg.includes('429') ||
+    msg.includes('connection')
+  );
+}
+
+function buildPrompt(
   numPreguntas: number,
   dificultad: string,
   categoria: string,
   distribucion: Record<QuestionType, number>,
-  customSystemPrompt?: string,
-  model = "gpt-4o-mini",
-  temperature = 0.3,
-  maxTokens = 4096
-): Promise<GeneratedQuestion[]> {
-  const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno del servidor');
-  }
-
-  const openai = new OpenAI({ apiKey });
-  
-  const prompt = `Eres un experto diseñador de evaluaciones. Genera ${numPreguntas} preguntas de evaluación basadas en el siguiente texto.
+  extractedText: string
+): string {
+  return `Eres un experto diseñador de evaluaciones. Genera ${numPreguntas} preguntas de evaluación basadas en el siguiente texto.
 
 Parámetros:
 - Dificultad: ${dificultad}
@@ -73,35 +79,101 @@ REGLAS OBLIGATORIAS — incumplirlas invalida la pregunta:
 - "respuesta_correcta" contiene los índices base-0 de las opciones correctas dentro del array "opciones"; debe tener al menos un elemento válido.
 - El JSON no debe contener comentarios ni texto fuera del objeto raíz.
 Mantén precisión pedagógica y calibra la dificultad al nivel solicitado.`;
+}
 
-  const response = await openai.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: customSystemPrompt ?? 'Eres un experto en diseño de evaluaciones educativas. Siempre responde con JSON válido.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ],
-    temperature,
-    max_tokens: maxTokens,
-    response_format: { type: 'json_object' }
-  });
+async function generateBatch(
+  openai: OpenAI,
+  extractedText: string,
+  numPreguntas: number,
+  dificultad: string,
+  categoria: string,
+  distribucion: Record<QuestionType, number>,
+  customSystemPrompt: string | undefined,
+  model: string,
+  temperature: number,
+  maxTokens: number,
+  retries: number
+): Promise<GeneratedQuestion[]> {
+  const prompt = buildPrompt(numPreguntas, dificultad, categoria, distribucion, extractedText);
+  let lastError: Error = new Error('Error desconocido al generar preguntas');
 
-  const content = response.choices[0].message.content;
-  if (!content) {
-    throw new Error('No se recibió respuesta de OpenAI');
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      await sleep(Math.min(1000 * Math.pow(2, attempt - 1), 10_000));
+    }
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: customSystemPrompt ?? 'Eres un experto en diseño de evaluaciones educativas. Siempre responde con JSON válido.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' }
+      });
+
+      const content = response.choices[0].message.content;
+      if (!content) throw new Error('No se recibió respuesta de OpenAI');
+
+      const parsed = JSON.parse(content);
+      const raw: unknown[] = Array.isArray(parsed.questions) ? parsed.questions : [];
+      return raw
+        .map((q, i) => normalizeQuestion(q, i))
+        .filter((q): q is GeneratedQuestion => q !== null);
+    } catch (err) {
+      lastError = err as Error;
+      if (!isRetryableError(err)) break;
+    }
+  }
+  throw lastError;
+}
+
+export async function generateQuestionsServer(
+  extractedText: string,
+  numPreguntas: number,
+  dificultad: string,
+  categoria: string,
+  distribucion: Record<QuestionType, number>,
+  customSystemPrompt?: string,
+  model = "gpt-4o-mini",
+  temperature = 0.3,
+  maxTokens = 4096,
+  retries = 3
+): Promise<GeneratedQuestion[]> {
+  const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno del servidor');
   }
 
-  const parsed = JSON.parse(content);
-  const raw: unknown[] = Array.isArray(parsed.questions) ? parsed.questions : [];
-  const questions = raw
-    .map((q, i) => normalizeQuestion(q, i))
-    .filter((q): q is GeneratedQuestion => q !== null);
-  return questions;
+  const openai = new OpenAI({ apiKey, timeout: 120_000 });
+
+  if (numPreguntas <= BATCH_SIZE) {
+    return generateBatch(openai, extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries);
+  }
+
+  // Divide en lotes de BATCH_SIZE para evitar timeouts en generaciones grandes
+  const batches: number[] = [];
+  let remaining = numPreguntas;
+  while (remaining > 0) {
+    batches.push(Math.min(remaining, BATCH_SIZE));
+    remaining -= BATCH_SIZE;
+  }
+
+  const allQuestions: GeneratedQuestion[] = [];
+  for (const batchCount of batches) {
+    const batchQuestions = await generateBatch(
+      openai, extractedText, batchCount, dificultad, categoria, distribucion,
+      customSystemPrompt, model, temperature, maxTokens, retries
+    );
+    allQuestions.push(...batchQuestions);
+  }
+
+  return allQuestions.map((q, i) => ({ ...q, id: i + 1 }));
 }
 
 function normalizeQuestion(q: unknown, index: number): GeneratedQuestion | null {
@@ -144,6 +216,7 @@ type GenerateQuestionsInput = {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  retries?: number;
 };
 
 export const generateQuestionsFn = createServerFn({ method: 'POST' })
@@ -158,7 +231,8 @@ export const generateQuestionsFn = createServerFn({ method: 'POST' })
       data.customSystemPrompt,
       data.model,
       data.temperature,
-      data.maxTokens
+      data.maxTokens,
+      data.retries
     );
   });
 
@@ -174,7 +248,7 @@ export const extractImageTextFn = createServerFn({ method: 'POST' })
       throw new Error('OPENAI_API_KEY no está configurada en el servidor');
     }
 
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey, timeout: 120_000 });
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',

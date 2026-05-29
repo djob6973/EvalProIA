@@ -237,18 +237,44 @@ function SettingsPage() {
 
               {/* Tokens Máx. */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Tokens Máx.
-                </label>
-                <select
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Tokens Máx.
+                  </label>
+                  <span className="font-mono text-xs font-semibold">{config.maxTokens.toLocaleString()}</span>
+                </div>
+                <input
+                  type="number"
+                  min="1024"
+                  max="128000"
+                  step="512"
                   value={config.maxTokens}
-                  onChange={(e) => setField("maxTokens", parseInt(e.target.value))}
-                  className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                >
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 1024) setField("maxTokens", val);
+                  }}
+                  className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm font-mono"
+                />
+                <div className="flex flex-wrap gap-1 pt-0.5">
                   {TOKEN_OPTIONS.map((t) => (
-                    <option key={t} value={t}>{t.toLocaleString()} tokens</option>
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setField("maxTokens", t)}
+                      className={`rounded px-2 py-0.5 text-[10px] font-mono transition-colors ${
+                        config.maxTokens === t
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+                      }`}
+                    >
+                      {t >= 1000 ? `${t / 1000}k` : t}
+                    </button>
                   ))}
-                </select>
+                </div>
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Mín. 1 024</span>
+                  <span>Máx. 128 000</span>
+                </div>
               </div>
 
               {/* Reintentos */}

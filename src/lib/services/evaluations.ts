@@ -212,14 +212,10 @@ export const questionsService = {
   async createBatch(questions: Omit<Question, 'id' | 'created_at'>[]) {
     if (!supabase) throw new Error('Supabase client not initialized')
 
-    console.log('[createBatch] Insertando', questions.length, 'preguntas en Supabase...')
-
     const { data, error } = await supabase
       .from('questions')
       .insert(questions)
       .select()
-
-    console.log('[createBatch] Respuesta Supabase → data:', data, '| error:', error)
 
     if (error) throw error
 
@@ -470,50 +466,34 @@ export function calculateQuestionScore(
   const correctCount = correctAnswers.length;
   const userSelectedCount = userAnswers.length;
   
-  console.log('=== DEBUG calculateQuestionScore ===');
-  console.log('Question ID:', question.id);
-  console.log('Correct answers:', correctAnswers);
-  console.log('User answer (raw):', userAnswer);
-  console.log('User answers (parsed):', userAnswers);
-  console.log('Total options:', totalOptions);
-  console.log('Correct count:', correctCount);
-  console.log('User selected count:', userSelectedCount);
-  console.log('Question weight:', questionWeight);
-  
   // REGLA 1: Si marca TODAS las opciones y no todas eran correctas → puntos = 0
   if (userSelectedCount === totalOptions && correctCount !== totalOptions) {
-    console.log('REGLA 1: Marca todas las opciones pero no todas son correctas → 0');
     return 0;
   }
-  
+
   // REGLA 2: Si marca MÁS opciones que la cantidad de respuestas correctas → puntos = 0
   if (userSelectedCount > correctCount) {
-    console.log('REGLA 2: Marca más opciones que correctas → 0');
     return 0;
   }
-  
+
   // REGLA 3: Si marca AL MENOS una respuesta incorrecta → puntos = 0
   const hasIncorrectAnswer = userAnswers.some(answer => !correctAnswers.includes(answer));
   if (hasIncorrectAnswer) {
-    console.log('REGLA 3: Marca al menos una respuesta incorrecta → 0');
     return 0;
   }
-  
+
   // REGLA 4: Si todas las opciones marcadas son correctas y NO hay opciones incorrectas seleccionadas
   const allSelectedAreCorrect = userAnswers.every(answer => correctAnswers.includes(answer));
   if (allSelectedAreCorrect && !hasIncorrectAnswer) {
     // Si seleccionó TODAS las respuestas correctas → puntaje completo
     if (userSelectedCount === correctCount) {
-      console.log('REGLA 4a: Seleccionó todas las correctas →', questionWeight);
       return questionWeight;
     }
     // Si seleccionó ALGUNAS respuestas correctas → puntaje parcial
     const partialScore = (userSelectedCount / correctCount) * questionWeight;
-    console.log('REGLA 4b: Seleccionó algunas correctas →', partialScore);
     return partialScore;
   }
-  
-  console.log('Por defecto: 0 puntos');
+
   // Por defecto, 0 puntos
   return 0;
 }
@@ -555,44 +535,27 @@ export async function calculateEvaluationScore(
   
   let totalScore = 0;
   
-  console.log('=== DEBUG calculateEvaluationScore ===');
-  console.log('Evaluation ID:', evaluationId);
-  console.log('Questions loaded:', questions.length);
-  console.log('Question IDs:', questions.map(q => q.id));
-  console.log('User answers keys:', Object.keys(userAnswers));
-  console.log('User answers:', userAnswers);
-  console.log('Question weight:', questionWeight);
-  
   for (const question of questions) {
     const userAnswer = userAnswers[question.id];
-    console.log('--- Processing question:', question.id);
-    console.log('User answer for this question:', userAnswer);
-    
+
     if (userAnswer === undefined || userAnswer === null) {
-      console.log('No answer provided, skipping');
       continue; // No respondió, 0 puntos
     }
-    
+
     // Para arrays, verificar que no esté vacío
     if (Array.isArray(userAnswer) && userAnswer.length === 0) {
-      console.log('Empty array, skipping');
       continue; // Array vacío, 0 puntos
     }
-    
+
     // Para strings, verificar que no esté vacío
     if (typeof userAnswer === 'string' && userAnswer === '') {
-      console.log('Empty string, skipping');
       continue; // String vacío, 0 puntos
     }
-    
-    const questionScore = calculateQuestionScore(question, userAnswer, questionWeight);
-    console.log('Question score:', questionScore);
-    totalScore += questionScore;
+
+    totalScore += calculateQuestionScore(question, userAnswer, questionWeight);
   }
-  
-  console.log('Total score before rounding:', totalScore);
+
   const finalScore = Math.round(totalScore * 100) / 100;
-  console.log('Final score:', finalScore);
   return finalScore; // Redondear a 2 decimales
 }
 

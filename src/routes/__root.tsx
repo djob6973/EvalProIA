@@ -3,10 +3,12 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  redirect,
   useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { supabase } from "@/lib/supabase";
 
 import appCss from "../styles.css?url";
 
@@ -67,7 +69,22 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const PUBLIC_PATHS = ["/login"];
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  beforeLoad: async ({ location }) => {
+    // Only runs in the browser (supabase client is null on SSR)
+    if (!supabase) return;
+    if (PUBLIC_PATHS.some((p) => location.pathname.startsWith(p))) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw redirect({
+        to: "/login",
+        search: { redirect: location.pathname + location.search },
+      });
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },

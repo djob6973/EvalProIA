@@ -8,6 +8,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/login")({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
+    redirect: typeof search.redirect === "string" ? search.redirect : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Iniciar sesión — EvalPro" },
@@ -19,6 +22,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const nav = useNavigate();
+  const { redirect: redirectTo } = Route.useSearch();
   const { signIn, loading, resetPassword, user, profile } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,7 +74,12 @@ function LoginPage() {
       .single() || { data: null };
 
     const userRole = profile?.role || 'participant';
-    nav({ to: userRole === "admin" ? "/dashboard" : "/participant" });
+    const defaultTo = userRole === "admin" || userRole === "both" ? "/dashboard" : "/participant";
+    // Use preserved redirect destination, but only allow internal relative paths
+    const destination = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
+      ? redirectTo
+      : defaultTo;
+    nav({ to: destination as any });
   }
 
   async function handleResetPassword(e: React.FormEvent) {
@@ -250,20 +259,6 @@ function LoginPage() {
             listas para enviar a tus participantes.
           </p>
 
-          <div className="grid grid-cols-3 gap-4 border-t border-primary-foreground/10 pt-8">
-            {[
-              { v: "12.4K", l: "Usuarios" },
-              { v: "45K+", l: "Preguntas" },
-              { v: "98.2%", l: "Disponibilidad" },
-            ].map((s) => (
-              <div key={s.l}>
-                <div className="font-mono text-xl font-bold">{s.v}</div>
-                <div className="mt-1 text-[10px] uppercase tracking-wider text-primary-foreground/50">
-                  {s.l}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="font-mono text-[10px] uppercase tracking-widest text-primary-foreground/40">
