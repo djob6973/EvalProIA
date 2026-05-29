@@ -29,7 +29,9 @@ function isRetryableError(err: unknown): boolean {
     msg.includes('rate limit') ||
     msg.includes('503') ||
     msg.includes('429') ||
-    msg.includes('connection')
+    msg.includes('connection') ||
+    msg.includes('truncated') ||
+    msg.includes('json')
   );
 }
 
@@ -60,7 +62,7 @@ Genera un JSON válido con el siguiente formato exacto:
       "id": 1,
       "tipo": "seleccion_unica|seleccion_multiple|verdadero_falso",
       "pregunta": "enunciado completo de la pregunta",
-      "contexto": "fragmento del documento que sustenta la pregunta",
+      "contexto": "introducción breve al tema evaluado, máximo 2 frases cortas, sin revelar la respuesta ni listar los elementos que la componen",
       "opciones": ["opción A", "opción B", "opción C", "opción D"],
       "respuesta_correcta": [0],
       "justificacion": "explicación de por qué esa opción es correcta",
@@ -74,7 +76,7 @@ REGLAS OBLIGATORIAS — incumplirlas invalida la pregunta:
 - Devuelve exactamente ${numPreguntas} preguntas.
 - Todos los campos son requeridos; nunca los omitas ni los dejes vacíos.
 - "pregunta" y "justificacion" deben tener al menos 10 caracteres cada uno.
-- "contexto" debe citar el fragmento relevante del documento que origina la pregunta.
+- "contexto" debe ser una introducción neutral al tema (máximo 2 frases). NO copie fragmentos del documento, NO liste los elementos evaluados, NO anticipe ni revele la respuesta correcta.
 - "opciones" debe tener exactamente 4 elementos para seleccion_unica y seleccion_multiple, y exactamente 2 para verdadero_falso.
 - "respuesta_correcta" contiene los índices base-0 de las opciones correctas dentro del array "opciones"; debe tener al menos un elemento válido.
 - El JSON no debe contener comentarios ni texto fuera del objeto raíz.
@@ -116,6 +118,10 @@ async function generateBatch(
         response_format: { type: 'json_object' }
       });
 
+      if (response.choices[0].finish_reason === 'length') {
+        throw new Error('truncated: respuesta cortada por límite de tokens; aumenta maxTokens en Configuración');
+      }
+
       const content = response.choices[0].message.content;
       if (!content) throw new Error('No se recibió respuesta de OpenAI');
 
@@ -141,7 +147,7 @@ export async function generateQuestionsServer(
   customSystemPrompt?: string,
   model = "gpt-4o-mini",
   temperature = 0.3,
-  maxTokens = 4096,
+  maxTokens = 8192,
   retries = 3
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;

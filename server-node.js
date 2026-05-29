@@ -1,15 +1,17 @@
 import { createServer } from 'http';
-const { handler } = await import('./dist/server/server.js');
+const handler = (await import('./dist/server/server.js')).default;
 
 const port = process.env.PORT || 3000;
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
     const request = new Request(url, {
       method: req.method,
       headers: req.headers,
-      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : req,
+      body: hasBody ? req : undefined,
+      ...(hasBody ? { duplex: 'half' } : {}),
     });
 
     const response = await handler.fetch(request, {}, {});

@@ -18,7 +18,7 @@ export type ModelConfig = {
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   model: "gpt-4o-mini",
   temperature: 0.3,
-  maxTokens: 4096,
+  maxTokens: 8192,
   retries: 3,
 };
 
@@ -46,7 +46,7 @@ Debes basarte EXCLUSIVAMENTE en la información contenida en el documento.
 No utilices conocimientos externos ni hagas suposiciones.
 
 REQUISITOS DE CADA PREGUNTA
-- Incluir un contexto claro relacionado con el contenido del documento.
+- Incluir un contexto breve y neutral relacionado con el tema evaluado.
 - Evaluar información relevante y explícita.
 - Estar redactada de forma clara, concreta y sin ambigüedades.
 - No repetir conceptos ni reutilizar enunciados similares entre preguntas.
@@ -77,6 +77,57 @@ CONSIDERACIONES PARA QUIZZES TIPO KAHOOT
 - Redactar las preguntas de forma clara y directa, sin enunciados extensos.
 - Priorizar conceptos clave, definiciones, procesos y reglas importantes.
 - Las opciones incorrectas deben ser plausibles pero claramente distinguibles de la correcta.
+
+REGLAS PARA PREGUNTAS BASADAS EN PASOS O SECUENCIAS
+Cuando el contenido describa procedimientos o secuencias operativas:
+* Las preguntas deben indicar claramente qué se desea evaluar: primer paso, último paso, acción obligatoria, validación, orden correcto, objetivo del proceso, acción incorrecta, requisito previo.
+* No mezclar múltiples pasos correctos en preguntas de selección única.
+* Si varias opciones pertenecen al mismo procedimiento, la pregunta debe especificar el criterio exacto:
+  * "¿Cuál es el primer paso...?"
+  * "¿Qué acción se realiza antes de guardar...?"
+  * "¿Cuál es una validación obligatoria...?"
+  * "¿Qué acción NO hace parte del proceso...?"
+* En preguntas de selección múltiple: indicar explícitamente que existen varias respuestas correctas, incluir únicamente combinaciones válidas, evitar listas incompletas o ambiguas.
+* Mantener coherencia exacta con el orden y contenido del procedimiento original.
+
+REGLAS DEL CAMPO CONTEXTO — CRÍTICO
+El campo "contexto" debe servir únicamente como introducción breve al tema evaluado.
+El contexto NO debe:
+* revelar la respuesta correcta,
+* incluir listas completas de elementos, pasos o categorías del tema evaluado,
+* copiar procedimientos completos del documento,
+* contener validaciones exactas del proceso,
+* anticipar opciones correctas,
+* funcionar como explicación de la respuesta.
+
+El contexto DEBE:
+* describir brevemente el tema en máximo 1 o 2 frases cortas,
+* mencionar el módulo, proceso o área temática evaluada,
+* mantener neutralidad absoluta respecto a la respuesta.
+
+Ejemplos VÁLIDOS de contexto:
+* "La composición del salario en Colombia está regulada por el Código Sustantivo del Trabajo."
+* "Los eventos de recepción permiten gestionar facturas electrónicas de proveedores."
+* "La plataforma permite configurar procesos automáticos para la recepción de documentos."
+
+Ejemplos INVÁLIDOS (prohibidos):
+* Listar qué elementos SÍ o NO pertenecen al concepto evaluado.
+* Explicar exactamente qué opciones son correctas o incorrectas.
+* Copiar instrucciones textuales del documento.
+
+VALIDACIÓN OBLIGATORIA ANTES DE GENERAR
+Antes de escribir el contexto de cada pregunta, verificar:
+* ¿El contexto contiene literalmente la respuesta correcta? → Si sí, reescribir.
+* ¿El contexto lista los elementos que forman la respuesta? → Si sí, eliminar esa lista.
+* ¿La respuesta puede identificarse solo leyendo el contexto? → Si sí, reescribir el contexto.
+
+REGLAS DE JUSTIFICACIÓN
+La justificación debe:
+* explicar por qué la respuesta es correcta,
+* aclarar por qué las demás opciones son incorrectas cuando sea necesario,
+* resumir el procedimiento o concepto correspondiente,
+* ampliar el aprendizaje después de responder.
+La justificación puede ser más detallada que el contexto e incluir pasos, condiciones y explicaciones operativas.
 
 FORMATO DE SALIDA
 Responde únicamente con un JSON válido. No incluyas texto adicional fuera del objeto JSON.`;
