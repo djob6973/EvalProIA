@@ -1,15 +1,25 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, FileQuestion, Lock } from "lucide-react";
+import { ArrowRight, Clock, FileQuestion, Lock, Calendar, CalendarX, CheckCircle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
-import { evaluationsService, questionsService, resultsService } from "@/lib/services/evaluations";
+import { evaluationsService, resultsService, evaluationParticipantsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/participant")({
   head: () => ({ meta: [{ title: "Mis Evaluaciones — EvalPro" }] }),
   component: ParticipantHome,
 });
+
+function formatDateTime(isoString: string): string {
+  return new Date(isoString).toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 function ParticipantHome() {
   const { profile, loading } = useAuth();
@@ -22,34 +32,43 @@ function ParticipantHome() {
   useEffect(() => {
     async function loadData() {
       if (!profile?.id) return;
-      
+
       try {
         setLoadingData(true);
-        
-        // Fetch all active evaluations
-        const allEvaluations = await evaluationsService.getAll();
-        const activeEvaluations = allEvaluations.filter((ev: any) => ev.activa !== false);
-        
-        // For each evaluation, get the question count
-        const evaluationsWithQuestions = await Promise.all(
-          activeEvaluations.map(async (ev: any) => {
-            const questions = await questionsService.getByEvaluationId(ev.id);
-            console.log('Evaluation:', ev.id, 'Questions count:', questions.length);
-            return {
-              ...ev,
-              questionCount: questions.length,
-              code: ev.id.slice(0, 6).toUpperCase(), // Generate a short code from ID
-              locked: false
-            };
-          })
-        );
-        
-        setEvaluations(evaluationsWithQuestions);
-        
-        // Fetch user's results
-        const results = await resultsService.getByUserId(profile.id);
+
+        const [allEvaluations, results, directIds] = await Promise.all([
+          evaluationsService.getAll(),
+          resultsService.getByUserId(profile.id),
+          evaluationParticipantsService.getByUserId(profile.id).catch(() => [] as string[]),
+        ]);
+
         setUserResults(results);
-        
+
+        const directSet = new Set(directIds);
+        const now = new Date();
+        const userAreaId = profile.area_id ?? null;
+
+        const activeEvaluations = allEvaluations.filter((ev: any) => {
+          if (ev.activa === false) return false;
+          if (ev.fecha_vencimiento && new Date(ev.fecha_vencimiento) < now) return false;
+          // Asignación directa siempre visible
+          if (directSet.has(ev.id)) return true;
+          // Sin área = no visible (requiere asignación directa)
+          if (!ev.area_id) return false;
+          // Área diferente = no visible
+          if (ev.area_id !== userAreaId) return false;
+          return true;
+        });
+
+        const evaluationsWithQuestions = activeEvaluations.map((ev: any) => ({
+          ...ev,
+          questionCount: ev.config?.num_preguntas || 0,
+          code: ev.id.slice(0, 6).toUpperCase(),
+          locked: false,
+        }));
+
+        setEvaluations(evaluationsWithQuestions);
+
       } catch (err) {
         console.error('Error loading participant data:', err);
         setError('Error al cargar los datos');
@@ -130,14 +149,28 @@ function ParticipantHome() {
                     {e.description && (
                       <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{e.description}</p>
                     )}
-                    <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <FileQuestion className="size-3.5" /> {e.questionCount} P
+                        <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
                       </span>
                       {e.tiempo_limite > 0 && (
                         <span className="flex items-center gap-1">
-                          <Clock className="size-3.5" /> {e.tiempo_limite}m
+                          <Clock className="size-3.5" /> {e.tiempo_limite} min
                         </span>
+                      )}
+                    </div>
+                    <div className="mt-2 space-y-1">
+                      {e.created_at && (
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Calendar className="size-3 shrink-0" />
+                          <span>Creada: {formatDateTime(e.created_at)}</span>
+                        </div>
+                      )}
+                      {e.fecha_vencimiento && (
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
+                          <CalendarX className="size-3 shrink-0" />
+                          <span>Vence: {formatDateTime(e.fecha_vencimiento)}</span>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -181,14 +214,17 @@ function ParticipantHome() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-bold leading-tight">{e.title}</h3>
-                      <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <FileQuestion className="size-3.5" /> {e.questionCount} P
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-3.5" /> {new Date(result?.completed_at).toLocaleDateString()}
+                          <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
                         </span>
                       </div>
+                      {result?.completed_at && (
+                        <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <CheckCircle className="size-3 shrink-0 text-emerald-600" />
+                          <span>Presentada: {formatDateTime(result.completed_at)}</span>
+                        </div>
+                      )}
                     </div>
                     <Button asChild variant="outline" className="w-full">
                       <Link to="/my-results/$id" params={{ id: result?.id }}>

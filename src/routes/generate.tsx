@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Check,
   CheckCircle2,
@@ -18,7 +19,10 @@ import {
   EyeOff,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { extractTextWithOCR, generateQuestions, type GeneratedQuestion } from "@/lib/services/openai";
+import { extractTextWithOCR, type GeneratedQuestion } from "@/lib/services/openai";
+import { questionsService, getUniqueCategories } from "@/lib/services/evaluations";
+import { generateQuestionsFn } from "@/lib/services/openai-server";
+import { getModelConfig } from "@/routes/settings";
 
 export const Route = createFileRoute("/generate")({
   head: () => ({
@@ -43,7 +47,7 @@ const TYPE_LABELS: Record<QuestionType, string> = {
 
 function GeneratePage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
   const navigate = useNavigate();
 
   // Redirigir a participantes a /participant
@@ -65,6 +69,8 @@ function GeneratePage() {
   const [dificultad, setDificultad] = useState("medio");
   const [categoria, setCategoria] = useState("");
   const [tiempoLimite, setTiempoLimite] = useState(30);
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [nuevaCategoria, setNuevaCategoria] = useState(false);
   const [distribucion, setDistribucion] = useState<Record<QuestionType, number>>({
     seleccion_unica: 33,
     seleccion_multiple: 33,
@@ -76,10 +82,25 @@ function GeneratePage() {
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showExtractedText, setShowExtractedText] = useState(false);
 
   const total = Object.values(distribucion).reduce((s, v) => s + v, 0);
+  
+  useEffect(() => {
+    getUniqueCategories().then(setCategorias).catch(console.error);
+  }, []);
+
+  // Debug log
+  useEffect(() => {
+    console.log('📊 Estado del componente:', {
+      total,
+      distribucion,
+      extractedText: !!extractedText,
+      extractedTextLength: extractedText?.length || 0
+    });
+  }, [total, distribucion, extractedText]);
 
   function handleFile(f: File | null) {
     if (!f) return;
@@ -132,24 +153,30 @@ function GeneratePage() {
   }
 
   async function generate() {
+    console.log('🔄 Iniciando generación de preguntas...');
+    console.log('extractedText:', extractedText?.substring(0, 100) + '...');
+    console.log('numPreguntas:', numPreguntas);
+    console.log('dificultad:', dificultad);
+    console.log('categoria:', categoria);
+    console.log('distribucion:', distribucion);
+    
     setGenerating(true);
     setQuestions([]);
     setSelected(new Set());
     setSaved(false);
     
     try {
-      const generated = await generateQuestions(
-        extractedText,
-        numPreguntas,
-        dificultad,
-        categoria,
-        distribucion
-      );
-      setQuestions(generated);
+      const customSystemPrompt = localStorage.getItem("evalpro_system_prompt") ?? undefined;
+      const { model, temperature, maxTokens } = getModelConfig();
+      const questionsArray = await generateQuestionsFn({
+        data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens },
+      });
+
+      setQuestions(questionsArray);
       // pre-select all
-      setSelected(new Set(generated.map((q) => q.id)));
+      setSelected(new Set(questionsArray.map((q) => q.id)));
     } catch (error) {
-      console.error('Error generating questions:', error);
+      console.error('❌ Error generating questions:', error);
       alert('Error al generar preguntas: ' + (error as Error).message);
     }
     
@@ -163,15 +190,66 @@ function GeneratePage() {
   }
 
   async function saveSelected() {
+    console.log('💾 saveSelected iniciado — seleccionadas:', selected.size);
     if (selected.size === 0) {
       alert("Selecciona al menos una pregunta para guardar");
       return;
     }
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3500);
+
+    try {
+      const selectedQuestions = questions.filter(q => selected.has(q.id));
+      console.log('📋 Preguntas a guardar:', selectedQuestions.length);
+
+      const validQuestions = selectedQuestions.filter(q =>
+        q.pregunta?.trim() &&
+        Array.isArray(q.opciones) && q.opciones.length >= 2 &&
+        Array.isArray(q.respuesta_correcta) && q.respuesta_correcta.length > 0
+      );
+
+      if (validQuestions.length === 0) {
+        alert('Ninguna de las preguntas seleccionadas tiene enunciado, opciones y respuesta correcta. Regenera las preguntas.');
+        setSaving(false);
+        return;
+      }
+
+      if (validQuestions.length < selectedQuestions.length) {
+        const skipped = selectedQuestions.length - validQuestions.length;
+        alert(`Se omitieron ${skipped} pregunta(s) incompletas (sin enunciado, opciones o respuesta correcta).`);
+      }
+
+      const questionsToSave = validQuestions.map(q => ({
+        evaluation_id: null,
+        question_text: q.pregunta,
+        options: q.opciones,
+        correct_answer: q.respuesta_correcta.join(','),
+        contexto: q.contexto ?? '',
+        categoria: q.categoria,
+        dificultad: q.dificultad,
+        estado: 'activa',
+        justificacion: q.justificacion ?? ''
+      }));
+
+      const savedResult = await questionsService.createBatch(questionsToSave);
+      console.log('✅ Guardadas correctamente:', savedResult.length, 'preguntas');
+
+      // Eliminar del estado las preguntas ya guardadas para evitar duplicados
+      const savedIds = new Set(validQuestions.map(q => q.id));
+      setQuestions(prev => prev.filter(q => !savedIds.has(q.id)));
+      setSelected(prev => {
+        const next = new Set(prev);
+        savedIds.forEach(id => next.delete(id));
+        return next;
+      });
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3500);
+    } catch (error) {
+      console.error('❌ Error al guardar preguntas:', error);
+      alert('Error al guardar las preguntas: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -334,12 +412,35 @@ function GeneratePage() {
                   </select>
                 </Field>
                 <Field label="Categoría">
-                  <input
-                    value={categoria}
-                    onChange={(e) => setCategoria(e.target.value)}
-                    placeholder="Ej: Matemáticas, Historia…"
+                  <select
+                    value={nuevaCategoria ? "__new__" : categoria}
+                    onChange={(e) => {
+                      if (e.target.value === "__new__") {
+                        setNuevaCategoria(true);
+                        setCategoria("");
+                      } else {
+                        setNuevaCategoria(false);
+                        setCategoria(e.target.value);
+                      }
+                    }}
                     className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                  />
+                  >
+                    <option value="">Sin categoría</option>
+                    {categorias.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="__new__">+ Crear nueva categoría…</option>
+                  </select>
+                  {nuevaCategoria && (
+                    <input
+                      type="text"
+                      value={categoria}
+                      onChange={(e) => setCategoria(e.target.value)}
+                      placeholder="Nombre de la nueva categoría"
+                      autoFocus
+                      className="mt-2 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  )}
                 </Field>
                 <Field label="Tiempo Límite (min)">
                   <input
@@ -384,7 +485,16 @@ function GeneratePage() {
               </div>
 
               <Button
-                onClick={generate}
+                onClick={() => {
+                  console.log('🖱️ Click en botón Generar Preguntas');
+                  console.log('Estado del botón:', {
+                    extractedText: !!extractedText,
+                    generating,
+                    total,
+                    extractedTextLength: extractedText?.length || 0
+                  });
+                  generate();
+                }}
                 disabled={!extractedText || generating || total !== 100}
                 size="lg"
                 className="mt-6 w-full"
@@ -470,7 +580,7 @@ function GeneratePage() {
                 >
                   {selected.size === questions.length ? "Deseleccionar todas" : "Seleccionar todas"}
                 </Button>
-                <Button onClick={saveSelected} disabled={saving || selected.size === 0}>
+                <Button onClick={() => setShowSaveConfirm(true)} disabled={saving || selected.size === 0}>
                   {saving ? (
                     <>
                       <Loader2 className="size-4 animate-spin" /> Guardando…
@@ -485,6 +595,16 @@ function GeneratePage() {
                     </>
                   )}
                 </Button>
+
+                <ConfirmDialog
+                  open={showSaveConfirm}
+                  title="¿Guardar preguntas seleccionadas?"
+                  description={`Se agregarán ${selected.size} pregunta${selected.size !== 1 ? "s" : ""} al banco de preguntas.`}
+                  confirmLabel="Guardar"
+                  loading={saving}
+                  onConfirm={async () => { setShowSaveConfirm(false); await saveSelected(); }}
+                  onCancel={() => setShowSaveConfirm(false)}
+                />
               </div>
             </div>
 

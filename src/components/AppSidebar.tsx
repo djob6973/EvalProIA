@@ -11,12 +11,14 @@ import {
   History,
   Home,
   LogOut,
+  Layers,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const adminNav = [
   { title: "Panel", url: "/dashboard", icon: LayoutDashboard, group: "Gestión" },
   { title: "Usuarios", url: "/users", icon: Users, group: "Gestión" },
+  { title: "Áreas", url: "/areas", icon: Layers, group: "Gestión" },
   { title: "Evaluaciones", url: "/evaluations", icon: ClipboardList, group: "Gestión" },
   { title: "Banco de Preguntas", url: "/question-bank", icon: Library, group: "Gestión" },
   { title: "Generador IA", url: "/generate", icon: Sparkles, group: "Herramientas" },
@@ -126,7 +128,7 @@ export function AppSidebar() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold leading-tight">{displayName}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
-              {isParticipantRole ? "Participante" : "Administrador"}
+              {profile?.role === 'both' ? "Admin + Participante" : isParticipantRole ? "Participante" : "Administrador"}
             </div>
           </div>
         </div>

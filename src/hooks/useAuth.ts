@@ -6,9 +6,10 @@ export interface Profile {
   id: string
   email: string
   full_name: string | null
-  role: 'admin' | 'participant'
+  role: 'admin' | 'participant' | 'both'
   created_at: string
   updated_at: string
+  area_id: string | null
 }
 
 export function useAuth() {
@@ -90,7 +91,7 @@ export function useAuth() {
     email: string,
     password: string,
     fullName?: string,
-    role: 'admin' | 'participant' = 'participant'
+    role: 'admin' | 'participant' | 'both' = 'participant'
   ): Promise<{ data: any; error: AuthError | null }> => {
     if (!supabase) {
       return { data: null, error: { message: 'Supabase client not available' } as AuthError }
@@ -137,6 +138,6 @@ export function useAuth() {
     signUp,
     signOut,
     resetPassword,
-    isAdmin: profile?.role === 'admin',
+    isAdmin: profile?.role === 'admin' || profile?.role === 'both',
   }
 }

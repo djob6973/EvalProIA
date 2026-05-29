@@ -13,7 +13,7 @@ export const Route = createFileRoute("/evaluations/$id/results")({
 
 function EvaluationResultsPage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
   const navigate = useNavigate();
   const { id } = Route.useParams();
   const [loading, setLoading] = useState(true);

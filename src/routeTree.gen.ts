@@ -19,6 +19,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as EvaluationsRouteImport } from './routes/evaluations'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as AreasRouteImport } from './routes/areas'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TakeCodeRouteImport } from './routes/take.$code'
@@ -76,6 +77,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AreasRoute = AreasRouteImport.update({
+  id: '/areas',
+  path: '/areas',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ActivityRoute = ActivityRouteImport.update({
   id: '/activity',
   path: '/activity',
@@ -110,6 +116,7 @@ const EvaluationsIdResultsRoute = EvaluationsIdResultsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/areas': typeof AreasRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/areas': typeof AreasRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
@@ -147,6 +155,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
+  '/areas': typeof AreasRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
@@ -167,6 +176,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/activity'
+    | '/areas'
     | '/dashboard'
     | '/evaluations'
     | '/generate'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/activity'
+    | '/areas'
     | '/dashboard'
     | '/evaluations'
     | '/generate'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/activity'
+    | '/areas'
     | '/dashboard'
     | '/evaluations'
     | '/generate'
@@ -222,6 +234,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
+  AreasRoute: typeof AreasRoute
   DashboardRoute: typeof DashboardRoute
   EvaluationsRoute: typeof EvaluationsRouteWithChildren
   GenerateRoute: typeof GenerateRoute
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/areas': {
+      id: '/areas'
+      path: '/areas'
+      fullPath: '/areas'
+      preLoaderRoute: typeof AreasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/activity': {
       id: '/activity'
       path: '/activity'
@@ -369,6 +389,7 @@ const EvaluationsRouteWithChildren = EvaluationsRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
+  AreasRoute: AreasRoute,
   DashboardRoute: DashboardRoute,
   EvaluationsRoute: EvaluationsRouteWithChildren,
   GenerateRoute: GenerateRoute,

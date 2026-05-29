@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Plus,
   Edit2,
@@ -57,6 +58,8 @@ const DIFF_LABEL: Record<Difficulty, string> = {
   medio: "Medio",
   dificil: "Difícil",
 };
+
+const PAGE_SIZE = 10;
 
 const SEED: Question[] = [
   {
@@ -131,7 +134,7 @@ function emptyQuestion(): Question {
 
 function QuestionBankPage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,10 +174,14 @@ function QuestionBankPage() {
         }));
         
         setItems(mappedItems);
-        
+
         // Extraer categorías únicas de las preguntas
         const uniqueCategories = Array.from(new Set(mappedItems.map(q => q.categoria))).sort();
         setCategories(uniqueCategories.length > 0 ? uniqueCategories : ['General']);
+
+        // Preseleccionar la categoría de la pregunta activa más reciente
+        const lastActiveCat = mappedItems.find(q => q.estado === 'activa')?.categoria;
+        if (lastActiveCat) setFilterCat(lastActiveCat);
       } catch (err) {
         console.error('Error loading questions:', err);
         setError('Error al cargar las preguntas');
@@ -190,14 +197,17 @@ function QuestionBankPage() {
   }, [isAdmin]);
   const [query, setQuery] = useState("");
   const [filterCat, setFilterCat] = useState<string>("todas");
-  const [filterEstado, setFilterEstado] = useState<"todos" | Status>("todos");
+  const [filterEstado, setFilterEstado] = useState<"todos" | Status>("activa");
   const [filterTipo, setFilterTipo] = useState<"todos" | QType>("todos");
+  const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
   const [form, setForm] = useState<Question>(emptyQuestion());
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const filtered = useMemo(
     () =>
@@ -211,11 +221,21 @@ function QuestionBankPage() {
     [items, query, filterCat, filterEstado, filterTipo],
   );
 
+  // Resetear página al cambiar cualquier filtro o búsqueda
+  useEffect(() => { setPage(1); }, [query, filterCat, filterEstado, filterTipo]);
+
   const counts = useMemo(() => {
-    const c: Record<string, number> = { Todas: items.length };
-    categories.forEach((cat) => (c[cat] = items.filter((q) => q.categoria === cat).length));
+    const source = filterEstado === 'todos' ? items : items.filter(q => q.estado === filterEstado);
+    const c: Record<string, number> = { Todas: source.length };
+    categories.forEach((cat) => (c[cat] = source.filter((q) => q.categoria === cat).length));
     return c;
-  }, [items, categories]);
+  }, [items, categories, filterEstado]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -300,7 +320,7 @@ function QuestionBankPage() {
     }));
   };
 
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.enunciado.trim()) return showToast("Escribe el enunciado", "error");
     if (!form.contexto.trim()) return showToast("Añade un contexto a la pregunta", "error");
@@ -312,12 +332,16 @@ function QuestionBankPage() {
       return showToast("Marca al menos una respuesta correcta", "error");
     if (form.tipo === "unica" && form.correctas.length > 1)
       return showToast("Selección única: solo una correcta", "error");
+    setShowSaveConfirm(true);
+  };
 
+  const executeSave = async () => {
     // Si es una categoría nueva, agregarla a la lista de categorías
     if (isCreatingCategory && newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
       setCategories((prev) => [...prev, newCategoryName.trim()].sort());
     }
 
+    setIsSaving(true);
     try {
       if (editing) {
         // Actualizar pregunta existente en Supabase
@@ -335,7 +359,7 @@ function QuestionBankPage() {
         showToast("Pregunta actualizada");
       } else {
         // Crear nueva pregunta en Supabase (sin evaluation_id para banco de preguntas)
-        const newQuestion = await questionsService.create({
+        await questionsService.create({
           evaluation_id: null,
           question_text: form.enunciado,
           contexto: form.contexto,
@@ -366,9 +390,12 @@ function QuestionBankPage() {
         showToast("Pregunta creada");
       }
       setShowModal(false);
+      setShowSaveConfirm(false);
     } catch (error) {
       console.error('Error saving question:', error);
       showToast("Error al guardar la pregunta", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -507,84 +534,110 @@ function QuestionBankPage() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filtered.map((q) => (
-                <div
-                  key={q.id}
-                  className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                          {q.id}
-                        </span>
-                        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {q.categoria}
-                        </span>
-                        <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
-                          {TYPE_LABEL[q.tipo]}
-                        </span>
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                          Dificultad · {DIFF_LABEL[q.dificultad]}
-                        </span>
-                        <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${
-                            q.estado === "activa"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : q.estado === "borrador"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}
-                        >
-                          {q.estado === "activa" ? "ACTIVA" : q.estado === "borrador" ? "BORRADOR" : "INACTIVA"}
-                        </span>
+            <>
+              <div className="space-y-3">
+                {paginated.map((q) => (
+                  <div
+                    key={q.id}
+                    className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                            {q.id}
+                          </span>
+                          <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {q.categoria}
+                          </span>
+                          <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                            {TYPE_LABEL[q.tipo]}
+                          </span>
+                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                            Dificultad · {DIFF_LABEL[q.dificultad]}
+                          </span>
+                          <span
+                            className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${
+                              q.estado === "activa"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : q.estado === "borrador"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {q.estado === "activa" ? "ACTIVA" : q.estado === "borrador" ? "BORRADOR" : "INACTIVA"}
+                          </span>
+                        </div>
+                        <p className="mb-2 text-sm leading-relaxed">{q.enunciado}</p>
+                        {q.contexto && (
+                          <p className="mb-3 rounded-md border-l-2 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                            <strong className="text-foreground">Contexto:</strong> {q.contexto}
+                          </p>
+                        )}
+                        <ul className="space-y-1">
+                          {q.opciones.map((o, i) => {
+                            const ok = q.correctas.includes(i);
+                            return (
+                              <li
+                                key={i}
+                                className={`flex items-start gap-2 rounded-md px-3 py-1.5 text-sm ${
+                                  ok ? "bg-emerald-50 text-emerald-800" : "text-muted-foreground"
+                                }`}
+                              >
+                                <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-current">
+                                  {ok && <Check className="size-3" />}
+                                </span>
+                                <span>{o}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
                       </div>
-                      <p className="mb-2 text-sm leading-relaxed">{q.enunciado}</p>
-                      {q.contexto && (
-                        <p className="mb-3 rounded-md border-l-2 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                          <strong className="text-foreground">Contexto:</strong> {q.contexto}
-                        </p>
-                      )}
-                      <ul className="space-y-1">
-                        {q.opciones.map((o, i) => {
-                          const ok = q.correctas.includes(i);
-                          return (
-                            <li
-                              key={i}
-                              className={`flex items-start gap-2 rounded-md px-3 py-1.5 text-sm ${
-                                ok
-                                  ? "bg-emerald-50 text-emerald-800"
-                                  : "text-muted-foreground"
-                              }`}
-                            >
-                              <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-current">
-                                {ok && <Check className="size-3" />}
-                              </span>
-                              <span>{o}</span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openEdit(q)}
-                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
-                      >
-                        <Edit2 className="size-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(q.id)}
-                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => openEdit(q)}
+                          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+                        >
+                          <Edit2 className="size-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(q.id)}
+                          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-border pt-4">
+                  <span className="text-xs text-muted-foreground">
+                    Página {page} de {totalPages} · {filtered.length} preguntas
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => p - 1)}
+                      disabled={page === 1}
+                    >
+                      ← Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => p + 1)}
+                      disabled={page === totalPages}
+                    >
+                      Siguiente →
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -795,6 +848,16 @@ function QuestionBankPage() {
                   {editing ? "Guardar cambios" : "Crear pregunta"}
                 </Button>
               </div>
+
+              <ConfirmDialog
+                open={showSaveConfirm}
+                title={editing ? "¿Guardar cambios?" : "¿Crear pregunta?"}
+                description={editing ? "Confirma que deseas guardar los cambios en esta pregunta." : "Confirma que deseas agregar esta pregunta al banco."}
+                confirmLabel={editing ? "Guardar cambios" : "Crear pregunta"}
+                loading={isSaving}
+                onConfirm={executeSave}
+                onCancel={() => setShowSaveConfirm(false)}
+              />
             </form>
           </div>
         </div>

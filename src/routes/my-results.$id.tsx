@@ -223,69 +223,36 @@ function MyResultPage() {
                 {Object.keys(result.answers).map((questionId, qIndex) => {
                   const question = questionsMap[questionId];
                   if (!question) return null;
-                  
+
                   const userAnswer = result.answers[questionId];
                   const userAnswers = userAnswer ? String(userAnswer).split(',').map((a: string) => a.trim()) : [];
                   const correctAnswers = question.correct_answer.split(',').map((a: string) => a.trim());
-                  
-                  // Verificar si todas las respuestas del usuario son correctas
-                  const allCorrect = userAnswers.length > 0 && 
+
+                  const allCorrect = userAnswers.length > 0 &&
                     userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                  // Verificar si el usuario seleccionó todas las respuestas correctas
                   const allSelected = correctAnswers.every((ans: string) => userAnswers.includes(ans));
                   const isCorrect = allCorrect && allSelected;
-                  
+                  const hasSomeCorrect = userAnswers.length > 0 &&
+                    userAnswers.some((ans: string) => correctAnswers.includes(ans));
+                  const isPartial = hasSomeCorrect && !isCorrect;
+
+                  const statusConfig = isCorrect
+                    ? { label: "Correcta", icon: <CheckCircle className="size-3" />, card: "border-emerald-200 bg-emerald-50", badge: "bg-emerald-100 text-emerald-700" }
+                    : isPartial
+                    ? { label: "Parcial", icon: <TrendingUp className="size-3" />, card: "border-amber-200 bg-amber-50", badge: "bg-amber-100 text-amber-700" }
+                    : { label: "Incorrecta", icon: <XCircle className="size-3" />, card: "border-red-200 bg-red-50", badge: "bg-red-100 text-red-700" };
+
                   return (
-                    <div key={questionId} className="rounded-lg border border-border bg-secondary/30 p-4">
-                      <div className="flex items-start gap-3">
-                        <div className={`mt-0.5 size-5 shrink-0 rounded-full flex items-center justify-center ${
-                          isCorrect ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
-                        }`}>
-                          {isCorrect ? <CheckCircle className="size-3" /> : <XCircle className="size-3" />}
+                    <div key={questionId} className={`rounded-lg border p-4 ${statusConfig.card}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <span className="text-xs text-muted-foreground">Pregunta {qIndex + 1}</span>
+                          <p className="mt-1 font-medium text-sm">{question.question_text}</p>
                         </div>
-                        <div className="flex-1 space-y-2">
-                          <div className="font-medium text-sm">
-                            <span className="text-muted-foreground mr-2">Pregunta {qIndex + 1}:</span>
-                            {question.question_text}
-                          </div>
-                          <div className="space-y-1">
-                            {question.options.map((option: string, oIndex: number) => {
-                              const isSelected = userAnswers.includes(String(oIndex));
-                              const isOptionCorrect = correctAnswers.includes(String(oIndex));
-                              
-                              return (
-                                <div
-                                  key={oIndex}
-                                  className={`flex items-center gap-2 rounded px-3 py-2 text-xs ${
-                                    isSelected && isOptionCorrect
-                                      ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                                      : isSelected && !isOptionCorrect
-                                      ? "bg-red-100 text-red-800 border border-red-300"
-                                      : isOptionCorrect
-                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                      : "bg-background"
-                                  }`}
-                                >
-                                  <div className={`size-4 rounded border-2 flex items-center justify-center ${
-                                    isSelected ? "border-current bg-current" : "border-muted"
-                                  }`}>
-                                    {isSelected && <div className="size-2 rounded-sm bg-white" />}
-                                  </div>
-                                  <span className="flex-1">{option}</span>
-                                  {isOptionCorrect && !isSelected && (
-                                    <span className="text-[10px] font-medium text-emerald-600">Correcta</span>
-                                  )}
-                                  {isSelected && isOptionCorrect && (
-                                    <span className="text-[10px] font-medium text-emerald-700">Tu respuesta ✓</span>
-                                  )}
-                                  {isSelected && !isOptionCorrect && (
-                                    <span className="text-[10px] font-medium text-red-700">Tu respuesta ✗</span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                        <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${statusConfig.badge}`}>
+                          {statusConfig.icon}
+                          {statusConfig.label}
+                        </span>
                       </div>
                     </div>
                   );
