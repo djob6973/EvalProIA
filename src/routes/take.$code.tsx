@@ -79,33 +79,40 @@ function TakeEvaluationRoute() {
         if (progress) {
           setExistingProgress(progress);
         }
-        
+
         // Cargar preguntas asociadas a la evaluación
         let questionsData = await questionsService.getByEvaluationId(code);
 
-        // Si no hay preguntas asociadas, cargar del banco de preguntas
+        // Si no hay preguntas directamente asociadas, cargar del banco de preguntas
         if (questionsData.length === 0) {
-          const allQuestions = await questionsService.getAll();
+          // Al reanudar, cargar exactamente las preguntas del progreso guardado
+          // para que los IDs coincidan con question_order y answers
+          if (progress && progress.question_order && progress.question_order.length > 0) {
+            questionsData = await questionsService.getByIds(progress.question_order);
+          } else {
+            const allQuestions = await questionsService.getAll();
 
-          // Filtrar por categorías si están especificadas
-          let filteredQuestions = allQuestions;
-          if (evalData.categorias && evalData.categorias.length > 0) {
-            filteredQuestions = allQuestions.filter(q =>
-              q.categoria && evalData.categorias.includes(q.categoria)
-            );
+            // Filtrar por categorías si están especificadas
+            let filteredQuestions = allQuestions;
+            const categorias = evalData.categorias;
+            if (categorias && categorias.length > 0) {
+              filteredQuestions = allQuestions.filter(q =>
+                q.categoria && categorias.includes(q.categoria)
+              );
+            }
+
+            // Filtrar por dificultad si no es "mixto"
+            if (evalData.config?.dificultad && evalData.config.dificultad !== 'mixto') {
+              filteredQuestions = filteredQuestions.filter(q =>
+                q.dificultad === evalData.config.dificultad
+              );
+            }
+
+            // Mezclar y limitar según num_preguntas
+            const shuffled = shuffleArray(filteredQuestions);
+            const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
+            questionsData = shuffled.slice(0, numPreguntas);
           }
-
-          // Filtrar por dificultad si no es "mixto"
-          if (evalData.config?.dificultad && evalData.config.dificultad !== 'mixto') {
-            filteredQuestions = filteredQuestions.filter(q =>
-              q.dificultad === evalData.config.dificultad
-            );
-          }
-
-          // Mezclar y limitar según num_preguntas
-          const shuffled = shuffleArray(filteredQuestions);
-          const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
-          questionsData = shuffled.slice(0, numPreguntas);
         }
         
         setQuestions(questionsData);

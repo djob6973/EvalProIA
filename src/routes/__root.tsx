@@ -84,6 +84,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         search: { redirect: location.pathname + location.search },
       });
     }
+
+    // Verify the user's profile still exists — catches deleted users whose JWT hasn't expired yet
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', session.user.id)
+      .maybeSingle();
+
+    if (!profile) {
+      await supabase.auth.signOut();
+      throw redirect({ to: "/login" });
+    }
   },
   head: () => ({
     meta: [

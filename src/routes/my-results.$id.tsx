@@ -100,7 +100,8 @@ function MyResultPage() {
     );
   }
 
-  const passed = result.score >= 60;
+  const passingThreshold = evaluation?.config?.porcentaje_aprobacion ?? 60;
+  const passed = result.score >= passingThreshold;
 
   // Calcular conteo de respuestas
   let correctCount = 0;

@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { areasService, Area } from "@/lib/services/evaluations";
-import { createUserFn } from "@/lib/services/auth-server";
+import { createUserFn, deleteUserFn } from "@/lib/services/auth-server";
 
 export const Route = createFileRoute("/users")({
   head: () => ({ meta: [{ title: "Usuarios — EvalPro" }] }),
@@ -225,12 +225,15 @@ function UsersPage() {
     setIsDeleting(true);
 
     try {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', deletingUser.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        setDeleteError("Sesión expirada. Recarga la página.");
+        return;
+      }
 
-      if (profileError) throw profileError;
+      await deleteUserFn({
+        data: { userId: deletingUser.id, _token: session.access_token },
+      });
 
       setShowDeleteModal(false);
       setDeletingUser(null);

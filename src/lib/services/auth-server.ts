@@ -71,3 +71,53 @@ export const createUserFn = createServerFn({ method: 'POST' })
 
     return { id: result.user.id, email: result.user.email };
   });
+
+type DeleteUserInput = {
+  userId: string;
+  _token: string;
+};
+
+export const deleteUserFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: DeleteUserInput) => data)
+  .handler(async ({ data }) => {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl =
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+
+    if (!serviceRoleKey || !supabaseUrl) {
+      throw new Error(
+        'Configuración del servidor incompleta: faltan SUPABASE_SERVICE_ROLE_KEY o SUPABASE_URL'
+      );
+    }
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // Verify caller identity and role server-side
+    const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(data._token);
+    if (authError || !caller) {
+      throw new Error('No autorizado');
+    }
+
+    const { data: callerProfile } = await adminClient
+      .from('profiles')
+      .select('role')
+      .eq('id', caller.id)
+      .single();
+
+    if (!callerProfile || !['admin', 'both'].includes(callerProfile.role)) {
+      throw new Error('No autorizado: se requiere rol de administrador');
+    }
+
+    // Prevent self-deletion
+    if (data.userId === caller.id) {
+      throw new Error('No puedes eliminar tu propia cuenta');
+    }
+
+    // Delete from auth.users — cascades to profiles and all related tables
+    const { error } = await adminClient.auth.admin.deleteUser(data.userId);
+    if (error) throw new Error(error.message);
+
+    return { success: true };
+  });

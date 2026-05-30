@@ -50,8 +50,9 @@ function EvaluationResultsPage() {
         const averageScore = totalParticipants > 0
           ? Math.round(resultsData.reduce((sum, r) => sum + r.score, 0) / totalParticipants)
           : 0;
+        const passingThreshold = evalData?.config?.porcentaje_aprobacion ?? 60;
         const passRate = totalParticipants > 0
-          ? Math.round((resultsData.filter((r) => r.score >= 60).length / totalParticipants) * 100)
+          ? Math.round((resultsData.filter((r) => r.score >= passingThreshold).length / totalParticipants) * 100)
           : 0;
         const bestScore = totalParticipants > 0
           ? Math.max(...resultsData.map((r) => r.score))
@@ -186,12 +187,12 @@ function EvaluationResultsPage() {
                       <td className="px-6 py-4">
                         <span
                           className={`rounded px-2 py-1 text-[10px] font-bold ${
-                            result.score >= 60
+                            result.score >= (evaluation?.config?.porcentaje_aprobacion ?? 60)
                               ? "bg-emerald-100 text-emerald-700"
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {result.score >= 60 ? "APROBADO" : "REPROBADO"}
+                          {result.score >= (evaluation?.config?.porcentaje_aprobacion ?? 60) ? "APROBADO" : "REPROBADO"}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
