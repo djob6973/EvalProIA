@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 
 export const PROMPT_STORAGE_KEY = "evalpro_system_prompt";
+export const PROMPT_VERSION_KEY = "evalpro_prompt_version";
+export const PROMPT_VERSION = "2";
 export const MODEL_CONFIG_KEY = "evalpro_model_config";
 
 export type ModelConfig = {
@@ -30,6 +32,17 @@ export function getModelConfig(): ModelConfig {
   } catch {
     return DEFAULT_MODEL_CONFIG;
   }
+}
+
+export function getSystemPrompt(): string {
+  if (typeof window === "undefined") return defaultPrompt;
+  const storedVersion = localStorage.getItem(PROMPT_VERSION_KEY);
+  if (storedVersion !== PROMPT_VERSION) {
+    localStorage.setItem(PROMPT_STORAGE_KEY, defaultPrompt);
+    localStorage.setItem(PROMPT_VERSION_KEY, PROMPT_VERSION);
+    return defaultPrompt;
+  }
+  return localStorage.getItem(PROMPT_STORAGE_KEY) ?? defaultPrompt;
 }
 
 export const Route = createFileRoute("/settings")({
@@ -59,7 +72,7 @@ RESTRICCIONES OBLIGATORIAS
 - No omitir respuestas ni justificaciones en ninguna pregunta.
 - No utilizar expresiones meta-referenciales al material fuente como:
   "según el documento", "de acuerdo con el documento", "como se menciona en el texto",
-  "según la guía", "según el manual" o frases similares.
+  "según la guía", "según el manual","segun el texto" o frases similares.
 - Las preguntas, opciones, respuestas y justificaciones deben redactarse como evaluaciones
   naturales y autónomas, sin referencia explícita al material entregado.
 - Si el documento no contiene información suficiente para algún tipo de pregunta solicitado,
@@ -90,36 +103,60 @@ Cuando el contenido describa procedimientos o secuencias operativas:
 * En preguntas de selección múltiple: indicar explícitamente que existen varias respuestas correctas, incluir únicamente combinaciones válidas, evitar listas incompletas o ambiguas.
 * Mantener coherencia exacta con el orden y contenido del procedimiento original.
 
-REGLAS DEL CAMPO CONTEXTO — CRÍTICO
-El campo "contexto" debe servir únicamente como introducción breve al tema evaluado.
-El contexto NO debe:
-* revelar la respuesta correcta,
-* incluir listas completas de elementos, pasos o categorías del tema evaluado,
-* copiar procedimientos completos del documento,
-* contener validaciones exactas del proceso,
-* anticipar opciones correctas,
-* funcionar como explicación de la respuesta.
+# REGLA CRÍTICA DEL CAMPO CONTEXTO
+El campo "contexto" NO debe describir, explicar, resumir ni desarrollar el contenido específico evaluado en la pregunta.
+Su función es únicamente indicar el tema general al que pertenece la pregunta.
 
-El contexto DEBE:
-* describir brevemente el tema en máximo 1 o 2 frases cortas,
-* mencionar el módulo, proceso o área temática evaluada,
-* mantener neutralidad absoluta respecto a la respuesta.
+## Regla principal
+Si el contexto puede utilizarse para inferir si una afirmación es verdadera o falsa, identificar la opción correcta o descartar opciones incorrectas, entonces el contexto es inválido.
 
-Ejemplos VÁLIDOS de contexto:
-* "La composición del salario en Colombia está regulada por el Código Sustantivo del Trabajo."
-* "Los eventos de recepción permiten gestionar facturas electrónicas de proveedores."
-* "La plataforma permite configurar procesos automáticos para la recepción de documentos."
+## Nivel de detalle permitido
+El contexto debe permanecer un nivel de abstracción por encima de la pregunta.
 
-Ejemplos INVÁLIDOS (prohibidos):
-* Listar qué elementos SÍ o NO pertenecen al concepto evaluado.
-* Explicar exactamente qué opciones son correctas o incorrectas.
-* Copiar instrucciones textuales del documento.
+Correcto — tema general:
+* "Importaciones."
+* "Proceso de importación."
+* "Capacitación sobre importaciones."
+* "Gestión de operaciones de comercio exterior."
 
-VALIDACIÓN OBLIGATORIA ANTES DE GENERAR
-Antes de escribir el contexto de cada pregunta, verificar:
-* ¿El contexto contiene literalmente la respuesta correcta? → Si sí, reescribir.
-* ¿El contexto lista los elementos que forman la respuesta? → Si sí, eliminar esa lista.
-* ¿La respuesta puede identificarse solo leyendo el contexto? → Si sí, reescribir el contexto.
+Incorrecto — información específica evaluada:
+* "La capacitación busca reducir errores."
+* "El proceso permite validar documentos."
+* "La recepción electrónica requiere aceptación."
+* "Las novedades salariales afectan la liquidación."
+
+## Restricciones adicionales
+El contexto NO puede:
+* Contener objetivos, beneficios o finalidades.
+* Contener ventajas o desventajas.
+* Contener definiciones completas.
+* Contener reglas de negocio.
+* Contener condiciones de uso.
+* Contener criterios de validación.
+* Contener consecuencias de una acción.
+* Contener características distintivas del concepto evaluado.
+* Contener información que permita confirmar o negar el enunciado.
+
+## Formato recomendado
+Preferir contextos extremadamente breves:
+* Nombre del módulo.
+* Nombre del proceso.
+* Nombre del tema.
+* Nombre de la funcionalidad.
+
+Ejemplos válidos:
+* "Importaciones."
+* "Capacitación en importaciones."
+* "Gestión documental."
+* "Facturación electrónica."
+* "Nómina."
+
+## Validación obligatoria
+Antes de generar el contexto, responder:
+1. ¿El contexto ayuda a responder la pregunta? → Si sí, eliminar información.
+2. ¿El contexto permite deducir la respuesta correcta? → Si sí, reescribir.
+3. ¿El contexto podría mostrarse para cualquier pregunta del mismo tema sin necesidad de cambios? → Si no, es demasiado específico.
+4. ¿El contexto es simplemente el nombre del tema o una descripción general del área? → Si no, simplificar.
 
 REGLAS DE JUSTIFICACIÓN
 La justificación debe:
@@ -147,10 +184,7 @@ function SettingsPage() {
   const navigate = useNavigate();
 
   // ── Prompt state ──────────────────────────────────────────────────────────
-  const [persistedPrompt, setPersistedPrompt] = useState<string>(() => {
-    if (typeof window === "undefined") return defaultPrompt;
-    return localStorage.getItem(PROMPT_STORAGE_KEY) ?? defaultPrompt;
-  });
+  const [persistedPrompt, setPersistedPrompt] = useState<string>(getSystemPrompt);
   const [promptValue, setPromptValue] = useState<string>(persistedPrompt);
   const [showPromptConfirm, setShowPromptConfirm] = useState(false);
   const isPromptDirty = promptValue !== persistedPrompt;

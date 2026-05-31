@@ -50,7 +50,8 @@ Automatizar el proceso de creación de evaluaciones de conocimiento a partir de 
 - Extracción de texto con OCR para imágenes vía gpt-4o
 - Configuración de generación: número de preguntas, dificultad, categoría, distribución de tipos
 - Tipos de pregunta: selección única, selección múltiple, verdadero/falso
-- Revisión y edición de preguntas antes de guardar
+- **Edición inline de preguntas generadas**: editar enunciado, opciones, respuesta correcta, dificultad, categoría y justificación antes de guardar — sin regenerar el lote completo
+- **Regeneración individual**: botón por pregunta que regenera solo esa pregunta del mismo tipo, manteniendo el resto del lote intacto
 - Importación masiva al banco de preguntas o a una evaluación específica
 
 ### 3. Gestión de Evaluaciones (Admin)

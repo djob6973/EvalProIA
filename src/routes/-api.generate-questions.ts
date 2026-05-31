@@ -11,6 +11,7 @@ export const APIRoute = createAPIFileRoute('/api/generate-questions')({
         dificultad: string;
         categoria: string;
         distribucion: Record<string, number>;
+        customSystemPrompt?: string;
       };
 
       const result = await generateQuestionsServer(
@@ -18,7 +19,8 @@ export const APIRoute = createAPIFileRoute('/api/generate-questions')({
         input.numPreguntas,
         input.dificultad,
         input.categoria,
-        input.distribucion
+        input.distribucion,
+        input.customSystemPrompt
       );
       
       return new Response(JSON.stringify(result), {

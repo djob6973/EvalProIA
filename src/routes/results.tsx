@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useMemo, useState } from "react";
+import { Download } from "lucide-react";
 import { resultsService, areasService, getAllParticipants } from "@/lib/services/evaluations";
 import type { Area } from "@/lib/services/evaluations";
 import {
@@ -219,6 +220,36 @@ function ResultsPage() {
       }));
   }, [allResults, filterYear, filterAreaId, filterUserId]);
 
+  function downloadCsv(rows: string[][], filename: string) {
+    const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const content = rows.map((row) => row.map(escape).join(",")).join("\n");
+    const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportResultsCsv() {
+    const headers = ["Participante", "Email", "Evaluación", "Área", "Puntaje", "Estado", "Fecha Completado"];
+    const rows = allResults.map((r) => {
+      const area = areas.find((a) => a.id === r.evaluations?.area_id);
+      return [
+        r.profiles?.full_name || "",
+        r.profiles?.email || "",
+        r.evaluations?.title || "",
+        area?.name || "",
+        String(r.score),
+        r.score >= 60 ? "APROBADO" : "REPROBADO",
+        new Date(r.completed_at).toLocaleString("es-ES"),
+      ];
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    downloadCsv([headers, ...rows], `resultados-globales-${today}.csv`);
+  }
+
   const max =
     distribution.length > 0
       ? Math.max(...distribution.map((d) => d.count))
@@ -268,6 +299,16 @@ function ResultsPage() {
         { label: "Herramientas" },
         { label: "Resultados Globales" },
       ]}
+      actions={
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={exportResultsCsv}
+          disabled={allResults.length === 0}
+        >
+          <Download className="size-4" /> Exportar CSV
+        </Button>
+      }
     >
       <div className="space-y-6">
         {/* KPI cards */}

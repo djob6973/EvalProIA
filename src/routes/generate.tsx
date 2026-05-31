@@ -17,12 +17,14 @@ import {
   CheckSquare,
   Eye,
   EyeOff,
+  Pencil,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { extractTextWithOCR, type GeneratedQuestion } from "@/lib/services/openai";
 import { questionsService, getUniqueCategories } from "@/lib/services/evaluations";
 import { generateQuestionsFn } from "@/lib/services/openai-server";
-import { getModelConfig } from "@/routes/settings";
+import { getModelConfig, getSystemPrompt } from "@/routes/settings";
 
 export const Route = createFileRoute("/generate")({
   head: () => ({
@@ -85,6 +87,9 @@ function GeneratePage() {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
   const [showExtractedText, setShowExtractedText] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState<GeneratedQuestion | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
 
   const total = Object.values(distribucion).reduce((s, v) => s + v, 0);
   
@@ -150,7 +155,7 @@ function GeneratePage() {
     setSaved(false);
     
     try {
-      const customSystemPrompt = localStorage.getItem("evalpro_system_prompt") ?? undefined;
+      const customSystemPrompt = getSystemPrompt();
       const { model, temperature, maxTokens, retries } = getModelConfig();
       const questionsArray = await generateQuestionsFn({
         data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries },
@@ -171,6 +176,74 @@ function GeneratePage() {
     const next = new Set(selected);
     next.has(id) ? next.delete(id) : next.add(id);
     setSelected(next);
+  }
+
+  function startEdit(q: GeneratedQuestion) {
+    setEditingId(q.id);
+    setEditDraft({ ...q, opciones: [...q.opciones], respuesta_correcta: [...q.respuesta_correcta] });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  function saveEdit() {
+    if (!editDraft) return;
+    setQuestions((prev) => prev.map((q) => (q.id === editDraft.id ? editDraft : q)));
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  async function regenerateQuestion(q: GeneratedQuestion) {
+    setRegeneratingId(q.id);
+    // Cancel edit mode on the question being regenerated
+    if (editingId === q.id) cancelEdit();
+    try {
+      const customSystemPrompt = getSystemPrompt();
+      const { model, temperature, maxTokens, retries } = getModelConfig();
+      const singleDistribucion = {
+        seleccion_unica: q.tipo === "seleccion_unica" ? 100 : 0,
+        seleccion_multiple: q.tipo === "seleccion_multiple" ? 100 : 0,
+        verdadero_falso: q.tipo === "verdadero_falso" ? 100 : 0,
+      };
+      const [newQ] = await generateQuestionsFn({
+        data: {
+          extractedText,
+          numPreguntas: 1,
+          dificultad: q.dificultad,
+          categoria: q.categoria,
+          distribucion: singleDistribucion,
+          customSystemPrompt,
+          model,
+          temperature,
+          maxTokens,
+          retries,
+        },
+      });
+      // Keep original id so selection state is preserved
+      setQuestions((prev) =>
+        prev.map((item) => (item.id === q.id ? { ...newQ, id: q.id } : item))
+      );
+    } catch (error) {
+      alert("Error al regenerar la pregunta: " + (error as Error).message);
+    } finally {
+      setRegeneratingId(null);
+    }
+  }
+
+  function toggleCorrectAnswer(optionIndex: number) {
+    if (!editDraft) return;
+    const isSingle = editDraft.tipo === "seleccion_unica" || editDraft.tipo === "verdadero_falso";
+    if (isSingle) {
+      setEditDraft({ ...editDraft, respuesta_correcta: [optionIndex] });
+    } else {
+      const already = editDraft.respuesta_correcta.includes(optionIndex);
+      const next = already
+        ? editDraft.respuesta_correcta.filter((i) => i !== optionIndex)
+        : [...editDraft.respuesta_correcta, optionIndex];
+      setEditDraft({ ...editDraft, respuesta_correcta: next });
+    }
   }
 
   async function saveSelected() {
@@ -602,6 +675,7 @@ function GeneratePage() {
                       )}
                     </button>
                     <div className="min-w-0 flex-1 space-y-3">
+                      {/* Badges row + edit toggle */}
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           #{String(idx + 1).padStart(2, "0")}
@@ -610,42 +684,185 @@ function GeneratePage() {
                           {TYPE_LABELS[q.tipo]}
                         </span>
                         <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
-                          {q.dificultad}
+                          {editingId === q.id && editDraft ? editDraft.dificultad : q.dificultad}
                         </span>
                         <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {q.categoria}
+                          {editingId === q.id && editDraft ? editDraft.categoria : q.categoria}
                         </span>
+                        <div className="ml-auto flex items-center gap-1">
+                          <button
+                            onClick={() => regenerateQuestion(q)}
+                            disabled={regeneratingId === q.id || editingId === q.id || generating}
+                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Regenerar esta pregunta"
+                          >
+                            {regeneratingId === q.id ? (
+                              <><Loader2 className="size-3 animate-spin" /> Regenerando…</>
+                            ) : (
+                              <><RefreshCw className="size-3" /> Regenerar</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => editingId === q.id ? cancelEdit() : startEdit(q)}
+                            disabled={regeneratingId === q.id}
+                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label={editingId === q.id ? "Cancelar edición" : "Editar pregunta"}
+                          >
+                            {editingId === q.id ? (
+                              <><X className="size-3" /> Cancelar</>
+                            ) : (
+                              <><Pencil className="size-3" /> Editar</>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium leading-relaxed">{q.pregunta}</p>
-                      {q.contexto && (
-                        <p className="rounded-md border-l-2 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                          <strong className="text-foreground">Contexto:</strong> {q.contexto}
-                        </p>
+
+                      {editingId === q.id && editDraft ? (
+                        /* ── EDIT MODE ── */
+                        <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4">
+                          {/* Pregunta */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pregunta</label>
+                            <textarea
+                              rows={3}
+                              value={editDraft.pregunta}
+                              onChange={(e) => setEditDraft({ ...editDraft, pregunta: e.target.value })}
+                              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
+
+                          {/* Contexto */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contexto (opcional)</label>
+                            <textarea
+                              rows={2}
+                              value={editDraft.contexto}
+                              onChange={(e) => setEditDraft({ ...editDraft, contexto: e.target.value })}
+                              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
+
+                          {/* Opciones */}
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Opciones — haz clic en la letra para marcar como correcta
+                            </label>
+                            {editDraft.opciones.map((opt, i) => {
+                              const isCorrect = editDraft.respuesta_correcta.includes(i);
+                              return (
+                                <div
+                                  key={i}
+                                  className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${
+                                    isCorrect ? "border-emerald-300 bg-emerald-50" : "border-border bg-background"
+                                  }`}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleCorrectAnswer(i)}
+                                    title={isCorrect ? "Quitar como correcta" : "Marcar como correcta"}
+                                    className={`grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold transition-colors ${
+                                      isCorrect
+                                        ? "bg-emerald-500 text-white"
+                                        : "bg-secondary text-muted-foreground hover:bg-accent/20"
+                                    }`}
+                                  >
+                                    {String.fromCharCode(65 + i)}
+                                  </button>
+                                  <input
+                                    value={opt}
+                                    onChange={(e) => {
+                                      const next = [...editDraft.opciones];
+                                      next[i] = e.target.value;
+                                      setEditDraft({ ...editDraft, opciones: next });
+                                    }}
+                                    className="flex-1 bg-transparent text-xs focus:outline-none"
+                                  />
+                                  {isCorrect && <Check className="size-3.5 shrink-0 text-emerald-600" />}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Dificultad + Categoría */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dificultad</label>
+                              <select
+                                value={editDraft.dificultad}
+                                onChange={(e) => setEditDraft({ ...editDraft, dificultad: e.target.value })}
+                                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                              >
+                                <option value="facil">Fácil</option>
+                                <option value="medio">Medio</option>
+                                <option value="dificil">Difícil</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categoría</label>
+                              <input
+                                value={editDraft.categoria}
+                                onChange={(e) => setEditDraft({ ...editDraft, categoria: e.target.value })}
+                                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Justificación */}
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Justificación</label>
+                            <textarea
+                              rows={2}
+                              value={editDraft.justificacion}
+                              onChange={(e) => setEditDraft({ ...editDraft, justificacion: e.target.value })}
+                              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                            />
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2 pt-1">
+                            <Button size="sm" onClick={saveEdit}>
+                              <Save className="size-3.5" /> Guardar cambios
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ── VIEW MODE ── */
+                        <>
+                          <p className="text-sm font-medium leading-relaxed">{q.pregunta}</p>
+                          {q.contexto && (
+                            <p className="rounded-md border-l-2 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                              <strong className="text-foreground">Contexto:</strong> {q.contexto}
+                            </p>
+                          )}
+                          <ul className="space-y-1.5">
+                            {q.opciones.map((opt, i) => {
+                              const correct = q.respuesta_correcta.includes(i);
+                              return (
+                                <li
+                                  key={i}
+                                  className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
+                                    correct
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                      : "border-border bg-background text-muted-foreground"
+                                  }`}
+                                >
+                                  <span className="grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold">
+                                    {String.fromCharCode(65 + i)}
+                                  </span>
+                                  {opt}
+                                  {correct && <Check className="ml-auto size-3.5" />}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          <p className="rounded-md border border-border bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
+                            <strong className="text-foreground">Justificación:</strong> {q.justificacion}
+                          </p>
+                        </>
                       )}
-                      <ul className="space-y-1.5">
-                        {q.opciones.map((opt, i) => {
-                          const correct = q.respuesta_correcta.includes(i);
-                          return (
-                            <li
-                              key={i}
-                              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
-                                correct
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                  : "border-border bg-background text-muted-foreground"
-                              }`}
-                            >
-                              <span className="grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold">
-                                {String.fromCharCode(65 + i)}
-                              </span>
-                              {opt}
-                              {correct && <Check className="ml-auto size-3.5" />}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <p className="rounded-md border border-border bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
-                        <strong className="text-foreground">Justificación:</strong> {q.justificacion}
-                      </p>
                     </div>
                   </div>
                 );

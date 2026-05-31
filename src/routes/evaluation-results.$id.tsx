@@ -3,10 +3,10 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService } from "@/lib/services/evaluations";
-import { ArrowLeft, TrendingUp, Users, Award, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download } from "lucide-react";
 
 export const Route = createFileRoute("/evaluation-results/$id")({
   head: () => ({ meta: [{ title: "Resultados de Evaluación — EvalPro" }] }),
@@ -92,6 +92,93 @@ function EvaluationResultsPage() {
     loadData();
   }, [profile, isAdmin, id, navigate]);
 
+  const questionAnalytics = useMemo(() => {
+    if (!results.length || !Object.keys(questionsMap).length) return [];
+
+    const qStats: Record<string, { questionId: string; text: string; attempts: number; correct: number }> = {};
+
+    results.forEach((r: any) => {
+      if (!r.answers) return;
+      Object.keys(r.answers).forEach((qId) => {
+        const q = questionsMap[qId];
+        if (!q) return;
+        if (!qStats[qId]) {
+          qStats[qId] = { questionId: qId, text: q.question_text, attempts: 0, correct: 0 };
+        }
+        const userAns = r.answers[qId] ? String(r.answers[qId]).split(",").map((a: string) => a.trim()) : [];
+        const correctAns = q.correct_answer.split(",").map((a: string) => a.trim());
+        const allCorrect = userAns.length > 0 && userAns.every((a: string) => correctAns.includes(a));
+        const allSelected = correctAns.every((a: string) => userAns.includes(a));
+        qStats[qId].attempts++;
+        if (allCorrect && allSelected) qStats[qId].correct++;
+      });
+    });
+
+    return Object.values(qStats)
+      .map((s) => ({
+        ...s,
+        errorRate: s.attempts > 0 ? Math.round(((s.attempts - s.correct) / s.attempts) * 100) : 0,
+      }))
+      .sort((a, b) => b.errorRate - a.errorRate);
+  }, [results, questionsMap]);
+
+  function downloadCsv(rows: string[][], filename: string) {
+    const escape = (v: string) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const content = rows.map((row) => row.map(escape).join(",")).join("\n");
+    const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportResultsCsv() {
+    const passing = evaluation?.config?.porcentaje_aprobacion ?? 60;
+    const headers = [
+      "Participante",
+      "Email",
+      "Puntaje",
+      "Estado",
+      "Correctas",
+      "Parciales",
+      "Incorrectas",
+      "Fecha Completado",
+    ];
+    const rows = results.map((r: any) => {
+      let correct = 0, partial = 0, incorrect = 0;
+      if (r.answers) {
+        Object.keys(r.answers).forEach((qId) => {
+          const q = questionsMap[qId];
+          if (!q) return;
+          const userAns = r.answers[qId] ? String(r.answers[qId]).split(",").map((a: string) => a.trim()) : [];
+          const correctAns = q.correct_answer.split(",").map((a: string) => a.trim());
+          const allCorrect = userAns.length > 0 && userAns.every((a: string) => correctAns.includes(a));
+          const allSelected = correctAns.every((a: string) => userAns.includes(a));
+          const isCorrect = allCorrect && allSelected;
+          const hasSome = userAns.length > 0 && userAns.some((a: string) => correctAns.includes(a));
+          if (isCorrect) correct++;
+          else if (hasSome) partial++;
+          else incorrect++;
+        });
+      }
+      return [
+        r.profiles?.full_name || "",
+        r.profiles?.email || "",
+        String(r.score),
+        r.score >= passing ? "APROBADO" : "REPROBADO",
+        String(correct),
+        String(partial),
+        String(incorrect),
+        new Date(r.completed_at).toLocaleString("es-ES"),
+      ];
+    });
+    const safe = (evaluation?.title || id).replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    const today = new Date().toISOString().slice(0, 10);
+    downloadCsv([headers, ...rows], `resultados-${safe}-${today}.csv`);
+  }
+
   if (loading) {
     return (
       <AppShell
@@ -126,11 +213,21 @@ function EvaluationResultsPage() {
     <AppShell
       breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }, { label: "Resultados" }]}
       actions={
-        <Button asChild variant="outline">
-          <Link to="/evaluations">
-            <ArrowLeft className="size-4" /> Volver a Evaluaciones
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportResultsCsv}
+            disabled={results.length === 0}
+          >
+            <Download className="size-4" /> Exportar CSV
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/evaluations">
+              <ArrowLeft className="size-4" /> Volver a Evaluaciones
+            </Link>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -365,6 +462,59 @@ function EvaluationResultsPage() {
             )}
           </div>
         </div>
+        {/* Analytics por pregunta */}
+        {questionAnalytics.length > 0 && (
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            <div className="border-b border-border p-6">
+              <h2 className="font-bold">Analytics por Pregunta</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Preguntas ordenadas de mayor a menor tasa de error — identifica los conceptos más débiles del equipo
+              </p>
+            </div>
+            <div className="divide-y divide-border">
+              {questionAnalytics.map((qa, idx) => {
+                const errorColor =
+                  qa.errorRate >= 70
+                    ? "bg-red-500"
+                    : qa.errorRate >= 40
+                    ? "bg-amber-400"
+                    : "bg-emerald-400";
+                const errorLabel =
+                  qa.errorRate >= 70
+                    ? "text-red-600"
+                    : qa.errorRate >= 40
+                    ? "text-amber-600"
+                    : "text-emerald-600";
+                return (
+                  <div key={qa.questionId} className="flex items-start gap-4 p-4">
+                    <div className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary font-mono text-xs font-bold text-muted-foreground">
+                      {idx + 1}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-sm font-medium leading-snug line-clamp-2">
+                        {qa.text}
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+                          <div
+                            className={`h-full rounded-full transition-all ${errorColor}`}
+                            style={{ width: `${qa.errorRate}%` }}
+                          />
+                        </div>
+                        <span className={`w-24 shrink-0 font-mono text-xs font-bold ${errorLabel}`}>
+                          {qa.errorRate}% errores
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {qa.attempts - qa.correct}/{qa.attempts} participantes
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );

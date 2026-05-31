@@ -13,7 +13,10 @@
     "preview": "vite preview --port $PORT",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "start": "node server-node.js"
+    "start": "node server-node.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",
@@ -77,6 +80,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

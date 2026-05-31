@@ -22,9 +22,12 @@ import {
   CalendarX,
   Layers,
   Users,
+  Copy,
+  Loader2,
+  Eye,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile } from "@/lib/services/evaluations";
+import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/evaluations")({
   head: () => ({ meta: [{ title: "Evaluaciones — EvalPro" }] }),
@@ -333,6 +336,10 @@ function EvaluationsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [previewEval, setPreviewEval] = useState<Evaluation | null>(null);
+  const [previewQuestions, setPreviewQuestions] = useState<any[]>([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   const emptyForm: Evaluation = {
     id: "",
@@ -490,6 +497,75 @@ function EvaluationsPage() {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
       setDeletingId(null);
+    }
+  };
+
+  function shuffleArray<T>(arr: T[]): T[] {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  const openPreview = async (ev: Evaluation) => {
+    setPreviewEval(ev);
+    setLoadingPreview(true);
+    setPreviewQuestions([]);
+    try {
+      let allQ = await questionsService.getAll();
+      if (ev.categorias && ev.categorias.length > 0) {
+        allQ = allQ.filter((q) => q.categoria && ev.categorias.includes(q.categoria));
+      }
+      if (ev.config?.dificultad && ev.config.dificultad !== "mixto") {
+        allQ = allQ.filter((q) => q.dificultad === ev.config.dificultad);
+      }
+      const ordered = ev.config?.aleatorio ? shuffleArray(allQ) : allQ;
+      setPreviewQuestions(ordered.slice(0, ev.config?.num_preguntas ?? 10));
+    } catch (err) {
+      console.error("Error loading preview questions:", err);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleDuplicate = async (ev: Evaluation) => {
+    setDuplicatingId(ev.id);
+    try {
+      const newEvaluation = await evaluationsService.create({
+        title: `Copia de ${ev.nombre}`,
+        description: ev.descripcion,
+        created_by: profile?.id || null,
+        tiempo_limite: ev.tiempo_limite,
+        intentos_permitidos: ev.intentos_permitidos,
+        activa: false,
+        categorias: [...ev.categorias],
+        config: { ...ev.config },
+        fecha_vencimiento: null,
+        area_id: ev.area_id ?? null,
+      });
+
+      const mappedItem: Evaluation = {
+        id: newEvaluation.id,
+        nombre: `Copia de ${ev.nombre}`,
+        descripcion: ev.descripcion,
+        tiempo_limite: ev.tiempo_limite,
+        intentos_permitidos: ev.intentos_permitidos,
+        activa: false,
+        categorias: [...ev.categorias],
+        config: { ...ev.config },
+        created_at: newEvaluation.created_at,
+        area_id: ev.area_id ?? null,
+      };
+
+      setItems((prev) => [mappedItem, ...prev]);
+      showToast(`"${mappedItem.nombre}" creada`);
+    } catch (err) {
+      console.error("Error duplicating evaluation:", err);
+      showToast("Error al duplicar la evaluación", "error");
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -713,11 +789,30 @@ function EvaluationsPage() {
                       <BarChart3 className="size-4" />
                     </a>
                     <button
+                      onClick={() => openPreview(ev)}
+                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+                      title="Vista previa"
+                    >
+                      <Eye className="size-4" />
+                    </button>
+                    <button
                       onClick={() => setAssigningEval(ev)}
                       className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
                       title="Asignar participantes"
                     >
                       <Users className="size-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDuplicate(ev)}
+                      disabled={duplicatingId === ev.id}
+                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent disabled:opacity-50"
+                      title="Duplicar evaluación"
+                    >
+                      {duplicatingId === ev.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
                     </button>
                     <button
                       onClick={() => openEdit(ev)}
@@ -757,6 +852,103 @@ function EvaluationsPage() {
           areas={areas}
           onClose={() => setAssigningEval(null)}
         />
+      )}
+
+      {/* ── PREVIEW MODAL ── */}
+      {previewEval && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+          <div className="my-8 w-full max-w-2xl rounded-2xl bg-card shadow-2xl">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-border bg-card px-6 py-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Eye className="size-4 text-accent" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-accent">Vista Previa</span>
+                </div>
+                <h3 className="mt-0.5 font-bold">{previewEval.nombre}</h3>
+              </div>
+              <button onClick={() => setPreviewEval(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="size-5" />
+              </button>
+            </div>
+
+            {/* Info strip */}
+            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-secondary/40 px-6 py-3">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <ClipboardList className="size-3.5" />
+                {previewEval.config.num_preguntas} preguntas
+              </span>
+              {previewEval.tiempo_limite > 0 && (
+                <span className="flex items-center gap-1.5 text-xs text-amber-600">
+                  <Clock className="size-3.5" />
+                  {previewEval.tiempo_limite} min
+                </span>
+              )}
+              <span className="flex items-center gap-1.5 text-xs text-emerald-600">
+                <CheckCircle className="size-3.5" />
+                Aprueba con {previewEval.config.porcentaje_aprobacion}%
+              </span>
+              <span className="ml-auto rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                VISTA PREVIA — sin registro de respuestas
+              </span>
+            </div>
+
+            {/* Questions */}
+            <div className="p-6">
+              {loadingPreview ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="h-6 w-6 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                </div>
+              ) : previewQuestions.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+                  No hay preguntas en el banco que coincidan con la configuración de esta evaluación.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {previewQuestions.map((q, idx) => (
+                    <div key={q.id}>
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-accent/10 font-mono text-xs font-bold text-accent">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 space-y-3">
+                          {q.contexto && (
+                            <p className="rounded border-l-2 border-accent/40 bg-accent/5 px-3 py-1.5 text-xs text-muted-foreground">
+                              {q.contexto}
+                            </p>
+                          )}
+                          <p className="text-sm font-medium leading-relaxed">{q.question_text}</p>
+                          <ul className="space-y-2">
+                            {q.options.map((opt: string, i: number) => (
+                              <li
+                                key={i}
+                                className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground"
+                              >
+                                <span className="grid size-5 shrink-0 place-items-center rounded-sm border border-border font-mono text-[10px] font-bold">
+                                  {String.fromCharCode(65 + i)}
+                                </span>
+                                {opt}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      {idx < previewQuestions.length - 1 && (
+                        <div className="mt-6 border-b border-border" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-border px-6 py-4">
+              <Button variant="outline" className="w-full" onClick={() => setPreviewEval(null)}>
+                Cerrar Vista Previa
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showModal && (
