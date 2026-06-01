@@ -1,8 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 
 export const PROMPT_STORAGE_KEY = "evalpro_system_prompt";
@@ -200,8 +203,50 @@ function SettingsPage() {
     config.retries !== persistedConfig.retries;
 
   useEffect(() => {
-    if (profile && !isAdmin) navigate({ to: "/participant" });
+    if (profile && !isAdmin) navigate({ to: "/account" });
   }, [profile, isAdmin, navigate]);
+
+  // ── Change own password state ─────────────────────────────────────────────
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  async function handleChangeOwnPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    if (newPassword.length < 6) { setPasswordError("La contraseña debe tener al menos 6 caracteres"); return; }
+    if (newPassword !== confirmNewPassword) { setPasswordError("Las contraseñas no coinciden"); return; }
+    if (!supabase) return;
+
+    setIsChangingPassword(true);
+    try {
+      // Re-authenticate with current password first to verify identity
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error("No se pudo verificar tu identidad");
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+      if (signInError) throw new Error("La contraseña actual es incorrecta");
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw new Error(error.message);
+
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (err: any) {
+      setPasswordError(err.message || "Error al cambiar contraseña");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  }
 
   // ── Prompt handlers ───────────────────────────────────────────────────────
   function savePrompt() {

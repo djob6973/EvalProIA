@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, X, Edit2, Trash2, Ban } from "lucide-react";
+import { Plus, Search, X, Edit2, Trash2, KeyRound } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -59,6 +59,14 @@ function UsersPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserProfile | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [showInviteConfirm, setShowInviteConfirm] = useState(false);
   const [showUpdateConfirm, setShowUpdateConfirm] = useState(false);
 
@@ -217,6 +225,46 @@ function UsersPage() {
     }
   };
 
+  const handleChangePassword = (user: UserProfile) => {
+    setPasswordUser(user);
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    setShowPasswordModal(true);
+  };
+
+  const executeChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    if (newPassword.length < 6) { setPasswordError("La contraseña debe tener al menos 6 caracteres"); return; }
+    if (newPassword !== confirmPassword) { setPasswordError("Las contraseñas no coinciden"); return; }
+    if (!supabase || !passwordUser) return;
+
+    setIsChangingPassword(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) { setPasswordError("Sesión expirada. Recarga la página."); return; }
+
+      const res = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: passwordUser.id, newPassword, _token: session.access_token }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al cambiar contraseña');
+      }
+      setPasswordSuccess(true);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setPasswordError(err.message || "Error al cambiar contraseña");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   const handleDeleteUser = (user: UserProfile) => {
     setDeletingUser(user);
     setShowDeleteModal(true);
@@ -346,6 +394,13 @@ function UsersPage() {
                             title="Editar usuario"
                           >
                             <Edit2 className="size-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleChangePassword(u)}
+                            className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                            title="Cambiar contraseña"
+                          >
+                            <KeyRound className="size-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteUser(u)}
@@ -607,6 +662,58 @@ function UsersPage() {
                 onCancel={() => setShowUpdateConfirm(false)}
               />
             </form>
+          </div>
+        </div>
+      )}
+
+      {showPasswordModal && passwordUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-sm rounded-lg bg-card p-6 shadow-lg">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Cambiar Contraseña</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">{passwordUser.email}</p>
+              </div>
+              <button onClick={() => setShowPasswordModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {passwordSuccess ? (
+              <div className="space-y-4">
+                <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-500">
+                  Contraseña actualizada correctamente.
+                </div>
+                <Button onClick={() => setShowPasswordModal(false)} className="w-full">Cerrar</Button>
+              </div>
+            ) : (
+              <form onSubmit={executeChangePassword} className="space-y-4">
+                {passwordError && (
+                  <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{passwordError}</div>
+                )}
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Nueva contraseña
+                  </Label>
+                  <Input id="new-password" type="password" placeholder="••••••••" value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)} disabled={isChangingPassword} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Confirmar contraseña
+                  </Label>
+                  <Input id="confirm-password" type="password" placeholder="••••••••" value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)} disabled={isChangingPassword} />
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowPasswordModal(false)}
+                    disabled={isChangingPassword} className="flex-1">Cancelar</Button>
+                  <Button type="submit" disabled={isChangingPassword} className="flex-1">
+                    {isChangingPassword ? "Guardando..." : "Cambiar contraseña"}
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

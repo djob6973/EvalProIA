@@ -120,6 +120,28 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // ── Direct API: change password ─────────────────────────────────────────
+    if (url.pathname === '/api/change-password' && req.method === 'POST') {
+      try {
+        const body = JSON.parse(bodyBuffer?.toString() || '{}');
+        const adminClient = getAdminClient();
+        await verifyAdminCaller(adminClient, body._token);
+
+        if (!body.userId || !body.newPassword) throw new Error('Faltan campos requeridos');
+        if (body.newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+
+        const { error } = await adminClient.auth.admin.updateUserById(body.userId, {
+          password: body.newPassword,
+        });
+        if (error) throw new Error(error.message);
+
+        jsonOk(res, { success: true });
+      } catch (err) {
+        jsonError(res, err.message);
+      }
+      return;
+    }
+
     // ── Direct API: delete user ──────────────────────────────────────────────
     if (url.pathname === '/api/delete-user' && req.method === 'POST') {
       try {

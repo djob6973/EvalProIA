@@ -12,6 +12,7 @@ import {
   Home,
   LogOut,
   Layers,
+  KeyRound,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -24,11 +25,13 @@ const adminNav = [
   { title: "Generador IA", url: "/generate", icon: Sparkles, group: "Herramientas" },
   { title: "Resultados Globales", url: "/results", icon: BarChart3, group: "Herramientas" },
   { title: "Configuración de Prompts", url: "/settings", icon: Settings, group: "Herramientas" },
+  { title: "Mi Cuenta", url: "/account", icon: KeyRound, group: "Cuenta" },
 ];
 
 const participantNav = [
   { title: "Inicio", url: "/participant", icon: Home, group: "Participante" },
   { title: "Mi Historial", url: "/my-history", icon: History, group: "Participante" },
+  { title: "Mi Cuenta", url: "/account", icon: KeyRound, group: "Cuenta" },
 ];
 
 export function AppSidebar() {
