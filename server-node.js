@@ -4,9 +4,10 @@ import { Readable } from 'stream';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
-import { config as loadEnv } from 'dotenv';
 
-loadEnv(); // no-op when .env is absent (e.g. Dokku, where vars come from the environment)
+// Load .env for local dev — Node.js 20.6+ built-in, no package needed.
+// No-op when .env is absent (Dokku injects vars via the environment).
+try { process.loadEnvFile(); } catch {}
 
 const handler = (await import('./dist/server/server.js')).default;
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
