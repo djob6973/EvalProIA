@@ -22,12 +22,16 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    base: '/', // Ensure assets are served from root path
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
       'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
     },
     server: {
-      allowedHosts: ['evalpro.apps.dataico.world', 'localhost', '127.0.0.1'],
+      allowedHosts: ['evalpro.apps.dataico.world', 'evalproia.apps.dataico.world', 'localhost', '127.0.0.1'],
+    },
+    build: {
+      assetsDir: 'assets', // Ensure assets are in the assets directory
     },
   },
   // Disable Cloudflare plugin for Dokku
