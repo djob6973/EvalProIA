@@ -9,25 +9,58 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase";
+import { Brain } from "lucide-react";
+import { NavigationProgress } from "@/components/NavigationProgress";
 
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Página no encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          La página que buscas no existe o fue movida.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Ir al inicio
-          </Link>
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header with branding */}
+      <header className="flex items-center gap-2.5 border-b border-border px-8 py-5">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Brain className="size-4" />
+          </div>
+          <div className="flex flex-col leading-none">
+            <span className="text-base font-bold tracking-tight">EvalPro</span>
+            <span className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Sistema de Evaluación
+            </span>
+          </div>
+        </Link>
+      </header>
+
+      {/* Content */}
+      <div className="flex flex-1 items-center justify-center px-4">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm text-center">
+          <div className="mb-6 inline-block rounded-md bg-accent/10 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-accent">
+            Error 404
+          </div>
+          <h1 className="text-5xl font-bold tracking-tight text-foreground">
+            Página no encontrada
+          </h1>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            La ruta que buscas no existe o fue movida. Verifica la URL o vuelve al inicio.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Ir al inicio
+            </Link>
+            <button
+              onClick={() => window.history.back()}
+              className="inline-flex items-center justify-center rounded-md border border-border bg-background px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              Volver atrás
+            </button>
+          </div>
+          <p className="mt-10 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            EvalPro · Infraestructura segura de evaluación
+          </p>
         </div>
       </div>
     </div>
@@ -138,6 +171,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <NavigationProgress />
       <Outlet />
     </QueryClientProvider>
   );

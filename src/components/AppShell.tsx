@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -12,6 +12,7 @@ interface AppShellProps {
 export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Handles runtime session expiry (token revoked while already on a page).
   // The router-level beforeLoad covers the initial navigation guard.
@@ -54,7 +55,12 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
           </nav>
           <div className="flex items-center gap-2">{actions}</div>
         </header>
-        <div className="mx-auto max-w-7xl px-6 py-8 md:px-8">{children}</div>
+        <div
+          key={pathname}
+          className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-2 duration-200 px-6 py-8 md:px-8"
+        >
+          {children}
+        </div>
       </main>
     </div>
   );

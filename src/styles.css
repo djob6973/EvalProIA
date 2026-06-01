@@ -123,6 +123,11 @@
   --sidebar-border: oklch(1 0 0 / 10%);
 }
 
+@keyframes nav-progress {
+  0%   { left: -33%; }
+  100% { left: 133%; }
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

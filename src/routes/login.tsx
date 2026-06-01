@@ -106,7 +106,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen w-full lg:grid-cols-2">
+    <div className="grid min-h-screen w-full animate-in fade-in duration-300 lg:grid-cols-2">
       <div className="flex flex-col p-8 md:p-12">
         <Link to="/dashboard" className="mb-16 flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
