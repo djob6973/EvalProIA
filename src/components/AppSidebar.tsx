@@ -39,10 +39,11 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
   
-  // Determinar navegación basada en el path actual
-  const isParticipantPath = path.startsWith("/participant") || path.startsWith("/my-history") || path.startsWith("/my-results") || path.startsWith("/take");
+  // Participants always see the participant nav regardless of path.
+  // Admin/both users see nav based on path context.
   const isParticipantRole = profile?.role === 'participant';
-  const nav = isParticipantPath ? participantNav : adminNav;
+  const isParticipantPath = path.startsWith("/participant") || path.startsWith("/my-history") || path.startsWith("/my-results") || path.startsWith("/take") || path.startsWith("/account");
+  const nav = (isParticipantRole || isParticipantPath) ? participantNav : adminNav;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
   // Obtener iniciales del nombre del usuario
