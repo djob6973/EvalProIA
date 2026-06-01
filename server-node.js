@@ -35,7 +35,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith('/assets/') || url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
       const filePath = join(__dirname, 'dist/client', url.pathname);
       const ext = extname(filePath);
-      const contentType = mimeTypes[ext as keyof typeof mimeTypes] || 'application/octet-stream';
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
       
       try {
         const data = await readFile(filePath);
