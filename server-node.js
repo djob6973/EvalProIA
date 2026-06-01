@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises';
 import { Readable } from 'stream';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 const handler = (await import('./dist/server/server.js')).default;
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -27,11 +28,43 @@ const mimeTypes = {
   '.eot': 'application/vnd.ms-fontobject',
 };
 
+function getAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  if (!serviceRoleKey || !supabaseUrl) {
+    throw new Error('Configuración del servidor incompleta: faltan SUPABASE_SERVICE_ROLE_KEY o SUPABASE_URL');
+  }
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+async function verifyAdminCaller(adminClient, token) {
+  const { data: { user }, error } = await adminClient.auth.getUser(token);
+  if (error || !user) throw new Error('No autorizado');
+  const { data: profile } = await adminClient
+    .from('profiles').select('role').eq('id', user.id).single();
+  if (!profile || !['admin', 'both'].includes(profile.role)) {
+    throw new Error('No autorizado: se requiere rol de administrador');
+  }
+  return user;
+}
+
+function jsonOk(res, data) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(data));
+}
+
+function jsonError(res, message, status = 400) {
+  res.writeHead(status, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: message }));
+}
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
-    // Serve static files from dist/client
+    // ── Static files ────────────────────────────────────────────────────────
     if (url.pathname.startsWith('/assets/') || url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
       const filePath = join(__dirname, 'dist/client', url.pathname);
       const ext = extname(filePath);
@@ -42,25 +75,71 @@ const server = createServer(async (req, res) => {
         res.end(data);
         return;
       } catch {
-        // File not found, continue to handler
+        // fall through to SSR handler
       }
     }
 
-    // Read POST/PUT/PATCH body fully before passing to the Web API Request.
-    // Passing the raw Node.js stream causes server functions to hang in
-    // TanStack Start because the stream is never drained.
-    let body = undefined;
+    // ── Read body once for all POST routes ──────────────────────────────────
+    let bodyBuffer;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       const chunks = [];
       for await (const chunk of req) {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
-      if (chunks.length > 0) {
-        body = Buffer.concat(chunks);
-      }
+      if (chunks.length > 0) bodyBuffer = Buffer.concat(chunks);
     }
 
-    // Build a Web API Request with properly converted headers
+    // ── Direct API: create user ──────────────────────────────────────────────
+    if (url.pathname === '/api/create-user' && req.method === 'POST') {
+      try {
+        const body = JSON.parse(bodyBuffer?.toString() || '{}');
+        const adminClient = getAdminClient();
+        await verifyAdminCaller(adminClient, body._token);
+
+        const { data: result, error } = await adminClient.auth.admin.createUser({
+          email: body.email,
+          password: body.password,
+          user_metadata: { full_name: body.fullName, role: body.role, area_id: body.areaId },
+          email_confirm: true,
+        });
+        if (error) throw new Error(error.message);
+
+        const { error: profileError } = await adminClient.from('profiles').upsert({
+          id: result.user.id,
+          email: body.email,
+          full_name: body.fullName,
+          role: body.role,
+          area_id: body.areaId ?? null,
+        });
+        if (profileError) throw new Error(profileError.message);
+
+        jsonOk(res, { id: result.user.id, email: result.user.email });
+      } catch (err) {
+        jsonError(res, err.message);
+      }
+      return;
+    }
+
+    // ── Direct API: delete user ──────────────────────────────────────────────
+    if (url.pathname === '/api/delete-user' && req.method === 'POST') {
+      try {
+        const body = JSON.parse(bodyBuffer?.toString() || '{}');
+        const adminClient = getAdminClient();
+        const caller = await verifyAdminCaller(adminClient, body._token);
+
+        if (body.userId === caller.id) throw new Error('No puedes eliminar tu propia cuenta');
+
+        const { error } = await adminClient.auth.admin.deleteUser(body.userId);
+        if (error) throw new Error(error.message);
+
+        jsonOk(res, { success: true });
+      } catch (err) {
+        jsonError(res, err.message);
+      }
+      return;
+    }
+
+    // ── TanStack Start SSR handler ───────────────────────────────────────────
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) {
       if (value === undefined) continue;
@@ -74,16 +153,13 @@ const server = createServer(async (req, res) => {
     const request = new Request(url.toString(), {
       method: req.method,
       headers,
-      body,
+      body: bodyBuffer || undefined,
     });
 
-    const response = await handler.fetch(request, {}, {});
+    const response = await handler.fetch(request, process.env, {});
 
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));
-
     if (response.body) {
-      // Pipe Web ReadableStream → Node.js Readable → HTTP response.
-      // This handles both streaming SSR and regular JSON responses without hanging.
       Readable.fromWeb(response.body).pipe(res);
     } else {
       res.end();

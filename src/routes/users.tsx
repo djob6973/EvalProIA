@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { areasService, Area } from "@/lib/services/evaluations";
-import { createUserFn, deleteUserFn } from "@/lib/services/auth-server";
 
 export const Route = createFileRoute("/users")({
   head: () => ({ meta: [{ title: "Usuarios — EvalPro" }] }),
@@ -133,16 +132,22 @@ function UsersPage() {
         setInviteError("Sesión expirada. Recarga la página.");
         return;
       }
-      await createUserFn({
-        data: {
+      const res = await fetch('/api/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email: inviteEmail,
           password: invitePassword,
           fullName: inviteFullName,
           role: inviteRole,
           areaId: inviteAreaId || null,
           _token: session.access_token,
-        },
+        }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al crear usuario');
+      }
 
       setShowInviteConfirm(false);
       setInviteSuccess(true);
@@ -231,9 +236,15 @@ function UsersPage() {
         return;
       }
 
-      await deleteUserFn({
-        data: { userId: deletingUser.id, _token: session.access_token },
+      const res = await fetch('/api/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: deletingUser.id, _token: session.access_token }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al eliminar usuario');
+      }
 
       setShowDeleteModal(false);
       setDeletingUser(null);
