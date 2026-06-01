@@ -1,5 +1,5 @@
 import { createServer } from 'http';
-import { readFile } from 'fs';
+import { readFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
 
