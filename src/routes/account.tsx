@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
+
 export const Route = createFileRoute("/account")({
   head: () => ({ meta: [{ title: "Mi Cuenta — EvalPro" }] }),
   component: AccountPage,
@@ -26,24 +27,30 @@ function AccountPage() {
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    if (!currentPassword) { setError("Ingresa tu contraseña actual"); return; }
     if (newPassword.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     if (newPassword !== confirmPassword) { setError("Las contraseñas no coinciden"); return; }
     if (!supabase) return;
 
     setIsLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user?.email) throw new Error("No se pudo verificar tu identidad");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Sesión expirada. Recarga la página.");
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
+      const res = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: session.user.id,
+          currentPassword,
+          newPassword,
+          _token: session.access_token,
+        }),
       });
-      if (signInError) throw new Error("La contraseña actual es incorrecta");
-
-      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-      if (updateError) throw new Error(updateError.message);
-
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al cambiar contraseña');
+      }
       setSuccess(true);
       setCurrentPassword("");
       setNewPassword("");

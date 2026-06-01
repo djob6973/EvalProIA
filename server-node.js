@@ -4,6 +4,9 @@ import { Readable } from 'stream';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { config as loadEnv } from 'dotenv';
+
+loadEnv(); // no-op when .env is absent (e.g. Dokku, where vars come from the environment)
 
 const handler = (await import('./dist/server/server.js')).default;
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -125,14 +128,30 @@ const server = createServer(async (req, res) => {
       try {
         const body = JSON.parse(bodyBuffer?.toString() || '{}');
         const adminClient = getAdminClient();
-        await verifyAdminCaller(adminClient, body._token);
 
-        if (!body.userId || !body.newPassword) throw new Error('Faltan campos requeridos');
-        if (body.newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+        // Verify caller identity via JWT
+        const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(body._token);
+        if (authError || !caller) throw new Error('No autorizado');
 
-        const { error } = await adminClient.auth.admin.updateUserById(body.userId, {
-          password: body.newPassword,
-        });
+        if (!body.newPassword || body.newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
+
+        const isOwnPassword = body.userId === caller.id;
+
+        if (isOwnPassword) {
+          // Self-service: verify current password before updating
+          if (!body.currentPassword) throw new Error('Se requiere la contraseña actual');
+          const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+          const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+          const regularClient = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+          const { error: signInError } = await regularClient.auth.signInWithPassword({ email: caller.email, password: body.currentPassword });
+          if (signInError) throw new Error('La contraseña actual es incorrecta');
+        } else {
+          // Admin changing another user's password
+          const { data: callerProfile } = await adminClient.from('profiles').select('role').eq('id', caller.id).single();
+          if (!callerProfile || !['admin', 'both'].includes(callerProfile.role)) throw new Error('No autorizado: se requiere rol de administrador');
+        }
+
+        const { error } = await adminClient.auth.admin.updateUserById(body.userId, { password: body.newPassword });
         if (error) throw new Error(error.message);
 
         jsonOk(res, { success: true });
