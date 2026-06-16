@@ -248,21 +248,29 @@ async function evalWithQuestions(id: string): Promise<Response> {
   const questions = await db`
     SELECT * FROM questions WHERE evaluation_id = ${id} ORDER BY created_at ASC
   `;
-  return json({ ...evaluation, questions });
+  return json({ ...evaluation, questions: questions.map(parseQuestion) });
 }
 
 // ── Questions handlers ────────────────────────────────────────────────────────
 
+function parseQuestion(row: any) {
+  if (!row) return row;
+  return {
+    ...row,
+    options: typeof row.options === "string" ? JSON.parse(row.options) : (row.options ?? []),
+  };
+}
+
 async function listQuestions(): Promise<Response> {
   const rows = await db`SELECT * FROM questions ORDER BY created_at DESC`;
-  return json(rows);
+  return json(rows.map(parseQuestion));
 }
 
 async function questionsByEval(evalId: string): Promise<Response> {
   const rows = await db`
     SELECT * FROM questions WHERE evaluation_id = ${evalId} ORDER BY created_at ASC
   `;
-  return json(rows);
+  return json(rows.map(parseQuestion));
 }
 
 async function questionsByIds(url: URL): Promise<Response> {
@@ -270,7 +278,7 @@ async function questionsByIds(url: URL): Promise<Response> {
   const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
   if (ids.length === 0) return json([]);
   const rows = await db`SELECT * FROM questions WHERE id = ANY(${ids}::uuid[])`;
-  return json(rows);
+  return json(rows.map(parseQuestion));
 }
 
 async function questionsFiltered(url: URL): Promise<Response> {
@@ -298,7 +306,7 @@ async function questionsFiltered(url: URL): Promise<Response> {
   } else {
     rows = await db`SELECT * FROM questions ORDER BY created_at DESC`;
   }
-  return json(rows);
+  return json(rows.map(parseQuestion));
 }
 
 async function createQuestion(request: Request): Promise<Response> {
@@ -319,7 +327,7 @@ async function createQuestion(request: Request): Promise<Response> {
        ${dificultad ?? null}, ${estado ?? null}, ${justificacion ?? null})
     RETURNING *
   `;
-  return json(row, 201);
+  return json(parseQuestion(row), 201);
 }
 
 async function createQuestionsBatch(request: Request): Promise<Response> {
@@ -343,7 +351,7 @@ async function createQuestionsBatch(request: Request): Promise<Response> {
     })))}
     RETURNING *
   `;
-  return json(rows, 201);
+  return json(rows.map(parseQuestion), 201);
 }
 
 async function updateQuestion(request: Request, id: string): Promise<Response> {
@@ -367,7 +375,7 @@ async function updateQuestion(request: Request, id: string): Promise<Response> {
     UPDATE questions SET ${db(patch)} WHERE id = ${id} RETURNING *
   `;
   if (!row) return json({ error: "No encontrado" }, 404);
-  return json(row);
+  return json(parseQuestion(row));
 }
 
 async function deleteQuestion(request: Request, id: string): Promise<Response> {
