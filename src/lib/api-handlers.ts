@@ -701,6 +701,7 @@ async function dashboardStats(): Promise<Response> {
     `,
     db`SELECT COUNT(*)::int AS count FROM profiles`,
     db`SELECT score FROM results`,
+    db`SELECT COUNT(*)::int AS count FROM questions`,
     db`
       SELECT r.score, r.completed_at,
              p.full_name AS profile_full_name,
