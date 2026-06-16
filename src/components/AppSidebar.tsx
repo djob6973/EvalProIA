@@ -39,13 +39,12 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
   
-  const role = profile?.role;
-  const isParticipantRole = role === 'participant';
-  // /account is neutral — context follows role, not path.
-  const participantPaths = ["/participant", "/my-history", "/my-results", "/take"];
-  const isOnParticipantPath = participantPaths.some((p) => path.startsWith(p));
-  // 'both' role users switch context via path; plain 'admin' always sees admin nav.
-  const showParticipantNav = isParticipantRole || (role === 'both' && isOnParticipantPath);
+  const isParticipantRole = profile?.role === 'participant';
+  // /account is neutral — doesn't trigger participant context.
+  const isOnParticipantPath = ["/participant", "/my-history", "/my-results", "/take"].some(
+    (p) => path.startsWith(p)
+  );
+  const showParticipantNav = isParticipantRole || isOnParticipantPath;
   const nav = showParticipantNav ? participantNav : adminNav;
   const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
