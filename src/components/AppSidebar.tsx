@@ -39,11 +39,15 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
   
-  // Participants always see the participant nav regardless of path.
-  // Admin/both users see nav based on path context.
-  const isParticipantRole = profile?.role === 'participant';
-  const isParticipantPath = path.startsWith("/participant") || path.startsWith("/my-history") || path.startsWith("/my-results") || path.startsWith("/take") || path.startsWith("/account");
-  const nav = (isParticipantRole || isParticipantPath) ? participantNav : adminNav;
+  const role = profile?.role;
+  const isParticipantRole = role === 'participant';
+  // /account is neutral — context follows role, not path.
+  const participantPaths = ["/participant", "/my-history", "/my-results", "/take"];
+  const isOnParticipantPath = participantPaths.some((p) => path.startsWith(p));
+  // 'both' role users switch context via path; plain 'admin' always sees admin nav.
+  const showParticipantNav = isParticipantRole || (role === 'both' && isOnParticipantPath);
+  const nav = showParticipantNav ? participantNav : adminNav;
+  const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
   // Obtener iniciales del nombre del usuario
