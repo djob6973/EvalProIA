@@ -330,10 +330,7 @@ async function createQuestionsBatch(request: Request): Promise<Response> {
   if (!questions.length) return json([]);
 
   const rows = await db`
-    INSERT INTO questions
-      (evaluation_id, question_text, options, correct_answer,
-       contexto, categoria, dificultad, estado, justificacion)
-    SELECT * FROM ${db(questions.map((q) => ({
+    INSERT INTO questions ${db(questions.map((q) => ({
       evaluation_id: q.evaluation_id ?? null,
       question_text: q.question_text,
       options: JSON.stringify(q.options),
