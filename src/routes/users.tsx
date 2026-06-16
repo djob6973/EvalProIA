@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, X, Edit2, Trash2, KeyRound } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { areasService, Area } from "@/lib/services/evaluations";
 
@@ -80,29 +79,11 @@ function UsersPage() {
   }, []);
 
   const fetchUsers = async () => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          results(count)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const usersWithCount = data?.map(user => ({
-        ...user,
-        evaluation_count: user.results?.[0]?.count || 0,
-        area_id: user.area_id ?? null,
-      })) || [];
-
-      setUsers(usersWithCount);
+      const r = await fetch('/api/data/profiles');
+      if (!r.ok) throw new Error('Error al cargar usuarios');
+      const data = await r.json();
+      setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -124,22 +105,12 @@ function UsersPage() {
       return;
     }
 
-    if (!supabase) {
-      setInviteError("Error de conexión con Supabase");
-      return;
-    }
-
     setShowInviteConfirm(true);
   };
 
   const executeInvite = async () => {
     setIsInviting(true);
     try {
-      const { data: { session } } = await supabase!.auth.getSession();
-      if (!session?.access_token) {
-        setInviteError("Sesión expirada. Recarga la página.");
-        return;
-      }
       const res = await fetch('/api/create-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -149,7 +120,6 @@ function UsersPage() {
           fullName: inviteFullName,
           role: inviteRole,
           areaId: inviteAreaId || null,
-          _token: session.access_token,
         }),
       });
       if (!res.ok) {
@@ -195,23 +165,23 @@ function UsersPage() {
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
     setUpdateError(null);
-    if (!supabase || !editingUser) {
-      setUpdateError("Error de conexión con Supabase");
-      return;
-    }
+    if (!editingUser) return;
     setShowUpdateConfirm(true);
   };
 
   const executeUpdateUser = async () => {
-    if (!supabase || !editingUser) return;
+    if (!editingUser) return;
     setIsUpdating(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ full_name: editFullName, role: editRole, area_id: editAreaId || null, updated_at: new Date().toISOString() })
-        .eq('id', editingUser.id);
-
-      if (error) throw error;
+      const res = await fetch(`/api/data/profiles/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: editFullName, role: editRole, area_id: editAreaId || null }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Error al actualizar usuario');
+      }
 
       setShowUpdateConfirm(false);
       setShowEditModal(false);
@@ -239,17 +209,14 @@ function UsersPage() {
     setPasswordError(null);
     if (newPassword.length < 6) { setPasswordError("La contraseña debe tener al menos 6 caracteres"); return; }
     if (newPassword !== confirmPassword) { setPasswordError("Las contraseñas no coinciden"); return; }
-    if (!supabase || !passwordUser) return;
+    if (!passwordUser) return;
 
     setIsChangingPassword(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) { setPasswordError("Sesión expirada. Recarga la página."); return; }
-
       const res = await fetch('/api/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: passwordUser.id, newPassword, _token: session.access_token }),
+        body: JSON.stringify({ userId: passwordUser.id, newPassword }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -272,22 +239,16 @@ function UsersPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!supabase || !deletingUser) return;
+    if (!deletingUser) return;
 
     setDeleteError(null);
     setIsDeleting(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        setDeleteError("Sesión expirada. Recarga la página.");
-        return;
-      }
-
       const res = await fetch('/api/delete-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: deletingUser.id, _token: session.access_token }),
+        body: JSON.stringify({ userId: deletingUser.id }),
       });
       if (!res.ok) {
         const err = await res.json();

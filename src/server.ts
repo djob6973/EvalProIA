@@ -2,12 +2,19 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { runMigrations } from "./lib/migrate";
+import { handleLogin, handleSignout, handleMe } from "./lib/auth-handlers";
+import { handleApiRequest } from "./lib/api-handlers";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
+// Migrations run once on first request; subsequent calls resolve immediately.
+const migrationPromise = runMigrations().catch((err) => {
+  console.error("[migrate] Error al ejecutar migraciones:", err);
+});
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
@@ -50,8 +57,6 @@ function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boole
   );
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
@@ -68,7 +73,27 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    await migrationPromise;
+
     try {
+      const url = new URL(request.url);
+      const { pathname } = url;
+
+      // ── Auth routes (intercepted before TanStack Start) ────────────────
+      if (pathname === "/api/auth/login" && request.method === "POST")
+        return handleLogin(request);
+      if (pathname === "/api/auth/signout")
+        return handleSignout(request);
+      if (pathname === "/api/me")
+        return handleMe(request);
+
+      // ── Data API routes ────────────────────────────────────────────────
+      if (pathname.startsWith("/api/")) {
+        const apiResponse = await handleApiRequest(request, pathname, url);
+        if (apiResponse) return apiResponse;
+      }
+
+      // ── TanStack Start (SSR + SPA) ─────────────────────────────────────
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

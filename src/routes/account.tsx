@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
 
@@ -30,22 +29,13 @@ function AccountPage() {
     if (!currentPassword) { setError("Ingresa tu contraseña actual"); return; }
     if (newPassword.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
     if (newPassword !== confirmPassword) { setError("Las contraseñas no coinciden"); return; }
-    if (!supabase) return;
 
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error("Sesión expirada. Recarga la página.");
-
-      const res = await fetch('/api/change-password', {
+      const res = await fetch('/api/change-own-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: session.user.id,
-          currentPassword,
-          newPassword,
-          _token: session.access_token,
-        }),
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
       if (!res.ok) {
         const err = await res.json();

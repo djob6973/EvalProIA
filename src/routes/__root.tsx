@@ -8,7 +8,6 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { supabase } from "@/lib/supabase";
 import { Brain } from "lucide-react";
 import { NavigationProgress } from "@/components/NavigationProgress";
 
@@ -104,19 +103,22 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 const PUBLIC_PATHS = ["/login"];
 
-// Module-level cache — avoids hitting the DB on every navigation.
-// Invalidated on sign-out (userId changes) or after 5 minutes.
+// Module-level cache — avoids an /api/me round-trip on every navigation.
 let profileCache: { userId: string; expiresAt: number } | null = null;
 const PROFILE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
-    // Only runs in the browser (supabase client is null on SSR)
-    if (!supabase) return;
+    // Only runs in the browser — server-side the platform already handles auth.
+    if (typeof window === "undefined") return;
     if (PUBLIC_PATHS.some((p) => location.pathname.startsWith(p))) return;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Use cache to avoid hitting the server on every navigation
+    const now = Date.now();
+    if (profileCache && now < profileCache.expiresAt) return;
+
+    const r = await fetch("/api/me");
+    if (!r.ok) {
       profileCache = null;
       throw redirect({
         to: "/login",
@@ -124,26 +126,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       });
     }
 
-    // Skip the DB round-trip if we verified this user recently
-    const now = Date.now();
-    if (profileCache?.userId === session.user.id && now < profileCache.expiresAt) {
-      return;
-    }
-
-    // Verify the user's profile still exists — catches deleted users whose JWT hasn't expired yet
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', session.user.id)
-      .maybeSingle();
-
-    if (!profile) {
-      profileCache = null;
-      await supabase.auth.signOut();
-      throw redirect({ to: "/login" });
-    }
-
-    profileCache = { userId: session.user.id, expiresAt: now + PROFILE_CACHE_TTL };
+    const profile = await r.json();
+    profileCache = { userId: profile.id, expiresAt: now + PROFILE_CACHE_TTL };
   },
   head: () => ({
     meta: [

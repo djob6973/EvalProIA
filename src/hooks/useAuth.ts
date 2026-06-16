@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react'
-import { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
 
 export interface Profile {
   id: string
@@ -12,122 +10,53 @@ export interface Profile {
   area_id: string | null
 }
 
+// Thin wrapper so components see a stable object shape regardless of auth backend.
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false)
-      return
-    }
-
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        fetchProfile(session.user.id)
-      }
-      setLoading(false)
-    })
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-      }
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
+    fetch('/api/me')
+      .then(async (r) => {
+        if (r.ok) setProfile(await r.json())
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
-
-  const fetchProfile = async (userId: string) => {
-    if (!supabase) return
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        console.error('Error fetching profile:', error)
-        // No setear profile a null inmediatamente, mantener el valor anterior si existe
-        // Esto evita que el profile se vuelva null durante recargas de la página
-        return
-      }
-      setProfile(data as Profile)
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-      // No setear profile a null inmediatamente
-    }
-  }
 
   const signIn = async (
     email: string,
     password: string
-  ): Promise<{ data: any; error: AuthError | null }> => {
-    if (!supabase) {
-      return { data: null, error: { message: 'Supabase client not available' } as AuthError }
-    }
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  ): Promise<{ data: any; error: { message: string } | null }> => {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
     })
-    return { data, error }
+    const data = await r.json()
+    if (r.ok) setProfile(data.profile)
+    return { data, error: r.ok ? null : { message: data.error || 'Error al iniciar sesión' } }
   }
 
-  const signUp = async (
-    email: string,
-    password: string,
-    fullName?: string,
-    role: 'admin' | 'participant' | 'both' = 'participant'
-  ): Promise<{ data: any; error: AuthError | null }> => {
-    if (!supabase) {
-      return { data: null, error: { message: 'Supabase client not available' } as AuthError }
-    }
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role,
-        },
-      },
-    })
-    return { data, error }
+  const signOut = async (): Promise<{ error: null }> => {
+    await fetch('/api/auth/signout')
+    setProfile(null)
+    return { error: null }
   }
 
-  const signOut = async (): Promise<{ error: AuthError | null }> => {
-    if (!supabase) {
-      return { error: { message: 'Supabase client not available' } as AuthError }
-    }
-    const { error } = await supabase.auth.signOut()
-    return { error }
-  }
+  // signUp and resetPassword are no longer needed (admin creates users via /api/create-user;
+  // on Dokku, Google SSO handles identity). Kept as stubs for interface compatibility.
+  const signUp = async (): Promise<{ data: null; error: { message: string } | null }> => ({
+    data: null,
+    error: { message: 'Use el panel de administración para crear usuarios' },
+  })
 
-  const resetPassword = async (
-    email: string
-  ): Promise<{ error: AuthError | null }> => {
-    if (!supabase) {
-      return { error: { message: 'Supabase client not available' } as AuthError }
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
-    return { error }
-  }
+  const resetPassword = async (): Promise<{ error: null }> => ({ error: null })
+
+  // Expose a synthetic "user" and "session" so existing code that reads user.id
+  // or session.user.id continues to work without changes.
+  const user = profile ? { id: profile.id, email: profile.email } : null
+  const session = profile ? { user } : null
 
   return {
     user,

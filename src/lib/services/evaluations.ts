@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase'
+// All data access goes through the local REST API (/api/data/*)
+// so this layer runs safely in the browser without any DB driver.
 
 export interface Area {
   id: string
@@ -60,361 +61,170 @@ export interface EvaluationProgress {
   updated_at: string
 }
 
-// Evaluations CRUD
-export const evaluationsService = {
-  async getAll() {
-    if (!supabase) throw new Error('Supabase client not initialized')
+// ── Helper ────────────────────────────────────────────────────────────────────
 
-    const { data, error } = await supabase
-      .from('evaluations')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return data as Evaluation[]
-  },
-
-  // Returns only active, non-expired evaluations — use this instead of getAll()
-  // when admin-level filtering is not needed (e.g. participant home page).
-  async getActive() {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const now = new Date().toISOString()
-
-    const { data, error } = await supabase
-      .from('evaluations')
-      .select('*')
-      .eq('activa', true)
-      .or(`fecha_vencimiento.is.null,fecha_vencimiento.gt.${now}`)
-      .order('created_at', { ascending: false })
-
-    if (error) throw error
-    return data as Evaluation[]
-  },
-
-  async getById(id: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluations')
-      .select('*')
-      .eq('id', id)
-      .single()
-    
-    if (error) throw error
-    return data as Evaluation
-  },
-
-  async create(evaluation: Omit<Evaluation, 'id' | 'created_at' | 'updated_at'>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluations')
-      .insert(evaluation)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as Evaluation
-  },
-
-  async update(id: string, evaluation: Partial<Evaluation>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluations')
-      .update(evaluation)
-      .eq('id', id)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as Evaluation
-  },
-
-  async delete(id: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { error } = await supabase
-      .from('evaluations')
-      .delete()
-      .eq('id', id)
-    
-    if (error) throw error
-  },
-
-  async getWithQuestions(id: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluations')
-      .select(`
-        *,
-        questions(*)
-      `)
-      .eq('id', id)
-      .single()
-    
-    if (error) throw error
-    return data as Evaluation & { questions: Question[] }
+async function apiFetch(path: string, options?: RequestInit): Promise<any> {
+  const r = await fetch(path, options);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({ error: r.statusText }));
+    throw new Error((err as any).error || r.statusText);
   }
+  return r.json();
 }
 
-// Questions CRUD
+// ── Evaluations CRUD ──────────────────────────────────────────────────────────
+
+export const evaluationsService = {
+  async getAll(): Promise<Evaluation[]> {
+    return apiFetch('/api/data/evaluations');
+  },
+
+  async getActive(): Promise<Evaluation[]> {
+    return apiFetch('/api/data/evaluations/active');
+  },
+
+  async getById(id: string): Promise<Evaluation> {
+    return apiFetch(`/api/data/evaluations/${id}`);
+  },
+
+  async create(evaluation: Omit<Evaluation, 'id' | 'created_at' | 'updated_at'>): Promise<Evaluation> {
+    return apiFetch('/api/data/evaluations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(evaluation),
+    });
+  },
+
+  async update(id: string, evaluation: Partial<Evaluation>): Promise<Evaluation> {
+    return apiFetch(`/api/data/evaluations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(evaluation),
+    });
+  },
+
+  async delete(id: string): Promise<void> {
+    await apiFetch(`/api/data/evaluations/${id}`, { method: 'DELETE' });
+  },
+
+  async getWithQuestions(id: string): Promise<Evaluation & { questions: Question[] }> {
+    return apiFetch(`/api/data/evaluations/${id}/with-questions`);
+  },
+}
+
+// ── Questions CRUD ────────────────────────────────────────────────────────────
+
 export const questionsService = {
-  async getAll() {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    return data as Question[]
+  async getAll(): Promise<Question[]> {
+    return apiFetch('/api/data/questions');
   },
 
-  async getByEvaluationId(evaluationId: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('evaluation_id', evaluationId)
-      .order('created_at', { ascending: true })
-    
-    if (error) throw error
-    return data as Question[]
+  async getByEvaluationId(evaluationId: string): Promise<Question[]> {
+    return apiFetch(`/api/data/questions/by-evaluation/${evaluationId}`);
   },
 
-  async create(question: Omit<Question, 'id' | 'created_at'>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('questions')
-      .insert(question)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as Question
+  async create(question: Omit<Question, 'id' | 'created_at'>): Promise<Question> {
+    return apiFetch('/api/data/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(question),
+    });
   },
 
-  async update(id: string, question: Partial<Question>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('questions')
-      .update(question)
-      .eq('id', id)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as Question
+  async update(id: string, question: Partial<Question>): Promise<Question> {
+    return apiFetch(`/api/data/questions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(question),
+    });
   },
 
-  async delete(id: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('questions')
-      .delete()
-      .eq('id', id)
-      .select()
-
-    if (error) throw error
-    if (!data || data.length === 0) throw new Error('No se pudo eliminar la pregunta. Verifica los permisos en Supabase (RLS).')
+  async delete(id: string): Promise<void> {
+    await apiFetch(`/api/data/questions/${id}`, { method: 'DELETE' });
   },
 
-  async createBatch(questions: Omit<Question, 'id' | 'created_at'>[]) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('questions')
-      .insert(questions)
-      .select()
-
-    if (error) throw error
-
-    if (!data || data.length === 0) {
-      throw new Error(
-        'Supabase no insertó ninguna pregunta (data vacío). ' +
-        'Verifica que las políticas RLS de la tabla "questions" permitan INSERT al rol autenticado.'
-      )
-    }
-
-    return data as Question[]
+  async createBatch(questions: Omit<Question, 'id' | 'created_at'>[]): Promise<Question[]> {
+    return apiFetch('/api/data/questions/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(questions),
+    });
   },
 
-  async getByIds(ids: string[]) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*')
-      .in('id', ids)
-
-    if (error) throw error
-    return data as Question[]
+  async getByIds(ids: string[]): Promise<Question[]> {
+    if (ids.length === 0) return [];
+    return apiFetch(`/api/data/questions/by-ids?ids=${ids.join(',')}`);
   },
 
-  // Filtered query — avoids downloading the entire question bank.
-  // Always prefer this over getAll() when category/difficulty filters are known.
   async getFiltered(filters: {
     categorias?: string[]
     dificultad?: string
-  }) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    let query = supabase.from('questions').select('*')
-
-    if (filters.categorias && filters.categorias.length > 0) {
-      query = query.in('categoria', filters.categorias)
-    }
-
-    if (filters.dificultad && filters.dificultad !== 'mixto') {
-      query = query.eq('dificultad', filters.dificultad)
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false })
-
-    if (error) throw error
-    return data as Question[]
+  }): Promise<Question[]> {
+    const params = new URLSearchParams();
+    if (filters.categorias?.length) params.set('categorias', filters.categorias.join(','));
+    if (filters.dificultad) params.set('dificultad', filters.dificultad);
+    return apiFetch(`/api/data/questions/filtered?${params}`);
   },
 }
 
-// Results CRUD
+// ── Results CRUD ──────────────────────────────────────────────────────────────
+
 export const resultsService = {
-  async getAll() {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('results')
-      .select(`
-        *,
-        evaluations(title, area_id),
-        profiles(full_name, email)
-      `)
-      .order('completed_at', { ascending: false })
-
-    if (error) throw error
-    return data as (Result & { evaluations: { title: string; area_id: string | null }, profiles: { full_name: string | null, email: string } })[]
+  async getAll(): Promise<(Result & { evaluations: { title: string; area_id: string | null }, profiles: { full_name: string | null, email: string } })[]> {
+    return apiFetch('/api/data/results');
   },
 
-  async getByUserId(userId: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('results')
-      .select(`
-        *,
-        evaluations(title, created_at, categorias)
-      `)
-      .eq('user_id', userId)
-      .order('completed_at', { ascending: false })
-
-    if (error) throw error
-    return data as (Result & { evaluations: { title: string; created_at: string; categorias: string[] | null } })[]
+  async getByUserId(userId: string): Promise<(Result & { evaluations: { title: string; created_at: string; categorias: string[] | null } })[]> {
+    return apiFetch(`/api/data/results/by-user/${userId}`);
   },
 
-  async getByEvaluationId(evaluationId: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('results')
-      .select(`
-        *,
-        profiles(full_name, email)
-      `)
-      .eq('evaluation_id', evaluationId)
-      .order('completed_at', { ascending: false })
-    
-    if (error) throw error
-    return data as (Result & { profiles: { full_name: string | null, email: string } })[]
+  async getByEvaluationId(evaluationId: string): Promise<(Result & { profiles: { full_name: string | null, email: string } })[]> {
+    return apiFetch(`/api/data/results/by-evaluation/${evaluationId}`);
   },
 
-  async create(result: Omit<Result, 'id' | 'completed_at'>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('results')
-      .insert(result)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as Result
+  async create(result: Omit<Result, 'id' | 'completed_at'>): Promise<Result> {
+    return apiFetch('/api/data/results', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(result),
+    });
   },
 
-  async getById(id: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('results')
-      .select('*')
-      .eq('id', id)
-      .single()
-    
-    if (error) throw error
-    return data as Result
-  }
+  async getById(id: string): Promise<Result> {
+    return apiFetch(`/api/data/results/${id}`);
+  },
 }
 
-// Areas CRUD
+// ── Areas CRUD ────────────────────────────────────────────────────────────────
+
 export const areasService = {
-  async getAll() {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('areas')
-      .select('*')
-      .order('name', { ascending: true })
-
-    if (error) throw error
-    return data as Area[]
+  async getAll(): Promise<Area[]> {
+    return apiFetch('/api/data/areas');
   },
 
-  async create(area: Omit<Area, 'id' | 'created_at' | 'updated_at'>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('areas')
-      .insert(area)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data as Area
+  async create(area: Omit<Area, 'id' | 'created_at' | 'updated_at'>): Promise<Area> {
+    return apiFetch('/api/data/areas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(area),
+    });
   },
 
-  async update(id: string, area: Partial<Pick<Area, 'name' | 'description'>>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { data, error } = await supabase
-      .from('areas')
-      .update({ ...area, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data as Area
+  async update(id: string, area: Partial<Pick<Area, 'name' | 'description'>>): Promise<Area> {
+    return apiFetch(`/api/data/areas/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(area),
+    });
   },
 
-  async delete(id: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-
-    const { error } = await supabase
-      .from('areas')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
+  async delete(id: string): Promise<void> {
+    await apiFetch(`/api/data/areas/${id}`, { method: 'DELETE' });
   },
 }
 
-// Direct participant assignment per evaluation
+// ── Evaluation participants ────────────────────────────────────────────────────
+
 export interface ParticipantProfile {
   id: string
   email: string
@@ -425,141 +235,80 @@ export interface ParticipantProfile {
 
 export const evaluationParticipantsService = {
   async getByEvaluationId(evaluationId: string): Promise<string[]> {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    const { data, error } = await supabase
-      .from('evaluation_participants')
-      .select('user_id')
-      .eq('evaluation_id', evaluationId)
-    if (error) throw error
-    return (data || []).map((r: any) => r.user_id)
+    return apiFetch(`/api/data/eval-participants/${evaluationId}`);
   },
 
   async getByUserId(userId: string): Promise<string[]> {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    const { data, error } = await supabase
-      .from('evaluation_participants')
-      .select('evaluation_id')
-      .eq('user_id', userId)
-    if (error) throw error
-    return (data || []).map((r: any) => r.evaluation_id)
+    return apiFetch(`/api/data/eval-participants/by-user/${userId}`);
   },
 
   async assign(evaluationId: string, userId: string): Promise<void> {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    const { error } = await supabase
-      .from('evaluation_participants')
-      .insert({ evaluation_id: evaluationId, user_id: userId })
-    if (error) throw error
+    await apiFetch('/api/data/eval-participants', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evaluationId, userId }),
+    });
   },
 
   async unassign(evaluationId: string, userId: string): Promise<void> {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    const { error } = await supabase
-      .from('evaluation_participants')
-      .delete()
-      .eq('evaluation_id', evaluationId)
-      .eq('user_id', userId)
-    if (error) throw error
+    await apiFetch('/api/data/eval-participants', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ evaluationId, userId }),
+    });
   },
 }
 
 export async function getAllParticipants(): Promise<ParticipantProfile[]> {
-  if (!supabase) throw new Error('Supabase client not initialized')
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email, full_name, area_id, role')
-    .in('role', ['participant', 'both'])
-    .order('full_name', { ascending: true })
-  if (error) throw error
-  return (data || []) as ParticipantProfile[]
+  return apiFetch('/api/data/participants');
 }
 
-// Get unique categories from questions table
 export async function getUniqueCategories(): Promise<string[]> {
-  if (!supabase) throw new Error('Supabase client not initialized')
-  
-  const { data, error } = await supabase
-    .from('questions')
-    .select('categoria')
-    .not('categoria', 'is', null)
-  
-  if (error) throw error
-  
-  // Extract unique categories
-  const categories = [...new Set(data?.map(q => q.categoria).filter(Boolean) || [])]
-  return categories.sort()
+  return apiFetch('/api/data/categories');
 }
 
-// Calcular puntaje de una pregunta con reglas anti-gaming
+// ── Scoring logic (pure, no network calls needed) ────────────────────────────
+
 export function calculateQuestionScore(
   question: Question,
   userAnswer: string | string[],
   questionWeight: number
 ): number {
-  // Parse correct answers (can be single index or comma-separated for multiple)
   const correctAnswers = question.correct_answer.split(',').map(a => a.trim());
-  
-  // Parse user answers
-  const userAnswers = Array.isArray(userAnswer) 
+  const userAnswers = Array.isArray(userAnswer)
     ? userAnswer.map(a => String(a).trim())
     : [String(userAnswer).trim()];
-  
+
   const totalOptions = question.options.length;
   const correctCount = correctAnswers.length;
   const userSelectedCount = userAnswers.length;
-  
-  // REGLA 1: Si marca TODAS las opciones y no todas eran correctas → puntos = 0
-  if (userSelectedCount === totalOptions && correctCount !== totalOptions) {
-    return 0;
+
+  if (userSelectedCount === totalOptions && correctCount !== totalOptions) return 0;
+  if (userSelectedCount > correctCount) return 0;
+
+  const hasIncorrectAnswer = userAnswers.some(a => !correctAnswers.includes(a));
+  if (hasIncorrectAnswer) return 0;
+
+  const allSelectedAreCorrect = userAnswers.every(a => correctAnswers.includes(a));
+  if (allSelectedAreCorrect) {
+    if (userSelectedCount === correctCount) return questionWeight;
+    return (userSelectedCount / correctCount) * questionWeight;
   }
 
-  // REGLA 2: Si marca MÁS opciones que la cantidad de respuestas correctas → puntos = 0
-  if (userSelectedCount > correctCount) {
-    return 0;
-  }
-
-  // REGLA 3: Si marca AL MENOS una respuesta incorrecta → puntos = 0
-  const hasIncorrectAnswer = userAnswers.some(answer => !correctAnswers.includes(answer));
-  if (hasIncorrectAnswer) {
-    return 0;
-  }
-
-  // REGLA 4: Si todas las opciones marcadas son correctas y NO hay opciones incorrectas seleccionadas
-  const allSelectedAreCorrect = userAnswers.every(answer => correctAnswers.includes(answer));
-  if (allSelectedAreCorrect && !hasIncorrectAnswer) {
-    // Si seleccionó TODAS las respuestas correctas → puntaje completo
-    if (userSelectedCount === correctCount) {
-      return questionWeight;
-    }
-    // Si seleccionó ALGUNAS respuestas correctas → puntaje parcial
-    const partialScore = (userSelectedCount / correctCount) * questionWeight;
-    return partialScore;
-  }
-
-  // Por defecto, 0 puntos
   return 0;
 }
 
-// Calcular puntaje total de una evaluación
 export async function calculateEvaluationScore(
   evaluationId: string,
   userAnswers: Record<string, string | string[]>,
   providedQuestions?: Question[]
 ): Promise<number> {
-  if (!supabase) throw new Error('Supabase client not initialized')
-  
   let questions: Question[];
-  
-  // Si se proporcionan preguntas, usarlas (para mantener consistencia con IDs)
+
   if (providedQuestions && providedQuestions.length > 0) {
     questions = providedQuestions;
   } else {
-    // Cargar preguntas directamente asociadas a la evaluación
     questions = await questionsService.getByEvaluationId(evaluationId);
-
-    // Si no hay preguntas asociadas, recuperar solo las que el usuario respondió.
-    // Los IDs en userAnswers son exactamente las preguntas que se mostraron durante
-    // el quiz (incluido su orden aleatorio), por lo que son la fuente de verdad.
     if (questions.length === 0) {
       const answeredIds = Object.keys(userAnswers);
       if (answeredIds.length > 0) {
@@ -567,93 +316,51 @@ export async function calculateEvaluationScore(
       }
     }
   }
-  
-  if (questions.length === 0) {
-    return 0;
-  }
-  
-  // Calcular peso por pregunta (100% / cantidad de preguntas)
+
+  if (questions.length === 0) return 0;
+
   const questionWeight = 100 / questions.length;
-  
   let totalScore = 0;
-  
+
   for (const question of questions) {
     const userAnswer = userAnswers[question.id];
-
-    if (userAnswer === undefined || userAnswer === null) {
-      continue; // No respondió, 0 puntos
-    }
-
-    // Para arrays, verificar que no esté vacío
-    if (Array.isArray(userAnswer) && userAnswer.length === 0) {
-      continue; // Array vacío, 0 puntos
-    }
-
-    // Para strings, verificar que no esté vacío
-    if (typeof userAnswer === 'string' && userAnswer === '') {
-      continue; // String vacío, 0 puntos
-    }
-
+    if (userAnswer === undefined || userAnswer === null) continue;
+    if (Array.isArray(userAnswer) && userAnswer.length === 0) continue;
+    if (typeof userAnswer === 'string' && userAnswer === '') continue;
     totalScore += calculateQuestionScore(question, userAnswer, questionWeight);
   }
 
-  const finalScore = Math.round(totalScore * 100) / 100;
-  return finalScore; // Redondear a 2 decimales
+  return Math.round(totalScore * 100) / 100;
 }
 
-// Evaluation Progress CRUD
+// ── Evaluation Progress ───────────────────────────────────────────────────────
+
 export const evaluationProgressService = {
-  async getByUserAndEvaluation(userId: string, evaluationId: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluation_progress')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('evaluation_id', evaluationId)
-      .single()
-    
-    if (error && error.code !== 'PGRST116') throw error // PGRST116 = not found
-    return data as EvaluationProgress | null
+  async getByUserAndEvaluation(userId: string, evaluationId: string): Promise<EvaluationProgress | null> {
+    return apiFetch(`/api/data/progress/${userId}/${evaluationId}`);
   },
 
-  async create(progress: Omit<EvaluationProgress, 'id' | 'started_at' | 'updated_at'>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluation_progress')
-      .insert(progress)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as EvaluationProgress
+  async create(progress: Omit<EvaluationProgress, 'id' | 'started_at' | 'updated_at'>): Promise<EvaluationProgress> {
+    return apiFetch('/api/data/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(progress),
+    });
   },
 
-  async update(userId: string, evaluationId: string, progress: Partial<EvaluationProgress>) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { data, error } = await supabase
-      .from('evaluation_progress')
-      .update(progress)
-      .eq('user_id', userId)
-      .eq('evaluation_id', evaluationId)
-      .select()
-      .single()
-    
-    if (error) throw error
-    return data as EvaluationProgress
+  async update(userId: string, evaluationId: string, progress: Partial<EvaluationProgress>): Promise<EvaluationProgress> {
+    return apiFetch('/api/data/progress', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, evaluationId, ...progress }),
+    });
   },
 
-  async delete(userId: string, evaluationId: string) {
-    if (!supabase) throw new Error('Supabase client not initialized')
-    
-    const { error } = await supabase
-      .from('evaluation_progress')
-      .delete()
-      .eq('user_id', userId)
-      .eq('evaluation_id', evaluationId)
-    
-    if (error) throw error
-  }
+  async delete(userId: string, evaluationId: string): Promise<void> {
+    await apiFetch('/api/data/progress', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, evaluationId }),
+    });
+  },
 }

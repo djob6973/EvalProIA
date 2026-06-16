@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
@@ -23,9 +22,11 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const nav = useNavigate();
   const { redirect: redirectTo } = Route.useSearch();
-  const { signIn, loading, resetPassword, user, profile } = useAuth();
+  const { signIn, loading, user, profile } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -33,13 +34,6 @@ function LoginPage() {
       nav({ to: role === "admin" || role === "both" ? "/dashboard" : "/participant" });
     }
   }, [user, profile, loading, nav]);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -55,54 +49,18 @@ function LoginPage() {
     const { data, error: signInError } = await signIn(email, password);
 
     if (signInError) {
-      if (signInError.message.includes("Invalid login credentials")) {
-        setError("Email o contraseña incorrectos. Verifica tus credenciales en Supabase.");
-      } else if (signInError.message.includes("Email not confirmed")) {
-        setError("Por favor, confirma tu email antes de iniciar sesión.");
-      } else {
-        setError(signInError.message);
-      }
+      setError(signInError.message);
       setIsSubmitting(false);
       return;
     }
 
-    // Fetch user profile to determine role
-    const { data: profile } = await supabase
-      ?.from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single() || { data: null };
-
-    const userRole = profile?.role || 'participant';
+    const userRole = data?.profile?.role || "participant";
     const defaultTo = userRole === "admin" || userRole === "both" ? "/dashboard" : "/participant";
-    // Use preserved redirect destination, but only allow internal relative paths
-    const destination = redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
-      ? redirectTo
-      : defaultTo;
+    const destination =
+      redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
+        ? redirectTo
+        : defaultTo;
     nav({ to: destination as any });
-  }
-
-  async function handleResetPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setResetError(null);
-    setIsResetting(true);
-
-    if (!resetEmail) {
-      setResetError("Por favor, ingresa tu email");
-      setIsResetting(false);
-      return;
-    }
-
-    const { error } = await resetPassword(resetEmail);
-
-    if (error) {
-      setResetError(error.message);
-      setIsResetting(false);
-      return;
-    }
-
-    setResetSuccess(true);
-    setIsResetting(false);
   }
 
   return (
@@ -136,32 +94,23 @@ function LoginPage() {
               <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Correo
               </Label>
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="tu@empresa.com" 
+              <Input
+                id="email"
+                type="email"
+                placeholder="tu@empresa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}
               />
             </div>
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Contraseña
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setShowResetPassword(true)}
-                  className="text-xs text-accent hover:underline"
-                >
-                  ¿Olvidaste?
-                </button>
-              </div>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
+              <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Contraseña
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
@@ -171,70 +120,6 @@ function LoginPage() {
               {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
             </Button>
           </form>
-
-          {showResetPassword && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="w-full max-w-sm rounded-lg bg-card p-6 shadow-lg">
-                <h3 className="mb-4 text-lg font-semibold">Recuperar contraseña</h3>
-                {resetSuccess ? (
-                  <div className="space-y-4">
-                    <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-500">
-                      Se ha enviado un email de recuperación a {resetEmail}. Revisa tu bandeja de entrada.
-                    </div>
-                    <Button
-                      onClick={() => {
-                        setShowResetPassword(false);
-                        setResetSuccess(false);
-                        setResetEmail("");
-                      }}
-                      className="w-full"
-                    >
-                      Cerrar
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    {resetError && (
-                      <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                        {resetError}
-                      </div>
-                    )}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="reset-email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        Email
-                      </Label>
-                      <Input
-                        id="reset-email"
-                        type="email"
-                        placeholder="tu@empresa.com"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        disabled={isResetting}
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowResetPassword(false);
-                          setResetEmail("");
-                          setResetError(null);
-                        }}
-                        disabled={isResetting}
-                        className="flex-1"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button type="submit" disabled={isResetting} className="flex-1">
-                        {isResetting ? "Enviando..." : "Enviar"}
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
-          )}
 
           <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             EvalPro · Infraestructura segura de evaluación
@@ -258,7 +143,6 @@ function LoginPage() {
             EvalPro extrae conocimiento de cualquier documento y genera evaluaciones calibradas —
             listas para enviar a tus participantes.
           </p>
-
         </div>
 
         <div className="font-mono text-[10px] uppercase tracking-widest text-primary-foreground/40">
