@@ -36,8 +36,10 @@ function ParticipantHome() {
       try {
         setLoadingData(true);
 
+        // getActive() pre-filters activa=true and non-expired at DB level,
+        // avoiding downloading the full evaluations list for every participant.
         const [allEvaluations, results, directIds] = await Promise.all([
-          evaluationsService.getAll(),
+          evaluationsService.getActive(),
           resultsService.getByUserId(profile.id),
           evaluationParticipantsService.getByUserId(profile.id).catch(() => [] as string[]),
         ]);
@@ -45,17 +47,12 @@ function ParticipantHome() {
         setUserResults(results);
 
         const directSet = new Set(directIds);
-        const now = new Date();
         const userAreaId = profile.area_id ?? null;
 
+        // activa and fecha_vencimiento already filtered by DB — only apply area/assignment logic
         const activeEvaluations = allEvaluations.filter((ev: any) => {
-          if (ev.activa === false) return false;
-          if (ev.fecha_vencimiento && new Date(ev.fecha_vencimiento) < now) return false;
-          // Asignación directa siempre visible
           if (directSet.has(ev.id)) return true;
-          // Sin área = no visible (requiere asignación directa)
           if (!ev.area_id) return false;
-          // Área diferente = no visible
           if (ev.area_id !== userAreaId) return false;
           return true;
         });

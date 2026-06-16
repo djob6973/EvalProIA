@@ -31,11 +31,13 @@ function Activity() {
   useEffect(() => {
     async function loadActivity() {
       if (!isAdmin) return;
-      
+
       try {
         setLoading(true);
-        const data = await statsService.getDashboardStats();
-        setActivity(data.recentActivity || []);
+        // getRecentActivity() is lighter than getDashboardStats() — only 2 queries
+        // and returns up to 50 items instead of the 8-item dashboard preview.
+        const data = await statsService.getRecentActivity(50);
+        setActivity(data);
       } catch (err) {
         console.error('Error loading activity:', err);
         setError('Error al cargar el registro de actividad');

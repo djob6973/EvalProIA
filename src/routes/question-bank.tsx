@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -196,6 +197,7 @@ function QuestionBankPage() {
     loadQuestions();
   }, [isAdmin]);
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 250);
   const [filterCat, setFilterCat] = useState<string>("todas");
   const [filterEstado, setFilterEstado] = useState<"todos" | Status>("activa");
   const [filterTipo, setFilterTipo] = useState<"todos" | QType>("todos");
@@ -212,17 +214,17 @@ function QuestionBankPage() {
   const filtered = useMemo(
     () =>
       items.filter((q) => {
-        const matchQ = q.enunciado.toLowerCase().includes(query.toLowerCase());
+        const matchQ = q.enunciado.toLowerCase().includes(debouncedQuery.toLowerCase());
         const matchC = filterCat === "todas" || q.categoria === filterCat;
         const matchE = filterEstado === "todos" || q.estado === filterEstado;
         const matchT = filterTipo === "todos" || q.tipo === filterTipo;
         return matchQ && matchC && matchE && matchT;
       }),
-    [items, query, filterCat, filterEstado, filterTipo],
+    [items, debouncedQuery, filterCat, filterEstado, filterTipo],
   );
 
   // Resetear página al cambiar cualquier filtro o búsqueda
-  useEffect(() => { setPage(1); }, [query, filterCat, filterEstado, filterTipo]);
+  useEffect(() => { setPage(1); }, [debouncedQuery, filterCat, filterEstado, filterTipo]);
 
   const counts = useMemo(() => {
     const source = filterEstado === 'todos' ? items : items.filter(q => q.estado === filterEstado);
@@ -359,7 +361,7 @@ function QuestionBankPage() {
         showToast("Pregunta actualizada");
       } else {
         // Crear nueva pregunta en Supabase (sin evaluation_id para banco de preguntas)
-        await questionsService.create({
+        const created = await questionsService.create({
           evaluation_id: null,
           question_text: form.enunciado,
           contexto: form.contexto,
@@ -370,23 +372,22 @@ function QuestionBankPage() {
           estado: form.estado,
           justificacion: form.justificacion
         });
-        
-        // Recargar preguntas desde Supabase para asegurar sincronización
-        const data = await questionsService.getAll();
-        const mappedItems: Question[] = data.map((q: any) => ({
-          id: q.id,
-          enunciado: q.question_text,
-          contexto: q.contexto || '',
-          tipo: q.options?.length === 2 && q.options[0] === 'Verdadero' ? 'vf' : 
-                q.correct_answer?.includes(',') ? 'multiple' : 'unica',
-          categoria: q.categoria || 'General',
-          dificultad: (q.dificultad as Difficulty) || 'medio',
-          estado: (q.estado as Status) || 'activa',
-          opciones: q.options || [],
-          correctas: q.correct_answer ? q.correct_answer.split(',').map(Number) : [],
-          justificacion: q.justificacion || ''
-        }));
-        setItems(mappedItems);
+
+        // Optimistic insert — avoids a full getAll() round-trip after every create
+        const mappedItem: Question = {
+          id: created.id,
+          enunciado: created.question_text,
+          contexto: created.contexto || '',
+          tipo: created.options?.length === 2 && created.options[0] === 'Verdadero' ? 'vf'
+              : created.correct_answer?.includes(',') ? 'multiple' : 'unica',
+          categoria: created.categoria || 'General',
+          dificultad: (created.dificultad as Difficulty) || 'medio',
+          estado: (created.estado as Status) || 'activa',
+          opciones: created.options || [],
+          correctas: created.correct_answer ? created.correct_answer.split(',').map(Number) : [],
+          justificacion: created.justificacion || '',
+        };
+        setItems((prev) => [mappedItem, ...prev]);
         showToast("Pregunta creada");
       }
       setShowModal(false);

@@ -64,12 +64,30 @@ export interface EvaluationProgress {
 export const evaluationsService = {
   async getAll() {
     if (!supabase) throw new Error('Supabase client not initialized')
-    
+
     const { data, error } = await supabase
       .from('evaluations')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
+    if (error) throw error
+    return data as Evaluation[]
+  },
+
+  // Returns only active, non-expired evaluations — use this instead of getAll()
+  // when admin-level filtering is not needed (e.g. participant home page).
+  async getActive() {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    const now = new Date().toISOString()
+
+    const { data, error } = await supabase
+      .from('evaluations')
+      .select('*')
+      .eq('activa', true)
+      .or(`fecha_vencimiento.is.null,fecha_vencimiento.gt.${now}`)
+      .order('created_at', { ascending: false })
+
     if (error) throw error
     return data as Evaluation[]
   },
@@ -231,15 +249,39 @@ export const questionsService = {
 
   async getByIds(ids: string[]) {
     if (!supabase) throw new Error('Supabase client not initialized')
-    
+
     const { data, error } = await supabase
       .from('questions')
       .select('*')
       .in('id', ids)
-    
+
     if (error) throw error
     return data as Question[]
-  }
+  },
+
+  // Filtered query — avoids downloading the entire question bank.
+  // Always prefer this over getAll() when category/difficulty filters are known.
+  async getFiltered(filters: {
+    categorias?: string[]
+    dificultad?: string
+  }) {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    let query = supabase.from('questions').select('*')
+
+    if (filters.categorias && filters.categorias.length > 0) {
+      query = query.in('categoria', filters.categorias)
+    }
+
+    if (filters.dificultad && filters.dificultad !== 'mixto') {
+      query = query.eq('dificultad', filters.dificultad)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data as Question[]
+  },
 }
 
 // Results CRUD

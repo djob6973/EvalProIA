@@ -23,130 +23,176 @@ export interface DashboardStats {
 }
 
 export const statsService = {
+  // Dedicated activity feed — lighter than getDashboardStats() and supports
+  // arbitrary limits for the full activity log page.
+  async getRecentActivity(limit = 50): Promise<DashboardStats['recentActivity']> {
+    if (!supabase) throw new Error('Supabase client not initialized')
+
+    const [
+      { data: recentResultsRaw, error: resultsError },
+      { data: recentEvaluationsRaw, error: evalsError },
+    ] = await Promise.all([
+      supabase
+        .from('results')
+        .select('score, completed_at, profiles(full_name), evaluations(title)')
+        .order('completed_at', { ascending: false })
+        .limit(limit),
+      supabase
+        .from('evaluations')
+        .select('title, created_at')
+        .order('created_at', { ascending: false })
+        .limit(Math.ceil(limit / 2)),
+    ])
+
+    if (resultsError) throw resultsError
+    if (evalsError) throw evalsError
+
+    const activity: DashboardStats['recentActivity'] = []
+
+    for (const result of (recentResultsRaw || [])) {
+      const profileData = (result as any).profiles
+      const evaluationData = (result as any).evaluations
+      activity.push({
+        type: 'result',
+        text: `${profileData?.full_name || 'Participante'} finalizó "${evaluationData?.title || 'Evaluación'}"`,
+        meta: `Puntaje: ${result.score}%`,
+        timestamp: result.completed_at,
+      })
+    }
+
+    for (const evaluation of (recentEvaluationsRaw || [])) {
+      activity.push({
+        type: 'evaluation',
+        text: `Evaluación "${evaluation.title}" creada`,
+        meta: 'Nueva evaluación',
+        timestamp: evaluation.created_at,
+      })
+    }
+
+    activity.sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    )
+
+    return activity.slice(0, limit)
+  },
   async getDashboardStats(): Promise<DashboardStats> {
     if (!supabase) {
       throw new Error('Supabase client not initialized')
     }
 
-    // Get total evaluations
-    const { data: evaluations, error: evalError } = await supabase
-      .from('evaluations')
-      .select('id, title, created_at')
-      .order('created_at', { ascending: false })
-
-    if (evalError) throw evalError
-
-    // Get total participants (profiles)
-    const { count: totalParticipants, error: participantsError } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-
-    if (participantsError) throw participantsError
-
-    // Get total results
-    const { data: results, error: resultsError } = await supabase
-      .from('results')
-      .select('score, completed_at, evaluation_id, user_id')
-
-    if (resultsError) throw resultsError
-
-    // Get total questions
-    const { count: totalQuestions, error: questionsError } = await supabase
-      .from('questions')
-      .select('*', { count: 'exact', head: true })
-
-    if (questionsError) throw questionsError
-
-    // Calculate average score
-    const averageScore = results && results.length > 0
-      ? Math.round(results.reduce((sum, r) => sum + r.score, 0) / results.length)
-      : 0
-
-    // Calculate completion rate (results / participants)
-    const completionRate = totalParticipants && totalParticipants > 0
-      ? Math.round(((results?.length || 0) / totalParticipants) * 100)
-      : 0
-
-    // Get recent evaluations with participant counts and average scores
-    const recentEvaluations = await Promise.all(
-      (evaluations || []).slice(0, 10).map(async (evaluation) => {
-        const { count: participants } = await supabase!
-          .from('results')
-          .select('*', { count: 'exact', head: true })
-          .eq('evaluation_id', evaluation.id)
-
-        const { data: evalResults } = await supabase!
-          .from('results')
-          .select('score')
-          .eq('evaluation_id', evaluation.id)
-
-        const avgScore = evalResults && evalResults.length > 0
-          ? Math.round(evalResults.reduce((sum, r) => sum + r.score, 0) / evalResults.length)
-          : 0
-
-        return {
-          id: evaluation.id,
-          title: evaluation.title,
-          participants: participants || 0,
-          averageScore: avgScore,
-          created_at: evaluation.created_at
-        }
-      })
-    )
-
-    // Get recent activity
-    const recentActivity: DashboardStats['recentActivity'] = []
-    
-    // Add recent results
-    const recentResults = (results || [])
-      .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime())
-      .slice(0, 5)
-
-    for (const result of recentResults) {
-      const { data: profile } = await supabase!
-        .from('profiles')
-        .select('full_name')
-        .eq('id', result.user_id)
-        .single()
-
-      const { data: evaluation } = await supabase!
+    // Run all independent queries in parallel — was 35+ sequential queries, now 5 parallel
+    const [
+      { count: totalEvaluations, error: evalCountError },
+      { data: recentEvaluationsRaw, error: recentEvalError },
+      { count: totalParticipants, error: participantsError },
+      { data: resultsData, count: totalResults, error: resultsError },
+      { count: totalQuestions, error: questionsError },
+      { data: recentResultsRaw, error: recentResultsError },
+    ] = await Promise.all([
+      // 1. Total evaluations count (HEAD — no data transfer)
+      supabase
         .from('evaluations')
-        .select('title')
-        .eq('id', result.evaluation_id)
-        .single()
+        .select('*', { count: 'exact', head: true }),
 
+      // 2. Last 10 evaluations with nested results for avg/count — replaces 20 N+1 queries
+      supabase
+        .from('evaluations')
+        .select('id, title, created_at, results(score)')
+        .order('created_at', { ascending: false })
+        .limit(10),
+
+      // 3. Total participants count (HEAD)
+      supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true }),
+
+      // 4. All result scores for global average (only the score column)
+      supabase
+        .from('results')
+        .select('score', { count: 'exact' }),
+
+      // 5. Total questions count (HEAD)
+      supabase
+        .from('questions')
+        .select('*', { count: 'exact', head: true }),
+
+      // 6. Recent results with joined names — replaces 10 N+1 queries
+      supabase
+        .from('results')
+        .select('score, completed_at, user_id, evaluation_id, profiles(full_name), evaluations(title)')
+        .order('completed_at', { ascending: false })
+        .limit(5),
+    ])
+
+    if (evalCountError) throw evalCountError
+    if (recentEvalError) throw recentEvalError
+    if (participantsError) throw participantsError
+    if (resultsError) throw resultsError
+    if (questionsError) throw questionsError
+    if (recentResultsError) throw recentResultsError
+
+    const totalResultsCount = totalResults || 0
+    const averageScore = totalResultsCount > 0 && resultsData
+      ? Math.round(resultsData.reduce((sum, r) => sum + r.score, 0) / totalResultsCount)
+      : 0
+
+    const completionRate = totalParticipants && totalParticipants > 0
+      ? Math.round((totalResultsCount / totalParticipants) * 100)
+      : 0
+
+    // Build recentEvaluations from nested results — zero extra queries
+    const recentEvaluations = (recentEvaluationsRaw || []).map((evaluation: any) => {
+      const evalResults: Array<{ score: number }> = evaluation.results || []
+      const participants = evalResults.length
+      const avgScore = participants > 0
+        ? Math.round(evalResults.reduce((sum, r) => sum + r.score, 0) / participants)
+        : 0
+      return {
+        id: evaluation.id,
+        title: evaluation.title,
+        participants,
+        averageScore: avgScore,
+        created_at: evaluation.created_at,
+      }
+    })
+
+    // Build activity from joined data — zero extra queries
+    const recentActivity: DashboardStats['recentActivity'] = []
+
+    for (const result of (recentResultsRaw || [])) {
+      const profileData = (result as any).profiles
+      const evaluationData = (result as any).evaluations
       recentActivity.push({
         type: 'result',
-        text: `${profile?.full_name || 'Participante'} finalizó "${evaluation?.title || 'Evaluación'}"`,
+        text: `${profileData?.full_name || 'Participante'} finalizó "${evaluationData?.title || 'Evaluación'}"`,
         meta: `Puntaje: ${result.score}%`,
-        timestamp: result.completed_at
+        timestamp: result.completed_at,
       })
     }
 
-    // Add recent evaluations
-    for (const evaluation of (evaluations || []).slice(0, 3)) {
+    // Add recent evaluations to activity feed
+    for (const evaluation of (recentEvaluationsRaw || []).slice(0, 3)) {
       recentActivity.push({
         type: 'evaluation',
         text: `Evaluación "${evaluation.title}" creada`,
         meta: 'Nueva evaluación',
-        timestamp: evaluation.created_at
+        timestamp: evaluation.created_at,
       })
     }
 
-    // Sort activity by timestamp
-    recentActivity.sort((a, b) => 
+    recentActivity.sort((a, b) =>
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     )
 
     return {
-      totalEvaluations: evaluations?.length || 0,
+      totalEvaluations: totalEvaluations || 0,
       totalParticipants: totalParticipants || 0,
-      totalResults: results?.length || 0,
+      totalResults: totalResultsCount,
       averageScore,
       completionRate,
       totalQuestions: totalQuestions || 0,
       recentEvaluations,
-      recentActivity: recentActivity.slice(0, 8)
+      recentActivity: recentActivity.slice(0, 8),
     }
-  }
+  },
 }

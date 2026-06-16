@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, memo } from "react";
+import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -227,6 +228,168 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
   );
 }
 
+type EvaluationCardProps = {
+  ev: Evaluation;
+  areas: Area[];
+  duplicatingId: string | null;
+  onPreview: (ev: Evaluation) => void;
+  onAssign: (ev: Evaluation) => void;
+  onDuplicate: (ev: Evaluation) => void;
+  onEdit: (ev: Evaluation) => void;
+  onDelete: (id: string) => void;
+};
+
+const EvaluationCard = memo(function EvaluationCard({
+  ev,
+  areas,
+  duplicatingId,
+  onPreview,
+  onAssign,
+  onDuplicate,
+  onEdit,
+  onDelete,
+}: EvaluationCardProps) {
+  const expired = isExpired(ev);
+  const areaName = ev.area_id ? areas.find((a) => a.id === ev.area_id)?.name : null;
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              {ev.id}
+            </span>
+            <h3 className="font-semibold">{ev.nombre}</h3>
+            <span
+              className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${
+                expired
+                  ? "bg-red-100 text-red-700"
+                  : ev.activa
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA"}
+            </span>
+          </div>
+          {ev.descripcion && (
+            <p className="mb-3 text-sm text-muted-foreground">{ev.descripcion}</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <span className="flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs text-accent">
+              <ClipboardList className="size-3" />
+              {ev.config.num_preguntas} preguntas
+            </span>
+            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-700">
+              <span className="font-mono font-bold">
+                {(100 / ev.config.num_preguntas).toFixed(2)}%
+              </span>
+              <span className="text-muted-foreground">c/u</span>
+            </span>
+            {ev.config.porcentaje_aprobacion != null && (
+              <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
+                <CheckCircle className="size-3" />
+                Aprueba con {ev.config.porcentaje_aprobacion}%
+              </span>
+            )}
+            {ev.tiempo_limite > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">
+                <Clock className="size-3" />
+                {ev.tiempo_limite} min
+              </span>
+            )}
+            <span className="rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+              {ev.intentos_permitidos} intento{ev.intentos_permitidos !== 1 ? "s" : ""}
+            </span>
+            {areaName && (
+              <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-xs text-violet-700">
+                <Layers className="size-3" />
+                {areaName}
+              </span>
+            )}
+            {ev.categorias.slice(0, 4).map((c) => (
+              <span
+                key={c}
+                className="flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground"
+              >
+                <Tag className="size-3" />
+                {c}
+              </span>
+            ))}
+            {ev.categorias.length > 4 && (
+              <span className="text-xs text-muted-foreground">
+                +{ev.categorias.length - 4} más
+              </span>
+            )}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {ev.created_at && (
+              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                <Calendar className="size-3" />
+                Creada: {formatDateTime(ev.created_at)}
+              </span>
+            )}
+            {ev.fecha_vencimiento && (
+              <span className={`flex items-center gap-1 text-[11px] font-medium ${expired ? "text-red-600" : "text-amber-600"}`}>
+                <CalendarX className="size-3" />
+                Vence: {formatDateTime(ev.fecha_vencimiento)}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <a
+            href={`/evaluation-results/${ev.id}`}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            title="Ver resultados"
+          >
+            <BarChart3 className="size-4" />
+          </a>
+          <button
+            onClick={() => onPreview(ev)}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            title="Vista previa"
+          >
+            <Eye className="size-4" />
+          </button>
+          <button
+            onClick={() => onAssign(ev)}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            title="Asignar participantes"
+          >
+            <Users className="size-4" />
+          </button>
+          <button
+            onClick={() => onDuplicate(ev)}
+            disabled={duplicatingId === ev.id}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent disabled:opacity-50"
+            title="Duplicar evaluación"
+          >
+            {duplicatingId === ev.id ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Copy className="size-4" />
+            )}
+          </button>
+          <button
+            onClick={() => onEdit(ev)}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+          >
+            <Edit2 className="size-4" />
+          </button>
+          <button
+            onClick={() => onDelete(ev.id)}
+            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 function EvaluationsPage() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
@@ -245,17 +408,20 @@ function EvaluationsPage() {
 
   const [items, setItems] = useState<Evaluation[]>([]);
 
-  // Cargar evaluaciones desde Supabase
+  // Carga inicial en paralelo — evaluaciones, categorías y áreas en un solo round-trip
   useEffect(() => {
-    async function loadEvaluations() {
-      if (!isAdmin) return;
-      
+    if (!isAdmin) return;
+
+    async function loadAll() {
       try {
         setLoading(true);
-        const data = await evaluationsService.getAll();
-        
-        // Mapear datos de Supabase al formato local
-        const mappedItems: Evaluation[] = data.map((evaluation: any) => ({
+        const [evalData, uniqueCategories, areasData] = await Promise.all([
+          evaluationsService.getAll(),
+          getUniqueCategories(),
+          areasService.getAll(),
+        ]);
+
+        const mappedItems: Evaluation[] = evalData.map((evaluation: any) => ({
           id: evaluation.id,
           nombre: evaluation.title,
           descripcion: evaluation.description || '',
@@ -273,57 +439,32 @@ function EvaluationsPage() {
         const expiredItems = mappedItems.filter(
           (ev) => ev.activa && ev.fecha_vencimiento && new Date(ev.fecha_vencimiento) < new Date()
         );
-        for (const ev of expiredItems) {
-          try {
-            await evaluationsService.update(ev.id, { activa: false });
-            ev.activa = false;
-          } catch (err) {
-            console.error('Error auto-deactivating expired evaluation:', ev.id, err);
-          }
-        }
+        await Promise.all(
+          expiredItems.map(async (ev) => {
+            try {
+              await evaluationsService.update(ev.id, { activa: false });
+              ev.activa = false;
+            } catch (err) {
+              console.error('Error auto-deactivating expired evaluation:', ev.id, err);
+            }
+          })
+        );
 
         setItems(mappedItems);
+        setCategories(uniqueCategories);
+        setAreas(areasData);
       } catch (err) {
-        console.error('Error loading evaluations:', err);
+        console.error('Error loading evaluations page data:', err);
         setError('Error al cargar las evaluaciones');
       } finally {
         setLoading(false);
       }
     }
 
-    loadEvaluations();
-  }, [isAdmin]);
-
-  // Cargar categorías únicas desde la base de datos
-  useEffect(() => {
-    async function loadCategories() {
-      if (!isAdmin) return;
-
-      try {
-        const uniqueCategories = await getUniqueCategories();
-        setCategories(uniqueCategories);
-      } catch (err) {
-        console.error('Error loading categories:', err);
-      }
-    }
-
-    loadCategories();
-  }, [isAdmin]);
-
-  // Cargar áreas
-  useEffect(() => {
-    async function loadAreas() {
-      if (!isAdmin) return;
-      try {
-        const data = await areasService.getAll();
-        setAreas(data);
-      } catch (err) {
-        console.error('Error loading areas:', err);
-      }
-    }
-    loadAreas();
+    loadAll();
   }, [isAdmin]);
   const [query, setQuery] = useState("");
+  const debouncedQuery = useDebounce(query, 250);
   const [filterCategoria, setFilterCategoria] = useState<string>("todas");
   const [filterEstado, setFilterEstado] = useState<"todos" | "activa" | "inactiva">("todos");
   const [filterArea, setFilterArea] = useState<string>("todas");
@@ -360,7 +501,7 @@ function EvaluationsPage() {
       items.filter((e) => {
         const matchQuery = (e.nombre + " " + e.descripcion)
           .toLowerCase()
-          .includes(query.toLowerCase());
+          .includes(debouncedQuery.toLowerCase());
         const matchCat =
           filterCategoria === "todas" || e.categorias.includes(filterCategoria);
         const matchEstado =
@@ -371,7 +512,7 @@ function EvaluationsPage() {
           (filterArea === "sin_area" ? !e.area_id : e.area_id === filterArea);
         return matchQuery && matchCat && matchEstado && matchArea;
       }),
-    [items, query, filterCategoria, filterEstado, filterArea],
+    [items, debouncedQuery, filterCategoria, filterEstado, filterArea],
   );
 
   const totalDist = form.config.dist_unica + form.config.dist_multiple + form.config.dist_vf;
@@ -514,14 +655,12 @@ function EvaluationsPage() {
     setLoadingPreview(true);
     setPreviewQuestions([]);
     try {
-      let allQ = await questionsService.getAll();
-      if (ev.categorias && ev.categorias.length > 0) {
-        allQ = allQ.filter((q) => q.categoria && ev.categorias.includes(q.categoria));
-      }
-      if (ev.config?.dificultad && ev.config.dificultad !== "mixto") {
-        allQ = allQ.filter((q) => q.dificultad === ev.config.dificultad);
-      }
-      const ordered = ev.config?.aleatorio ? shuffleArray(allQ) : allQ;
+      // Use filtered query at DB level — avoids downloading the full question bank
+      const questions = await questionsService.getFiltered({
+        categorias: ev.categorias?.length > 0 ? ev.categorias : undefined,
+        dificultad: ev.config?.dificultad,
+      });
+      const ordered = ev.config?.aleatorio ? shuffleArray(questions) : questions;
       setPreviewQuestions(ordered.slice(0, ev.config?.num_preguntas ?? 10));
     } catch (err) {
       console.error("Error loading preview questions:", err);
@@ -692,143 +831,17 @@ function EvaluationsPage() {
         ) : (
           <div className="grid gap-4">
             {filtered.map((ev) => (
-              <div
+              <EvaluationCard
                 key={ev.id}
-                className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-1 flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                        {ev.id}
-                      </span>
-                      <h3 className="font-semibold">{ev.nombre}</h3>
-                      <span
-                        className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${
-                          isExpired(ev)
-                            ? "bg-red-100 text-red-700"
-                            : ev.activa
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        {isExpired(ev) ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA"}
-                      </span>
-                    </div>
-                    {ev.descripcion && (
-                      <p className="mb-3 text-sm text-muted-foreground">{ev.descripcion}</p>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      <span className="flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs text-accent">
-                        <ClipboardList className="size-3" />
-                        {ev.config.num_preguntas} preguntas
-                      </span>
-                      <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-700">
-                        <span className="font-mono font-bold">
-                          {(100 / ev.config.num_preguntas).toFixed(2)}%
-                        </span>
-                        <span className="text-muted-foreground">c/u</span>
-                      </span>
-                      {ev.config.porcentaje_aprobacion != null && (
-                        <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
-                          <CheckCircle className="size-3" />
-                          Aprueba con {ev.config.porcentaje_aprobacion}%
-                        </span>
-                      )}
-                      {ev.tiempo_limite > 0 && (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">
-                          <Clock className="size-3" />
-                          {ev.tiempo_limite} min
-                        </span>
-                      )}
-                      <span className="rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
-                        {ev.intentos_permitidos} intento{ev.intentos_permitidos !== 1 ? "s" : ""}
-                      </span>
-                      {ev.area_id && (
-                        <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-xs text-violet-700">
-                          <Layers className="size-3" />
-                          {areas.find((a) => a.id === ev.area_id)?.name ?? "Área"}
-                        </span>
-                      )}
-                      {ev.categorias.slice(0, 4).map((c) => (
-                        <span
-                          key={c}
-                          className="flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground"
-                        >
-                          <Tag className="size-3" />
-                          {c}
-                        </span>
-                      ))}
-                      {ev.categorias.length > 4 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{ev.categorias.length - 4} más
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {ev.created_at && (
-                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Calendar className="size-3" />
-                          Creada: {formatDateTime(ev.created_at)}
-                        </span>
-                      )}
-                      {ev.fecha_vencimiento && (
-                        <span className={`flex items-center gap-1 text-[11px] font-medium ${isExpired(ev) ? "text-red-600" : "text-amber-600"}`}>
-                          <CalendarX className="size-3" />
-                          Vence: {formatDateTime(ev.fecha_vencimiento)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <a
-                      href={`/evaluation-results/${ev.id}`}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
-                      title="Ver resultados"
-                    >
-                      <BarChart3 className="size-4" />
-                    </a>
-                    <button
-                      onClick={() => openPreview(ev)}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
-                      title="Vista previa"
-                    >
-                      <Eye className="size-4" />
-                    </button>
-                    <button
-                      onClick={() => setAssigningEval(ev)}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
-                      title="Asignar participantes"
-                    >
-                      <Users className="size-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDuplicate(ev)}
-                      disabled={duplicatingId === ev.id}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent disabled:opacity-50"
-                      title="Duplicar evaluación"
-                    >
-                      {duplicatingId === ev.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Copy className="size-4" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => openEdit(ev)}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
-                    >
-                      <Edit2 className="size-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(ev.id)}
-                      className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                ev={ev}
+                areas={areas}
+                duplicatingId={duplicatingId}
+                onPreview={openPreview}
+                onAssign={setAssigningEval}
+                onDuplicate={handleDuplicate}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}

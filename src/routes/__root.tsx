@@ -104,6 +104,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 const PUBLIC_PATHS = ["/login"];
 
+// Module-level cache — avoids hitting the DB on every navigation.
+// Invalidated on sign-out (userId changes) or after 5 minutes.
+let profileCache: { userId: string; expiresAt: number } | null = null;
+const PROFILE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     // Only runs in the browser (supabase client is null on SSR)
@@ -112,10 +117,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
+      profileCache = null;
       throw redirect({
         to: "/login",
         search: { redirect: location.pathname + location.searchStr },
       });
+    }
+
+    // Skip the DB round-trip if we verified this user recently
+    const now = Date.now();
+    if (profileCache?.userId === session.user.id && now < profileCache.expiresAt) {
+      return;
     }
 
     // Verify the user's profile still exists — catches deleted users whose JWT hasn't expired yet
@@ -126,9 +138,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       .maybeSingle();
 
     if (!profile) {
+      profileCache = null;
       await supabase.auth.signOut();
       throw redirect({ to: "/login" });
     }
+
+    profileCache = { userId: session.user.id, expiresAt: now + PROFILE_CACHE_TTL };
   },
   head: () => ({
     meta: [

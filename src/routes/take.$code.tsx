@@ -90,25 +90,12 @@ function TakeEvaluationRoute() {
           if (progress && progress.question_order && progress.question_order.length > 0) {
             questionsData = await questionsService.getByIds(progress.question_order);
           } else {
-            const allQuestions = await questionsService.getAll();
+            // Query with filters at DB level — avoids downloading the full question bank
+            const filteredQuestions = await questionsService.getFiltered({
+              categorias: evalData.categorias,
+              dificultad: evalData.config?.dificultad,
+            });
 
-            // Filtrar por categorías si están especificadas
-            let filteredQuestions = allQuestions;
-            const categorias = evalData.categorias;
-            if (categorias && categorias.length > 0) {
-              filteredQuestions = allQuestions.filter(q =>
-                q.categoria && categorias.includes(q.categoria)
-              );
-            }
-
-            // Filtrar por dificultad si no es "mixto"
-            if (evalData.config?.dificultad && evalData.config.dificultad !== 'mixto') {
-              filteredQuestions = filteredQuestions.filter(q =>
-                q.dificultad === evalData.config.dificultad
-              );
-            }
-
-            // Mezclar y limitar según num_preguntas
             const shuffled = shuffleArray(filteredQuestions);
             const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
             questionsData = shuffled.slice(0, numPreguntas);
@@ -450,6 +437,10 @@ function QuizRunner({
   answersRef.current = answers;
   const onSubmitRef = useRef(onSubmit);
   onSubmitRef.current = onSubmit;
+  // Kept as a ref so the save effect doesn't depend on timeRemaining,
+  // which changes every second and would trigger a DB write per tick.
+  const timeRemainingRef = useRef(timeRemaining);
+  timeRemainingRef.current = timeRemaining;
 
   // Timer effect
   useEffect(() => {
@@ -469,7 +460,10 @@ function QuizRunner({
     return () => clearInterval(timer);
   }, [tiempoLimite]);
 
-  // Save progress periodically
+  // Save progress when the question index or answers change (2 s debounce).
+  // timeRemaining is intentionally excluded from deps — it changes every second via
+  // the timer and would cause a Supabase write per tick. We read the latest value
+  // through timeRemainingRef at the moment the save actually fires.
   useEffect(() => {
     if (!userId || !code) return;
 
@@ -477,19 +471,17 @@ function QuizRunner({
       try {
         await evaluationProgressService.update(userId, code, {
           current_question_index: i,
-          answers: answers,
-          time_remaining: timeRemaining
+          answers,
+          time_remaining: timeRemainingRef.current,
         });
       } catch (err) {
         console.error('Error saving progress:', err);
       }
     };
 
-    // Save immediately when answers or index changes
-    const saveTimer = setTimeout(saveProgress, 1000);
-
+    const saveTimer = setTimeout(saveProgress, 2000);
     return () => clearTimeout(saveTimer);
-  }, [i, answers, timeRemaining, userId, code, tiempoLimite]);
+  }, [i, answers, userId, code]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
