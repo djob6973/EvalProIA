@@ -166,7 +166,7 @@ async function route(
 
 async function listEvaluations(): Promise<Response> {
   const rows = await db`SELECT * FROM evaluations ORDER BY created_at DESC`;
-  return json(rows);
+  return json(rows.map(parseEvaluation));
 }
 
 async function activeEvaluations(): Promise<Response> {
@@ -176,13 +176,13 @@ async function activeEvaluations(): Promise<Response> {
       AND (fecha_vencimiento IS NULL OR fecha_vencimiento > now())
     ORDER BY created_at DESC
   `;
-  return json(rows);
+  return json(rows.map(parseEvaluation));
 }
 
 async function getEvaluation(id: string): Promise<Response> {
   const [row] = await db`SELECT * FROM evaluations WHERE id = ${id}`;
   if (!row) return json({ error: "No encontrado" }, 404);
-  return json(row);
+  return json(parseEvaluation(row));
 }
 
 async function createEvaluation(request: Request): Promise<Response> {
@@ -202,11 +202,11 @@ async function createEvaluation(request: Request): Promise<Response> {
     VALUES
       (${title}, ${description ?? null}, ${created_by ?? null}, ${area_id ?? null},
        ${activa ?? true}, ${tiempo_limite ?? null}, ${intentos_permitidos ?? 1},
-       ${JSON.stringify(categorias ?? [])}, ${JSON.stringify(config ?? {})},
+       ${db.json(categorias ?? [])}, ${db.json(config ?? {})},
        ${fecha_vencimiento ?? null})
     RETURNING *
   `;
-  return json(row, 201);
+  return json(parseEvaluation(row), 201);
 }
 
 async function updateEvaluation(request: Request, id: string): Promise<Response> {
@@ -221,7 +221,9 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
-    if (k in body) patch[k] = body[k];
+    if (k in body) {
+      patch[k] = (k === "categorias" || k === "config") ? db.json(body[k]) : body[k];
+    }
   }
   if (Object.keys(patch).length === 0) return json({ error: "Sin cambios" }, 400);
 
@@ -231,7 +233,7 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
     RETURNING *
   `;
   if (!row) return json({ error: "No encontrado" }, 404);
-  return json(row);
+  return json(parseEvaluation(row));
 }
 
 async function deleteEvaluation(request: Request, id: string): Promise<Response> {
@@ -248,7 +250,22 @@ async function evalWithQuestions(id: string): Promise<Response> {
   const questions = await db`
     SELECT * FROM questions WHERE evaluation_id = ${id} ORDER BY created_at ASC
   `;
-  return json({ ...evaluation, questions: questions.map(parseQuestion) });
+  return json({ ...parseEvaluation(evaluation), questions: questions.map(parseQuestion) });
+}
+
+// ── Evaluation helpers ────────────────────────────────────────────────────────
+
+function parseEvaluation(row: any) {
+  if (!row) return row;
+  return {
+    ...row,
+    categorias: typeof row.categorias === "string"
+      ? JSON.parse(row.categorias)
+      : (row.categorias ?? []),
+    config: typeof row.config === "string"
+      ? JSON.parse(row.config)
+      : (row.config ?? {}),
+  };
 }
 
 // ── Questions handlers ────────────────────────────────────────────────────────

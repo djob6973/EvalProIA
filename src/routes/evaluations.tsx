@@ -421,19 +421,28 @@ function EvaluationsPage() {
           areasService.getAll(),
         ]);
 
-        const mappedItems: Evaluation[] = evalData.map((evaluation: any) => ({
+        const mappedItems: Evaluation[] = evalData.map((evaluation: any) => {
+          const rawCats = evaluation.categorias;
+          let categorias: string[] = [];
+          if (Array.isArray(rawCats)) {
+            categorias = rawCats;
+          } else if (typeof rawCats === 'string' && rawCats) {
+            try { categorias = JSON.parse(rawCats); } catch { categorias = []; }
+          }
+          return {
           id: evaluation.id,
           nombre: evaluation.title,
           descripcion: evaluation.description || '',
           tiempo_limite: evaluation.tiempo_limite || 0,
           intentos_permitidos: evaluation.intentos_permitidos || 1,
           activa: evaluation.activa !== undefined ? evaluation.activa : true,
-          categorias: evaluation.categorias || [],
+          categorias,
           config: evaluation.config || DEFAULT_CONFIG,
           created_at: evaluation.created_at,
           fecha_vencimiento: evaluation.fecha_vencimiento ?? undefined,
           area_id: evaluation.area_id ?? null,
-        }));
+          };
+        });
 
         // Auto-desactivar evaluaciones vencidas
         const expiredItems = mappedItems.filter(
