@@ -315,27 +315,34 @@ function GeneratePage() {
         </Button>
       }
     >
-      <div className="space-y-6">
-        {/* Stepper */}
-        <ol className="grid gap-3 sm:grid-cols-4">
+      <div className="space-y-8">
+        {/* Progress Stepper with Enhanced Design */}
+        <ol className="grid gap-3 sm:grid-cols-4 animate-fade-in">
           {[
             { n: 1, label: "Cargar Documento", done: !!file },
             { n: 2, label: "Extraer Contenido", done: !!extractedText },
             { n: 3, label: "Configurar y Generar", done: questions.length > 0 },
             { n: 4, label: "Revisar y Guardar", done: saved },
-          ].map((s) => (
+          ].map((s, idx) => (
             <li
               key={s.n}
-              className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
-                s.done ? "border-accent/40 bg-accent/5" : "border-border bg-card"
+              className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-all duration-300 ${
+                s.done 
+                  ? "border-accent/40 bg-accent/10 shadow-sm hover:shadow-md hover:border-accent/60" 
+                  : "border-border bg-card hover:border-border/80"
               }`}
+              style={{
+                animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 50}ms both`
+              }}
             >
               <div
-                className={`grid size-7 place-items-center rounded-full font-mono text-xs font-bold ${
-                  s.done ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"
+                className={`grid size-7 place-items-center rounded-full font-mono text-xs font-bold transition-all duration-300 ${
+                  s.done 
+                    ? "bg-accent text-accent-foreground scale-110" 
+                    : "bg-secondary text-muted-foreground"
                 }`}
               >
-                {s.done ? <Check className="size-4" /> : s.n}
+                {s.done ? <Check className="size-4 animate-scale-in" /> : s.n}
               </div>
               <span className="text-sm font-medium">{s.label}</span>
             </li>
@@ -345,15 +352,15 @@ function GeneratePage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* LEFT: Upload + Extraction + Config */}
           <div className="space-y-6 lg:col-span-2">
-            {/* 1. Upload */}
+            {/* 1. Upload - Enhanced Design */}
             <Card title="1. Cargar Documento" subtitle="Sube PDF, DOCX o TXT para extraer contenido">
               {file ? (
-                <div className="flex items-center gap-3 rounded-lg border border-border bg-secondary/40 p-4">
-                  <div className="grid size-10 place-items-center rounded-md bg-accent/10 text-accent">
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-accent/5 p-4 animate-slide-up transition-all">
+                  <div className="grid size-10 place-items-center rounded-md bg-accent/15 text-accent animate-pulse-accent">
                     <FileText className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{file.name}</div>
+                    <div className="truncate text-sm font-semibold">{file.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {(file.size / 1024).toFixed(1)} KB · listo para extracción
                     </div>
@@ -363,16 +370,18 @@ function GeneratePage() {
                       setFile(null);
                       setExtractedText("");
                     }}
-                    className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-secondary"
+                    className="grid size-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
                   >
                     <X className="size-4" />
                   </button>
                 </div>
               ) : (
-                <label className="flex h-36 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors hover:bg-secondary/50">
-                  <Upload className="mb-2 size-5" />
-                  <span className="text-sm font-medium">Arrastra tu archivo aquí o haz clic</span>
-                  <span className="mt-1 text-[10px]">PDF, DOCX, TXT (máx. 10MB)</span>
+                <label className="group flex h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-all duration-300 hover:border-accent/40 hover:bg-accent/5">
+                  <div className="flex flex-col items-center transition-transform duration-300 group-hover:scale-110">
+                    <Upload className="mb-2 size-6 transition-colors group-hover:text-accent" />
+                    <span className="text-sm font-semibold">Arrastra tu archivo aquí o haz clic</span>
+                    <span className="mt-1 text-[10px]">PDF, DOCX, TXT (máx. 10MB)</span>
+                  </div>
                   <input
                     type="file"
                     hidden
@@ -382,7 +391,11 @@ function GeneratePage() {
                 </label>
               )}
 
-              <Button onClick={extractText} disabled={!file || extracting} className="mt-4 w-full">
+              <Button 
+                onClick={extractText} 
+                disabled={!file || extracting} 
+                className="mt-4 w-full transition-all duration-300 hover:shadow-lg"
+              >
                 {extracting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" /> {extractionStatus}
@@ -399,36 +412,42 @@ function GeneratePage() {
               </Button>
 
               {extracting && (
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className="h-full bg-accent transition-all"
-                    style={{ width: `${extractionProgress}%` }}
-                  />
+                <div className="mt-4 space-y-2 animate-slide-up">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground">{extractionProgress}%</span>
+                    <span className="text-muted-foreground">Procesando...</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full bg-gradient-to-r from-accent to-accent/60 transition-all duration-500"
+                      style={{ width: `${extractionProgress}%` }}
+                    />
+                  </div>
                 </div>
               )}
 
               {extractedText && !extracting && (
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-2 animate-slide-up">
                   <button
                     onClick={() => setShowExtractedText(!showExtractedText)}
-                    className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent/80 transition-colors"
+                    className="flex items-center gap-2 text-sm font-medium text-accent transition-colors hover:text-accent/80 group"
                   >
                     {showExtractedText ? (
                       <>
-                        <EyeOff className="size-4" />
+                        <EyeOff className="size-4 transition-transform group-hover:scale-110" />
                         Ocultar texto extraído ({extractedText.length} chars)
                       </>
                     ) : (
                       <>
-                        <Eye className="size-4" />
+                        <Eye className="size-4 transition-transform group-hover:scale-110" />
                         Ver texto extraído ({extractedText.length} chars)
                       </>
                     )}
                   </button>
                   
                   {showExtractedText && (
-                    <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-secondary/30 p-4 transition-all duration-300 ease-in-out">
-                      <pre className="text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap break-words">
+                    <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-secondary/50 p-4 animate-slide-down transition-all duration-300">
+                      <pre className="text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap break-words font-mono">
                         {extractedText}
                       </pre>
                     </div>
@@ -437,28 +456,28 @@ function GeneratePage() {
               )}
             </Card>
 
-            {/* 2. Configuration */}
+            {/* 2. Configuration - Enhanced Design */}
             <Card
               title="2. Configuración de Preguntas"
               subtitle="Define los parámetros de generación"
               disabled={!extractedText}
             >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Field label="Número de Preguntas">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-fade-in">
+                <Field label="Número de Preguntas" hint="5-50">
                   <input
                     type="number"
                     min={1}
                     max={50}
                     value={numPreguntas}
                     onChange={(e) => setNumPreguntas(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
                   />
                 </Field>
                 <Field label="Dificultad">
                   <select
                     value={dificultad}
                     onChange={(e) => setDificultad(e.target.value)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
                   >
                     <option value="facil">Fácil</option>
                     <option value="medio">Medio</option>
@@ -477,7 +496,7 @@ function GeneratePage() {
                         setCategoria(e.target.value);
                       }
                     }}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
                   >
                     <option value="">Sin categoría</option>
                     {categorias.map((cat) => (
@@ -492,48 +511,64 @@ function GeneratePage() {
                       onChange={(e) => setCategoria(e.target.value)}
                       placeholder="Nombre de la nueva categoría"
                       autoFocus
-                      className="mt-2 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="mt-2 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     />
                   )}
                 </Field>
-                <Field label="Tiempo Límite (min)">
+                <Field label="Tiempo Límite (min)" hint="30 min default">
                   <input
                     type="number"
                     min={1}
                     value={tiempoLimite}
                     onChange={(e) => setTiempoLimite(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
                   />
                 </Field>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-8 space-y-4 p-5 rounded-lg border border-border/50 bg-secondary/30 animate-fade-in">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Distribución por Tipo
-                  </label>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Distribución por Tipo de Pregunta
+                    </label>
+                    <p className="mt-1 text-[10px] text-muted-foreground/70">
+                      Ajusta los porcentajes para definir la composición de preguntas
+                    </p>
+                  </div>
                   <span
-                    className={`rounded px-2 py-0.5 font-mono text-[10px] font-bold ${
-                      total === 100 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    className={`rounded-full px-3 py-1 font-mono text-[10px] font-bold transition-all duration-300 ${
+                      total === 100 
+                        ? "bg-emerald-100 text-emerald-700 shadow-sm" 
+                        : "bg-amber-100 text-amber-700 shadow-sm"
                     }`}
                   >
                     Total: {total}%
                   </span>
                 </div>
-                {(Object.keys(distribucion) as QuestionType[]).map((tipo) => (
-                  <div key={tipo} className="space-y-1">
+                {(Object.keys(distribucion) as QuestionType[]).map((tipo, idx) => (
+                  <div key={tipo} className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-foreground">{TYPE_LABELS[tipo]}</span>
-                      <span className="font-mono text-muted-foreground">{distribucion[tipo]}%</span>
+                      <span className="font-semibold text-foreground">{TYPE_LABELS[tipo]}</span>
+                      <span className="font-mono font-bold text-accent">{distribucion[tipo]}%</span>
                     </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={distribucion[tipo]}
-                      onChange={(e) => updateDistribucion(tipo, parseInt(e.target.value))}
-                      className="w-full accent-accent"
-                    />
+                    <div className="relative">
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={distribucion[tipo]}
+                        onChange={(e) => updateDistribucion(tipo, parseInt(e.target.value))}
+                        className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer accent-accent transition-opacity hover:opacity-100 opacity-90"
+                      />
+                      <div 
+                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-accent rounded-full pointer-events-none transition-all"
+                        style={{
+                          left: `calc(${distribucion[tipo]}% - 8px)`,
+                          boxShadow: '0 0 12px rgba(237, 86, 80, 0.3)'
+                        }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -542,7 +577,7 @@ function GeneratePage() {
                 onClick={() => generate()}
                 disabled={!extractedText || generating || total !== 100}
                 size="lg"
-                className="mt-6 w-full"
+                className="mt-6 w-full transition-all duration-300 hover:shadow-lg disabled:opacity-50"
               >
                 {generating ? (
                   <>
@@ -555,64 +590,122 @@ function GeneratePage() {
                 )}
               </Button>
             </Card>
+                    type="number"
+                    min={1}
+                    value={tiempoLimite}
+                    onChange={(e) => setTiempoLimite(parseInt(e.target.value) || 1)}
+                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
+                  />
+                </Field>
+              </div>
+
+              <div className="mt-8 space-y-4 p-5 rounded-lg border border-border/50 bg-secondary/30 animate-fade-in">
           </div>
 
-          {/* RIGHT: Pipeline */}
-          <div className="space-y-6">
-            <div className="rounded-xl p-6" style={{ background: "#333333", color: "#F1F1F1" }}>
-              <div className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(241,241,241,0.5)" }}>
-                Flujo de Extracción
+          {/* RIGHT: Enhanced Pipeline Panel */}
+          <div className="space-y-6 animate-slide-in-left">
+            {/* Flujo de Extracción - Enhanced Design */}
+            <div className="rounded-xl p-6 transition-all duration-300 hover:shadow-lg" style={{ background: "#2E2E2E", color: "#F1F1F1" }}>
+              <div className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(241,241,241,0.6)" }}>
+                ✨ Flujo de Extracción
               </div>
-              <ol className="mt-4 space-y-3 text-xs">
+              <ol className="mt-5 space-y-3.5 text-xs">
                 {[
-                  "Cargar documento",
-                  "Extracción de texto con IA",
-                  "Configurar parámetros",
-                  "Generar preguntas",
-                  "Revisar y seleccionar",
-                  "Guardar en Banco de Preguntas",
-                ].map((s, i) => (
-                  <li key={s} className="flex gap-3">
-                    <div className="grid size-5 shrink-0 place-items-center rounded-full border border-primary-foreground/20 font-mono text-[9px]">
-                      {i + 1}
-                    </div>
-                    <span className="text-primary-foreground/80">{s}</span>
-                  </li>
-                ))}
+                  { label: "Cargar documento", completed: !!file },
+                  { label: "Extracción de texto con IA", completed: !!extractedText },
+                  { label: "Configurar parámetros", completed: false },
+                  { label: "Generar preguntas", completed: questions.length > 0 },
+                  { label: "Revisar y seleccionar", completed: questions.length > 0 && selected.size > 0 },
+                  { label: "Guardar en Banco de Preguntas", completed: saved },
+                ].map((s, i) => {
+                  const isCurrentStep = 
+                    (i === 0 && !file) ||
+                    (i === 1 && file && !extractedText) ||
+                    (i === 2 && extractedText && questions.length === 0) ||
+                    (i === 3 && extractedText && questions.length === 0) ||
+                    (i === 4 && questions.length > 0 && !saved) ||
+                    (i === 5 && saved);
+                  
+                  return (
+                    <li 
+                      key={i} 
+                      className="flex gap-3 transition-all duration-300 group"
+                      style={{
+                        opacity: s.completed || isCurrentStep ? 1 : 0.5,
+                        animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 100}ms both`
+                      }}
+                    >
+                      <div className={`grid size-5 shrink-0 place-items-center rounded-full border transition-all duration-300 font-mono text-[9px] font-bold ${
+                        s.completed
+                          ? "bg-accent text-white border-accent"
+                          : isCurrentStep
+                          ? "border-accent/60 bg-accent/10 text-accent group-hover:border-accent group-hover:bg-accent/20"
+                          : "border-primary-foreground/20 text-primary-foreground/50"
+                      }`}>
+                        {s.completed ? (
+                          <Check className="size-3" />
+                        ) : (
+                          <span className={isCurrentStep ? "animate-pulse" : ""}>{i + 1}</span>
+                        )}
+                      </div>
+                      <span className={`text-primary-foreground/80 transition-colors duration-300 ${
+                        s.completed ? "text-primary-foreground" : ""
+                      }`}>
+                        {s.label}
+                      </span>
+                    </li>
+                  );
+                })}
               </ol>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="font-bold">Recomendaciones</h3>
-              <ul className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
-                <li>· Los archivos PDF y DOCX se procesan directamente para extraer texto.</li>
-                <li>· Las imágenes (.jpg, .png) se procesan con IA de visión de OpenAI.</li>
-                <li>· Los archivos de texto (.txt) se leen directamente sin procesamiento adicional.</li>
-                <li>
-                  · Personaliza los prompts en{" "}
-                  <Link to="/settings" className="text-foreground hover:underline">
-                    Configuración de Prompts
-                  </Link>
-                  .
+            {/* Recomendaciones - Enhanced Design */}
+            <div className="rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:shadow-lg hover:border-accent/30">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">💡</span>
+                <h3 className="font-bold">Recomendaciones</h3>
+              </div>
+              <ul className="space-y-2.5 text-xs leading-relaxed text-muted-foreground">
+                <li className="flex gap-2 transition-all hover:text-foreground">
+                  <span className="shrink-0 text-accent font-bold">•</span>
+                  <span>Los archivos PDF y DOCX se procesan directamente para extraer texto.</span>
+                </li>
+                <li className="flex gap-2 transition-all hover:text-foreground">
+                  <span className="shrink-0 text-accent font-bold">•</span>
+                  <span>Las imágenes (.jpg, .png) se procesan con IA de visión de OpenAI.</span>
+                </li>
+                <li className="flex gap-2 transition-all hover:text-foreground">
+                  <span className="shrink-0 text-accent font-bold">•</span>
+                  <span>Los archivos de texto (.txt) se leen directamente sin procesamiento adicional.</span>
+                </li>
+                <li className="flex gap-2 transition-all hover:text-foreground">
+                  <span className="shrink-0 text-accent font-bold">•</span>
+                  <span>
+                    Personaliza los prompts en{" "}
+                    <Link to="/settings" className="text-accent font-semibold hover:underline">
+                      Configuración de Prompts
+                    </Link>
+                    .
+                  </span>
                 </li>
               </ul>
             </div>
           </div>
         </div>
 
-        {/* 3. Review & Save */}
+        {/* 3. Review & Save - Enhanced Design with Card Layout */}
         {questions.length > 0 && (
-          <div className="rounded-xl border border-border bg-card shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 p-5">
+          <div className="rounded-xl border border-border bg-card shadow-md overflow-hidden animate-slide-up">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-secondary/40 to-accent/5 p-6">
               <div>
-                <h2 className="font-bold">3. Revisar y Seleccionar Preguntas</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+                <h2 className="text-lg font-bold">3. Revisar y Seleccionar Preguntas</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
                   Marca las preguntas que quieras conservar y guárdalas en el banco.
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="rounded bg-accent/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase text-accent">
-                  {selected.size} de {questions.length} seleccionadas
+                <span className="rounded-full bg-accent/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase text-accent border border-accent/30">
+                  {selected.size} de {questions.length}
                 </span>
                 <Button
                   variant="ghost"
@@ -622,10 +715,15 @@ function GeneratePage() {
                       selected.size === questions.length ? new Set() : new Set(questions.map((q) => q.id)),
                     )
                   }
+                  className="transition-all duration-300 hover:bg-secondary"
                 >
-                  {selected.size === questions.length ? "Deseleccionar todas" : "Seleccionar todas"}
+                  {selected.size === questions.length ? "Deseleccionar" : "Seleccionar"}
                 </Button>
-                <Button onClick={() => setShowSaveConfirm(true)} disabled={saving || selected.size === 0}>
+                <Button 
+                  onClick={() => setShowSaveConfirm(true)} 
+                  disabled={saving || selected.size === 0}
+                  className="transition-all duration-300 hover:shadow-lg"
+                >
                   {saving ? (
                     <>
                       <Loader2 className="size-4 animate-spin" /> Guardando…
@@ -636,7 +734,7 @@ function GeneratePage() {
                     </>
                   ) : (
                     <>
-                      <Save className="size-4" /> Guardar Seleccionadas
+                      <Save className="size-4" /> Guardar
                     </>
                   )}
                 </Button>
@@ -653,216 +751,227 @@ function GeneratePage() {
               </div>
             </div>
 
-            <div className="divide-y divide-border">
+            {/* Questions Grid - Card Layout */}
+            <div className="grid gap-4 p-6 md:grid-cols-2 lg:grid-cols-1">
               {questions.map((q, idx) => {
                 const isSel = selected.has(q.id);
                 return (
                   <div
                     key={q.id}
-                    className={`flex gap-4 p-5 transition-colors ${
-                      isSel ? "bg-accent/5" : "hover:bg-secondary/30"
+                    className={`group rounded-lg border transition-all duration-300 p-5 ${
+                      isSel 
+                        ? "border-accent/40 bg-accent/10 shadow-md hover:shadow-lg hover:border-accent/60" 
+                        : "border-border bg-card hover:border-accent/20 hover:shadow-md"
                     }`}
+                    style={{
+                      animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 30}ms both`
+                    }}
                   >
-                    <button
-                      onClick={() => toggle(q.id)}
-                      className="mt-1 shrink-0 text-accent"
-                      aria-label="Seleccionar pregunta"
-                    >
-                      {isSel ? (
-                        <CheckSquare className="size-5" />
-                      ) : (
-                        <Square className="size-5 text-muted-foreground" />
-                      )}
-                    </button>
-                    <div className="min-w-0 flex-1 space-y-3">
-                      {/* Badges row + edit toggle */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          #{String(idx + 1).padStart(2, "0")}
-                        </span>
-                        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {TYPE_LABELS[q.tipo]}
-                        </span>
-                        <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
-                          {editingId === q.id && editDraft ? editDraft.dificultad : q.dificultad}
-                        </span>
-                        <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {editingId === q.id && editDraft ? editDraft.categoria : q.categoria}
-                        </span>
-                        <div className="ml-auto flex items-center gap-1">
-                          <button
-                            onClick={() => regenerateQuestion(q)}
-                            disabled={regeneratingId === q.id || editingId === q.id || generating}
-                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                            title="Regenerar esta pregunta"
-                          >
-                            {regeneratingId === q.id ? (
-                              <><Loader2 className="size-3 animate-spin" /> Regenerando…</>
-                            ) : (
-                              <><RefreshCw className="size-3" /> Regenerar</>
-                            )}
-                          </button>
-                          <button
-                            onClick={() => editingId === q.id ? cancelEdit() : startEdit(q)}
-                            disabled={regeneratingId === q.id}
-                            className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
-                            aria-label={editingId === q.id ? "Cancelar edición" : "Editar pregunta"}
-                          >
-                            {editingId === q.id ? (
-                              <><X className="size-3" /> Cancelar</>
-                            ) : (
-                              <><Pencil className="size-3" /> Editar</>
-                            )}
-                          </button>
+                    <div className="flex gap-4">
+                      {/* Checkbox */}
+                      <button
+                        onClick={() => toggle(q.id)}
+                        className="mt-0.5 shrink-0 text-accent transition-transform duration-300 hover:scale-125"
+                        aria-label="Seleccionar pregunta"
+                      >
+                        {isSel ? (
+                          <CheckSquare className="size-5 animate-scale-in" />
+                        ) : (
+                          <Square className="size-5 text-muted-foreground group-hover:text-accent/60" />
+                        )}
+                      </button>
+
+                      {/* Content */}
+                      <div className="min-w-0 flex-1 space-y-3">
+                        {/* Badges row */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            #{String(idx + 1).padStart(2, "0")}
+                          </span>
+                          <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {TYPE_LABELS[q.tipo]}
+                          </span>
+                          <span className="rounded bg-accent/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                            {editingId === q.id && editDraft ? editDraft.dificultad : q.dificultad}
+                          </span>
+                          <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {editingId === q.id && editDraft ? editDraft.categoria : q.categoria}
+                          </span>
+                          <div className="ml-auto flex items-center gap-1">
+                            <button
+                              onClick={() => regenerateQuestion(q)}
+                              disabled={regeneratingId === q.id || editingId === q.id || generating}
+                              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                              title="Regenerar esta pregunta"
+                            >
+                              {regeneratingId === q.id ? (
+                                <><Loader2 className="size-3 animate-spin" /> Regenerando…</>
+                              ) : (
+                                <><RefreshCw className="size-3" /> Regenerar</>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => editingId === q.id ? cancelEdit() : startEdit(q)}
+                              disabled={regeneratingId === q.id}
+                              className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label={editingId === q.id ? "Cancelar edición" : "Editar pregunta"}
+                            >
+                              {editingId === q.id ? (
+                                <><X className="size-3" /> Cancelar</>
+                              ) : (
+                                <><Pencil className="size-3" /> Editar</>
+                              )}
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      {editingId === q.id && editDraft ? (
-                        /* ── EDIT MODE ── */
-                        <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4">
-                          {/* Pregunta */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pregunta</label>
-                            <textarea
-                              rows={3}
-                              value={editDraft.pregunta}
-                              onChange={(e) => setEditDraft({ ...editDraft, pregunta: e.target.value })}
-                              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                            />
-                          </div>
-
-                          {/* Contexto */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contexto (opcional)</label>
-                            <textarea
-                              rows={2}
-                              value={editDraft.contexto}
-                              onChange={(e) => setEditDraft({ ...editDraft, contexto: e.target.value })}
-                              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
-                            />
-                          </div>
-
-                          {/* Opciones */}
-                          <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                              Opciones — haz clic en la letra para marcar como correcta
-                            </label>
-                            {editDraft.opciones.map((opt, i) => {
-                              const isCorrect = editDraft.respuesta_correcta.includes(i);
-                              return (
-                                <div
-                                  key={i}
-                                  className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${
-                                    isCorrect ? "border-emerald-300 bg-emerald-50" : "border-border bg-background"
-                                  }`}
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleCorrectAnswer(i)}
-                                    title={isCorrect ? "Quitar como correcta" : "Marcar como correcta"}
-                                    className={`grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold transition-colors ${
-                                      isCorrect
-                                        ? "bg-emerald-500 text-white"
-                                        : "bg-secondary text-muted-foreground hover:bg-accent/20"
-                                    }`}
-                                  >
-                                    {String.fromCharCode(65 + i)}
-                                  </button>
-                                  <input
-                                    value={opt}
-                                    onChange={(e) => {
-                                      const next = [...editDraft.opciones];
-                                      next[i] = e.target.value;
-                                      setEditDraft({ ...editDraft, opciones: next });
-                                    }}
-                                    className="flex-1 bg-transparent text-xs focus:outline-none"
-                                  />
-                                  {isCorrect && <Check className="size-3.5 shrink-0 text-emerald-600" />}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Dificultad + Categoría */}
-                          <div className="grid grid-cols-2 gap-3">
+                        {editingId === q.id && editDraft ? (
+                          /* ── EDIT MODE ── */
+                          <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4 animate-slide-down">
+                            {/* Pregunta */}
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dificultad</label>
-                              <select
-                                value={editDraft.dificultad}
-                                onChange={(e) => setEditDraft({ ...editDraft, dificultad: e.target.value })}
-                                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
-                              >
-                                <option value="facil">Fácil</option>
-                                <option value="medio">Medio</option>
-                                <option value="dificil">Difícil</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categoría</label>
-                              <input
-                                value={editDraft.categoria}
-                                onChange={(e) => setEditDraft({ ...editDraft, categoria: e.target.value })}
-                                className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pregunta</label>
+                              <textarea
+                                rows={3}
+                                value={editDraft.pregunta}
+                                onChange={(e) => setEditDraft({ ...editDraft, pregunta: e.target.value })}
+                                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                               />
                             </div>
-                          </div>
 
-                          {/* Justificación */}
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Justificación</label>
-                            <textarea
-                              rows={2}
-                              value={editDraft.justificacion}
-                              onChange={(e) => setEditDraft({ ...editDraft, justificacion: e.target.value })}
-                              className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
-                            />
-                          </div>
+                            {/* Contexto */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contexto (opcional)</label>
+                              <textarea
+                                rows={2}
+                                value={editDraft.contexto}
+                                onChange={(e) => setEditDraft({ ...editDraft, contexto: e.target.value })}
+                                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                              />
+                            </div>
 
-                          {/* Actions */}
-                          <div className="flex gap-2 pt-1">
-                            <Button size="sm" onClick={saveEdit}>
-                              <Save className="size-3.5" /> Guardar cambios
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                              Cancelar
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* ── VIEW MODE ── */
-                        <>
-                          <p className="text-sm font-medium leading-relaxed">{q.pregunta}</p>
-                          {q.contexto && (
-                            <p className="rounded-md border-l-2 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                              <strong className="text-foreground">Contexto:</strong> {q.contexto}
-                            </p>
-                          )}
-                          <ul className="space-y-1.5">
-                            {q.opciones.map((opt, i) => {
-                              const correct = q.respuesta_correcta.includes(i);
-                              return (
-                                <li
-                                  key={i}
-                                  className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
-                                    correct
-                                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                      : "border-border bg-background text-muted-foreground"
-                                  }`}
+                            {/* Opciones */}
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                Opciones — haz clic en la letra para marcar como correcta
+                              </label>
+                              {editDraft.opciones.map((opt, i) => {
+                                const isCorrect = editDraft.respuesta_correcta.includes(i);
+                                return (
+                                  <div
+                                    key={i}
+                                    className={`flex items-center gap-2 rounded-md border px-2 py-1.5 transition-all duration-300 ${
+                                      isCorrect ? "border-emerald-300 bg-emerald-50" : "border-border bg-background hover:border-accent/30"
+                                    }`}
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleCorrectAnswer(i)}
+                                      title={isCorrect ? "Quitar como correcta" : "Marcar como correcta"}
+                                      className={`grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold transition-all duration-300 ${
+                                        isCorrect
+                                          ? "bg-emerald-500 text-white"
+                                          : "bg-secondary text-muted-foreground hover:bg-accent/20"
+                                      }`}
+                                    >
+                                      {String.fromCharCode(65 + i)}
+                                    </button>
+                                    <input
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const next = [...editDraft.opciones];
+                                        next[i] = e.target.value;
+                                        setEditDraft({ ...editDraft, opciones: next });
+                                      }}
+                                      className="flex-1 bg-transparent text-xs focus:outline-none"
+                                    />
+                                    {isCorrect && <Check className="size-3.5 shrink-0 text-emerald-600" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Dificultad + Categoría */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dificultad</label>
+                                <select
+                                  value={editDraft.dificultad}
+                                  onChange={(e) => setEditDraft({ ...editDraft, dificultad: e.target.value })}
+                                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
                                 >
-                                  <span className="grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold">
-                                    {String.fromCharCode(65 + i)}
-                                  </span>
-                                  {opt}
-                                  {correct && <Check className="ml-auto size-3.5" />}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                          <p className="rounded-md border border-border bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
-                            <strong className="text-foreground">Justificación:</strong> {q.justificacion}
-                          </p>
-                        </>
-                      )}
+                                  <option value="facil">Fácil</option>
+                                  <option value="medio">Medio</option>
+                                  <option value="dificil">Difícil</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categoría</label>
+                                <input
+                                  value={editDraft.categoria}
+                                  onChange={(e) => setEditDraft({ ...editDraft, categoria: e.target.value })}
+                                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Justificación */}
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Justificación</label>
+                              <textarea
+                                rows={2}
+                                value={editDraft.justificacion}
+                                onChange={(e) => setEditDraft({ ...editDraft, justificacion: e.target.value })}
+                                className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                              />
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex gap-2 pt-2">
+                              <Button size="sm" onClick={saveEdit} className="transition-all duration-300">
+                                <Save className="size-3.5" /> Guardar cambios
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={cancelEdit}>
+                                Cancelar
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* ── VIEW MODE ── */
+                          <>
+                            <p className="text-sm font-medium leading-relaxed text-foreground">{q.pregunta}</p>
+                            {q.contexto && (
+                              <p className="rounded-md border-l-4 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                                <strong className="text-foreground">Contexto:</strong> {q.contexto}
+                              </p>
+                            )}
+                            <ul className="space-y-1.5">
+                              {q.opciones.map((opt, i) => {
+                                const correct = q.respuesta_correcta.includes(i);
+                                return (
+                                  <li
+                                    key={i}
+                                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-all duration-300 ${
+                                      correct
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                        : "border-border bg-background text-muted-foreground group-hover:border-accent/20"
+                                    }`}
+                                  >
+                                    <span className="grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold">
+                                      {String.fromCharCode(65 + i)}
+                                    </span>
+                                    <span className="flex-1">{opt}</span>
+                                    {correct && <Check className="size-3.5 shrink-0 text-emerald-600" />}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                            <p className="rounded-md border border-border bg-secondary/40 p-3 text-xs leading-relaxed text-muted-foreground">
+                              <strong className="text-foreground">Justificación:</strong> {q.justificacion}
+                            </p>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -901,10 +1010,13 @@ function Card({
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</label>
+        {hint && <span className="text-[10px] text-muted-foreground/60">{hint}</span>}
+      </div>
       {children}
     </div>
   );

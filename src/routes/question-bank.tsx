@@ -454,36 +454,36 @@ function QuestionBankPage() {
 
       <div className="grid gap-6 lg:grid-cols-4">
         <aside className="space-y-4 lg:col-span-1">
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-3 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <div className="rounded-lg border border-border bg-card p-5 transition-all duration-300" style={{ boxShadow: "var(--shadow-sm)" }}>
+            <div className="mb-4 font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors duration-300" style={{ color: "var(--accent)" }}>
               Categorías
             </div>
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-1">
               <li>
                 <button
                   onClick={() => setFilterCat("todas")}
-                  className={`flex w-full items-center justify-between rounded-md px-3 py-2 ${
+                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
                     filterCat === "todas"
-                      ? "bg-accent/10 text-accent"
-                      : "text-muted-foreground hover:bg-secondary"
+                      ? "bg-coral-soft text-coral-text"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
-                  <span>Todas las preguntas</span>
-                  <span className="font-mono text-xs">{counts.Todas}</span>
+                  <span>Todas</span>
+                  <span className="font-mono text-[10px] font-bold">{counts.Todas}</span>
                 </button>
               </li>
-              {categories.map((c: string) => (
-                <li key={c}>
+              {categories.map((c: string, idx: number) => (
+                <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
                   <button
                     onClick={() => setFilterCat(c)}
-                    className={`flex w-full items-center justify-between rounded-md px-3 py-2 ${
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
                       filterCat === c
-                        ? "bg-accent/10 text-accent"
-                        : "text-muted-foreground hover:bg-secondary"
+                        ? "bg-coral-soft text-coral-text"
+                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}
                   >
                     <span>{c}</span>
-                    <span className="font-mono text-xs">{counts[c] ?? 0}</span>
+                    <span className="font-mono text-[10px] font-bold">{counts[c] ?? 0}</span>
                   </button>
                 </li>
               ))}
@@ -492,20 +492,22 @@ function QuestionBankPage() {
         </aside>
 
         <div className="space-y-4 lg:col-span-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[200px] flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="flex flex-wrap items-center gap-3 animate-fade-in">
+            <div className="relative min-w-[220px] flex-1 max-w-sm transition-all duration-300">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 transition-colors duration-300" style={{ color: "var(--muted-foreground)" }} />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar preguntas…"
-                className="w-full rounded-md border border-input bg-card py-2 pl-9 pr-3 text-sm"
+                className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                style={{ borderColor: "var(--border)", background: "var(--card)" }}
               />
             </div>
             <select
               value={filterTipo}
               onChange={(e) => setFilterTipo(e.target.value as typeof filterTipo)}
-              className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
+              style={{ borderColor: "var(--border)", background: "var(--card)" }}
             >
               <option value="todos">Todos los tipos</option>
               <option value="unica">Selección Única</option>
@@ -515,77 +517,80 @@ function QuestionBankPage() {
             <select
               value={filterEstado}
               onChange={(e) => setFilterEstado(e.target.value as typeof filterEstado)}
-              className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+              className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
+              style={{ borderColor: "var(--border)", background: "var(--card)" }}
             >
               <option value="todos">Todos los estados</option>
               <option value="activa">Activas</option>
               <option value="borrador">Borradores</option>
               <option value="inactiva">Inactivas</option>
             </select>
-            <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span className="ml-auto font-mono text-[9px] font-bold uppercase tracking-[.12em] px-3 py-2 rounded-lg transition-all duration-300" style={{ background: "var(--secondary)/40", border: "1px solid var(--border)", color: "var(--foreground)" }}>
               {filtered.length} de {items.length}
             </span>
           </div>
 
           {filtered.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-12 text-center">
-              <HelpCircle className="mx-auto mb-3 size-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">
+            <div className="rounded-lg border border-border bg-card p-12 text-center animate-fade-in transition-all duration-300" style={{ boxShadow: "var(--shadow-sm)" }}>
+              <HelpCircle className="mx-auto mb-3 size-10 transition-colors duration-300" style={{ color: "var(--text-faint)" }} />
+              <p className="text-sm transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                 No hay preguntas que coincidan con los filtros.
               </p>
             </div>
           ) : (
             <>
               <div className="space-y-3">
-                {paginated.map((q) => (
+                {paginated.map((q, idx) => (
                   <div
                     key={q.id}
-                    className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+                    style={{ animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 40}ms both` }}
+                    className="group rounded-lg border border-border bg-card p-5 transition-all duration-300 hover:shadow-md hover:border-accent/40"
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-4">
                       <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                        <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                          <span className="font-mono text-[9px] font-bold uppercase tracking-[.1em] transition-all duration-300" style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "3px 8px" }}>
                             {q.id}
                           </span>
-                          <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
                             {q.categoria}
                           </span>
-                          <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                          <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
                             {TYPE_LABEL[q.tipo]}
                           </span>
-                          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                            Dificultad · {DIFF_LABEL[q.dificultad]}
+                          <span className="text-[10px] font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
+                            {DIFF_LABEL[q.dificultad]}
                           </span>
                           <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${
-                              q.estado === "activa"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : q.estado === "borrador"
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-gray-100 text-gray-700"
-                            }`}
+                            className="rounded-lg px-2.5 py-1 text-[10px] font-bold tracking-wider transition-all duration-300"
+                            style={{
+                              background: q.estado === "activa" ? "var(--coral-soft)" : q.estado === "borrador" ? "rgba(217,119,6,.12)" : "rgba(107,114,128,.12)",
+                              color: q.estado === "activa" ? "var(--coral-text)" : q.estado === "borrador" ? "#FBBF24" : "#6B7280"
+                            }}
                           >
                             {q.estado === "activa" ? "ACTIVA" : q.estado === "borrador" ? "BORRADOR" : "INACTIVA"}
                           </span>
                         </div>
-                        <p className="mb-2 text-sm leading-relaxed">{q.enunciado}</p>
+                        <p className="mb-2 text-sm leading-relaxed transition-colors duration-300" style={{ color: "var(--foreground)" }}>{q.enunciado}</p>
                         {q.contexto && (
-                          <p className="mb-3 rounded-md border-l-2 border-accent/50 bg-accent/5 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                            <strong className="text-foreground">Contexto:</strong> {q.contexto}
+                          <p className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--muted-foreground)" }}>
+                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>Contexto:</strong> {q.contexto}
                           </p>
                         )}
-                        <ul className="space-y-1">
+                        <ul className="space-y-2">
                           {q.opciones.map((o, i) => {
                             const ok = q.correctas.includes(i);
                             return (
                               <li
                                 key={i}
-                                className={`flex items-start gap-2 rounded-md px-3 py-1.5 text-sm ${
-                                  ok ? "bg-emerald-50 text-emerald-800" : "text-muted-foreground"
-                                }`}
+                                className="flex items-start gap-2 rounded-lg px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 hover:bg-secondary/40"
+                                style={{
+                                  border: "1px solid var(--border)",
+                                  background: ok ? "var(--coral-soft)" : "var(--background)",
+                                  color: ok ? "var(--coral-text)" : "var(--muted-foreground)"
+                                }}
                               >
-                                <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-current">
+                                <span className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-full border transition-all duration-300" style={{ borderColor: "currentColor" }}>
                                   {ok && <Check className="size-3" />}
                                 </span>
                                 <span>{o}</span>
@@ -594,16 +599,22 @@ function QuestionBankPage() {
                           })}
                         </ul>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 shrink-0 opacity-70 transition-all duration-300 group-hover:opacity-100">
                         <button
                           onClick={() => openEdit(q)}
-                          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+                          className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
+                          style={{ color: "var(--muted-foreground)" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
                         >
                           <Edit2 className="size-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(q.id)}
-                          className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          className="rounded-lg p-2 transition-all duration-300 hover:bg-destructive/10 hover:scale-110"
+                          style={{ color: "var(--muted-foreground)" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--destructive)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
                         >
                           <Trash2 className="size-4" />
                         </button>
@@ -644,23 +655,24 @@ function QuestionBankPage() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-card shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4">
-              <h3 className="font-semibold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-card shadow-2xl transition-all duration-300" style={{ borderRadius: 16, border: "1px solid var(--border)" }}>
+            <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-5 transition-all duration-300" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
+              <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>
                 {editing ? "Editar" : "Nueva"} Pregunta
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
+                style={{ color: "var(--muted-foreground)" }}
               >
-                <X className="size-5" />
+                <X className="size-4" />
               </button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-5 p-6">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <div className="animate-fade-in" style={{ animationDelay: "0ms" }}>
+                <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                   Enunciado *
                 </label>
                 <textarea
@@ -669,14 +681,15 @@ function QuestionBankPage() {
                   value={form.enunciado}
                   onChange={(e) => setForm({ ...form, enunciado: e.target.value })}
                   placeholder="Escribe la pregunta…"
-                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                  style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <div className="animate-fade-in" style={{ animationDelay: "50ms" }}>
+                <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                   Contexto *
-                  <span className="ml-1 font-normal normal-case text-muted-foreground/70">
+                  <span className="ml-1 font-normal normal-case transition-colors duration-300" style={{ color: "var(--muted-foreground)/70" }}>
                     — explica el enunciado sin revelar la respuesta
                   </span>
                 </label>
@@ -686,28 +699,30 @@ function QuestionBankPage() {
                   value={form.contexto}
                   onChange={(e) => setForm({ ...form, contexto: e.target.value })}
                   placeholder="Describe el escenario, marco teórico o situación que da sentido a la pregunta. No insinúes ni adelantes la respuesta correcta."
-                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                  style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 />
               </div>
 
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <div className="col-span-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
+                  <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     Tipo
                   </label>
                   <select
                     value={form.tipo}
                     onChange={(e) => setTipo(e.target.value as QType)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   >
                     <option value="unica">Selección Única</option>
                     <option value="multiple">Selección Múltiple</option>
                     <option value="vf">Verdadero / Falso</option>
                   </select>
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <div className="animate-fade-in" style={{ animationDelay: "150ms" }}>
+                  <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     Categoría
                   </label>
                   <select
@@ -721,7 +736,8 @@ function QuestionBankPage() {
                         setForm({ ...form, categoria: e.target.value });
                       }
                     }}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   >
                     {categories.map((c: string) => (
                       <option key={c} value={c}>
@@ -739,12 +755,13 @@ function QuestionBankPage() {
                         setForm({ ...form, categoria: e.target.value });
                       }}
                       placeholder="Nombre de la nueva categoría"
-                      className="mt-2 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="mt-2 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                      style={{ borderColor: "var(--border)", background: "var(--background)" }}
                     />
                   )}
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <div className="animate-fade-in" style={{ animationDelay: "200ms" }}>
+                  <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     Dificultad
                   </label>
                   <select
@@ -752,7 +769,8 @@ function QuestionBankPage() {
                     onChange={(e) =>
                       setForm({ ...form, dificultad: e.target.value as Difficulty })
                     }
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   >
                     <option value="facil">Fácil</option>
                     <option value="medio">Medio</option>
@@ -761,16 +779,17 @@ function QuestionBankPage() {
                 </div>
               </div>
 
-              <div>
+              <div className="animate-fade-in" style={{ animationDelay: "250ms" }}>
                 <div className="mb-2 flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground">
+                  <label className="text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     Opciones — marca la(s) correcta(s)
                   </label>
                   {form.tipo !== "vf" && form.opciones.length < 6 && (
                     <button
                       type="button"
                       onClick={addOpcion}
-                      className="text-xs font-medium text-accent hover:underline"
+                      className="text-xs font-medium transition-all duration-300 hover:underline"
+                      style={{ color: "var(--accent)" }}
                     >
                       + Añadir opción
                     </button>
@@ -780,15 +799,16 @@ function QuestionBankPage() {
                   {form.opciones.map((o, i) => {
                     const ok = form.correctas.includes(i);
                     return (
-                      <div key={i} className="flex items-center gap-2">
+                      <div key={i} className="flex items-center gap-2 transition-all duration-300">
                         <button
                           type="button"
                           onClick={() => toggleCorrecta(i)}
-                          className={`inline-flex size-7 shrink-0 items-center justify-center rounded-md border ${
-                            ok
-                              ? "border-emerald-600 bg-emerald-600 text-white"
-                              : "border-input bg-background text-transparent"
-                          }`}
+                          className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border transition-all duration-300"
+                          style={{
+                            borderColor: ok ? "var(--coral-text)" : "var(--border)",
+                            background: ok ? "var(--coral-soft)" : "var(--background)",
+                            color: ok ? "var(--coral-text)" : "transparent"
+                          }}
                           title="Marcar como correcta"
                         >
                           <Check className="size-4" />
@@ -798,13 +818,17 @@ function QuestionBankPage() {
                           onChange={(e) => updateOpcion(i, e.target.value)}
                           disabled={form.tipo === "vf"}
                           placeholder={`Opción ${i + 1}`}
-                          className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-accent"
+                          className="flex-1 rounded-lg border px-3 py-2 text-sm disabled:opacity-60 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                          style={{ borderColor: "var(--border)", background: "var(--background)" }}
                         />
                         {form.tipo !== "vf" && form.opciones.length > 2 && (
                           <button
                             type="button"
                             onClick={() => removeOpcion(i)}
-                            className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            className="rounded-lg p-2 transition-all duration-300 hover:bg-destructive/10 hover:scale-110"
+                            style={{ color: "var(--muted-foreground)" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--destructive)")}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
                           >
                             <Trash2 className="size-4" />
                           </button>
@@ -815,24 +839,26 @@ function QuestionBankPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <div className="animate-fade-in" style={{ animationDelay: "300ms" }}>
+                <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                   Justificación (opcional)
                 </label>
                 <textarea
                   rows={2}
                   value={form.justificacion ?? ""}
                   onChange={(e) => setForm({ ...form, justificacion: e.target.value })}
-                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                  style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <label className="text-xs font-medium text-muted-foreground">Estado</label>
+              <div className="flex items-center gap-3 animate-fade-in" style={{ animationDelay: "350ms" }}>
+                <label className="text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>Estado</label>
                 <select
                   value={form.estado}
                   onChange={(e) => setForm({ ...form, estado: e.target.value as Status })}
-                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                  style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 >
                   <option value="activa">Activa</option>
                   <option value="borrador">Borrador</option>
@@ -840,7 +866,7 @@ function QuestionBankPage() {
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              <div className="flex items-center justify-end gap-2 border-t border-border pt-4 transition-all duration-300">
                 <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
                   Cancelar
                 </Button>

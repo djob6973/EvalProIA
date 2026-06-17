@@ -137,40 +137,40 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
       <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col shadow-2xl"
-        style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)" }}
+        className="flex max-h-[85vh] w-full max-w-lg flex-col shadow-2xl transition-all duration-300"
+        style={{ borderRadius: 16, background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         <div
-          className="flex items-center justify-between px-[22px] py-[18px]"
+          className="flex items-center justify-between px-6 py-5 transition-all duration-300"
           style={{ borderBottom: "1px solid var(--border)" }}
         >
           <div className="min-w-0">
-            <h3 className="font-display text-[17px] font-medium" style={{ color: "var(--foreground)" }}>Asignar Participantes</h3>
-            <p className="mt-0.5 truncate text-[12px]" style={{ color: "var(--muted-foreground)" }}>{evaluation.nombre}</p>
+            <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>Asignar Participantes</h3>
+            <p className="mt-0.5 truncate text-[12px] transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>{evaluation.nombre}</p>
           </div>
           <button
             onClick={onClose}
-            className="ml-4 shrink-0 rounded-[8px] p-1.5 transition-colors hover:bg-secondary"
+            className="ml-4 shrink-0 rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
             style={{ color: "var(--muted-foreground)" }}
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="border-b border-border px-6 py-3">
+        <div className="border-b border-border px-6 py-3 transition-all duration-300">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 transition-colors duration-300" style={{ color: "var(--muted-foreground)" }} />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar participante…"
-              className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+              className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}
             />
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
             {assignedIds.size} participante{assignedIds.size !== 1 ? "s" : ""} asignado{assignedIds.size !== 1 ? "s" : ""}
           </p>
         </div>
@@ -178,15 +178,15 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
         <div className="flex-1 overflow-y-auto">
           {loadingModal ? (
             <div className="flex items-center justify-center py-12">
-              <div className="h-6 w-6 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-4 transition-all duration-300" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
+            <div className="py-12 text-center text-sm transition-colors duration-300 animate-fade-in" style={{ color: "var(--muted-foreground)" }}>
               {searchQuery ? "No hay participantes que coincidan." : "No hay participantes registrados."}
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {filtered.map((p) => {
+              {filtered.map((p, idx) => {
                 const isAssigned = assignedIds.has(p.id);
                 const isToggling = togglingId === p.id;
                 const areaName = p.area_id ? areas.find((a) => a.id === p.area_id)?.name : null;
@@ -195,32 +195,36 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
                     key={p.id}
                     onClick={() => !isToggling && toggle(p.id)}
                     disabled={isToggling}
-                    className={`flex w-full items-center gap-3 px-6 py-3 text-left transition-colors disabled:opacity-50 ${
-                      isAssigned ? "bg-accent/5 hover:bg-accent/10" : "hover:bg-secondary"
+                    className={`flex w-full items-center gap-3 px-6 py-3 text-left transition-all duration-300 disabled:opacity-50 ${
+                      isAssigned ? "hover:bg-accent/10" : "hover:bg-secondary"
                     }`}
+                    style={{
+                      animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both`,
+                      background: isAssigned ? "var(--coral-soft)" : "transparent"
+                    }}
                   >
                     <div
-                      className={`flex size-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+                      className={`flex size-5 shrink-0 items-center justify-center rounded border-2 transition-all duration-300 ${
                         isAssigned ? "border-accent bg-accent" : "border-border"
                       }`}
                     >
                       {isAssigned && (
-                        <CheckCircle className="size-3 text-accent-foreground" />
+                        <CheckCircle className="size-3 transition-all duration-300" style={{ color: "var(--background)" }} />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{p.full_name || p.email}</div>
-                      <div className="flex items-center gap-2 truncate text-xs text-muted-foreground">
+                      <div className="truncate text-sm font-medium transition-colors duration-300" style={{ color: isAssigned ? "var(--coral-text)" : "var(--foreground)" }}>{p.full_name || p.email}</div>
+                      <div className="flex items-center gap-2 truncate text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                         <span>{p.email}</span>
                         {areaName && (
-                          <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] font-medium text-violet-700">
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-medium transition-all duration-300" style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}>
                             {areaName}
                           </span>
                         )}
                       </div>
                     </div>
                     {isToggling && (
-                      <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                      <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 transition-all duration-300" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
                     )}
                   </button>
                 );
@@ -265,21 +269,21 @@ const EvaluationCard = memo(function EvaluationCard({
 
   return (
     <div
-      className="transition-shadow hover:shadow-md"
-      style={{ borderRadius: 20, padding: "22px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+      className="group transition-all duration-300 hover:shadow-md hover:border-accent/40"
+      style={{ borderRadius: 16, padding: "20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex items-center gap-[10px] flex-wrap">
+          <div className="mb-3 flex items-center gap-2.5 flex-wrap">
             <span
-              className="font-mono text-[10px] font-bold uppercase tracking-[.1em]"
-              style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "2px 8px" }}
+              className="font-mono text-[9px] font-bold uppercase tracking-[.1em] transition-all duration-300"
+              style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "3px 8px" }}
             >
               {ev.id.slice(0, 8).toUpperCase()}
             </span>
-            <h3 className="font-display text-[16px] font-medium" style={{ color: "var(--foreground)" }}>{ev.nombre}</h3>
+            <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>{ev.nombre}</h3>
             <span
-              className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider"
+              className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider transition-all duration-300"
               style={
                 expired
                   ? { background: "rgba(220,38,38,.12)", color: "#EF4444" }
@@ -291,36 +295,38 @@ const EvaluationCard = memo(function EvaluationCard({
               {expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA"}
             </span>
           </div>
+
           {ev.descripcion && (
-            <p className="mb-3 text-[13px]" style={{ color: "var(--muted-foreground)" }}>{ev.descripcion}</p>
+            <p className="mb-4 text-[13px] leading-relaxed transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>{ev.descripcion}</p>
           )}
-          <div className="flex flex-wrap gap-[6px]">
+
+          <div className="flex flex-wrap gap-2">
             <span
-              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
               style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
             >
               <ClipboardList className="size-3" />
               {ev.config.num_preguntas} preguntas
             </span>
             <span
-              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
               style={{ background: "rgba(5,150,105,.12)", color: "#10B981" }}
             >
               <span className="font-mono font-bold">{(100 / ev.config.num_preguntas).toFixed(2)}%</span>
-              <span style={{ color: "var(--muted-foreground)" }}>c/u</span>
+              <span>c/u</span>
             </span>
             {ev.config.porcentaje_aprobacion != null && (
               <span
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
                 style={{ background: "rgba(59,130,246,.12)", color: "#60A5FA" }}
               >
                 <CheckCircle className="size-3" />
-                Aprueba con {ev.config.porcentaje_aprobacion}%
+                Aprueba {ev.config.porcentaje_aprobacion}%
               </span>
             )}
             {ev.tiempo_limite > 0 && (
               <span
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
                 style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}
               >
                 <Clock className="size-3" />
@@ -328,56 +334,61 @@ const EvaluationCard = memo(function EvaluationCard({
               </span>
             )}
             <span
-              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
               style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
             >
               {ev.intentos_permitidos} intento{ev.intentos_permitidos !== 1 ? "s" : ""}
             </span>
             {areaName && (
               <span
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
                 style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}
               >
                 <Layers className="size-3" />
                 {areaName}
               </span>
             )}
-            {ev.categorias.slice(0, 4).map((c) => (
+            {ev.categorias.slice(0, 3).map((c) => (
               <span
                 key={c}
-                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
                 style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
               >
                 <Tag className="size-3" />
                 {c}
               </span>
             ))}
-            {ev.categorias.length > 4 && (
-              <span className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
-                +{ev.categorias.length - 4} más
+            {ev.categorias.length > 3 && (
+              <span className="text-[11px] font-medium px-2.5 py-1" style={{ color: "var(--muted-foreground)" }}>
+                +{ev.categorias.length - 3}
               </span>
             )}
           </div>
-          <div className="mt-2 flex flex-wrap gap-3">
+
+          <div className="mt-3 flex flex-wrap gap-4 text-[11px] transition-all duration-300">
             {ev.created_at && (
-              <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+              <span className="flex items-center gap-1.5 transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                 <Calendar className="size-3" />
                 Creada: {formatDateTime(ev.created_at)}
               </span>
             )}
             {ev.fecha_vencimiento && (
-              <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: expired ? "#EF4444" : "#FBBF24" }}>
+              <span 
+                className="flex items-center gap-1.5 font-medium transition-colors duration-300" 
+                style={{ color: expired ? "#EF4444" : "#FBBF24" }}
+              >
                 <CalendarX className="size-3" />
                 Vence: {formatDateTime(ev.fecha_vencimiento)}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-[2px]">
+
+        <div className="flex items-center gap-1 shrink-0 opacity-70 transition-all duration-300 group-hover:opacity-100">
           <a
             href={`/evaluation-results/${ev.id}`}
-            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
-            style={{ color: "var(--muted-foreground)" }}
+            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
+            style={{ color: "var(--muted-foreground)", display: 'flex' }}
             title="Ver resultados"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
             onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
@@ -386,7 +397,7 @@ const EvaluationCard = memo(function EvaluationCard({
           </a>
           <button
             onClick={() => onPreview(ev)}
-            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
             style={{ color: "var(--muted-foreground)" }}
             title="Vista previa"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
@@ -396,7 +407,7 @@ const EvaluationCard = memo(function EvaluationCard({
           </button>
           <button
             onClick={() => onAssign(ev)}
-            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
             style={{ color: "var(--muted-foreground)" }}
             title="Asignar participantes"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
@@ -407,7 +418,7 @@ const EvaluationCard = memo(function EvaluationCard({
           <button
             onClick={() => onDuplicate(ev)}
             disabled={duplicatingId === ev.id}
-            className="rounded-[8px] p-2 transition-colors hover:bg-secondary disabled:opacity-50"
+            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110 disabled:opacity-50"
             style={{ color: "var(--muted-foreground)" }}
             title="Duplicar evaluación"
             onMouseEnter={(e) => { if (duplicatingId !== ev.id) e.currentTarget.style.color = "var(--accent)"; }}
@@ -421,7 +432,7 @@ const EvaluationCard = memo(function EvaluationCard({
           </button>
           <button
             onClick={() => onEdit(ev)}
-            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
             style={{ color: "var(--muted-foreground)" }}
             title="Editar evaluación"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
@@ -431,7 +442,7 @@ const EvaluationCard = memo(function EvaluationCard({
           </button>
           <button
             onClick={() => onDelete(ev.id)}
-            className="rounded-[8px] p-2 transition-colors hover:bg-destructive/10"
+            className="rounded-lg p-2 transition-all duration-300 hover:bg-destructive/10 hover:scale-110"
             style={{ color: "var(--muted-foreground)" }}
             title="Eliminar evaluación"
             onMouseEnter={(e) => (e.currentTarget.style.color = "var(--destructive)")}
@@ -836,21 +847,23 @@ function EvaluationsPage() {
       )}
 
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
+        {/* 🔍 Filter Bar - Enhanced Design */}
+        <div className="flex flex-wrap items-center gap-3 animate-fade-in">
+          <div className="relative min-w-[220px] flex-1 max-w-sm transition-all duration-300">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 transition-colors" style={{ color: "var(--muted-foreground)" }} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar evaluaciones…"
-              className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+              className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
             />
           </div>
+
           <select
             value={filterCategoria}
             onChange={(e) => setFilterCategoria(e.target.value)}
-            className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+            className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
             style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
           >
             <option value="todas">Todas las categorías</option>
@@ -860,21 +873,23 @@ function EvaluationsPage() {
               </option>
             ))}
           </select>
+
           <select
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value as typeof filterEstado)}
-            className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+            className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
             style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
           >
             <option value="todos">Todos los estados</option>
             <option value="activa">Activas</option>
             <option value="inactiva">Inactivas</option>
           </select>
+
           {areas.length > 0 && (
             <select
               value={filterArea}
               onChange={(e) => setFilterArea(e.target.value)}
-              className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+              className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
             >
               <option value="todas">Todas las áreas</option>
@@ -886,35 +901,49 @@ function EvaluationsPage() {
               ))}
             </select>
           )}
-          <div className="ml-auto font-mono text-[10px] uppercase tracking-[.12em]" style={{ color: "var(--text-faint)" }}>
+
+          <div 
+            className="ml-auto font-mono text-[10px] uppercase tracking-[.12em] px-3 py-2 rounded-lg transition-all duration-300"
+            style={{ 
+              color: "var(--text-faint)",
+              background: "var(--secondary)/40",
+              border: "1px solid var(--border)"
+            }}
+          >
             {filtered.length} de {items.length}
           </div>
         </div>
 
         {filtered.length === 0 ? (
           <div
-            className="p-12 text-center"
+            className="p-12 text-center animate-fade-in transition-all duration-300"
             style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
           >
             <ClipboardList className="mx-auto mb-3 size-10" style={{ color: "var(--text-faint)" }} />
             <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
-              No hay evaluaciones. Crea la primera con "Nueva Evaluación".
+              {filtered.length === items.length ? 'No hay evaluaciones. Crea la primera con "Nueva Evaluación".' : 'No hay evaluaciones que coincidan con los filtros.'}
             </p>
           </div>
         ) : (
           <div className="grid gap-4">
-            {filtered.map((ev) => (
-              <EvaluationCard
+            {filtered.map((ev, idx) => (
+              <div
                 key={ev.id}
-                ev={ev}
-                areas={areas}
-                duplicatingId={duplicatingId}
-                onPreview={openPreview}
-                onAssign={setAssigningEval}
-                onDuplicate={handleDuplicate}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-              />
+                style={{
+                  animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 40}ms both`
+                }}
+              >
+                <EvaluationCard
+                  ev={ev}
+                  areas={areas}
+                  duplicatingId={duplicatingId}
+                  onPreview={openPreview}
+                  onAssign={setAssigningEval}
+                  onDuplicate={handleDuplicate}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -942,26 +971,26 @@ function EvaluationsPage() {
 
       {/* ── PREVIEW MODAL ── */}
       {previewEval && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 animate-fade-in">
           <div
-            className="my-8 w-full max-w-2xl shadow-2xl"
-            style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)" }}
+            className="my-8 w-full max-w-2xl shadow-2xl transition-all duration-300"
+            style={{ borderRadius: 16, background: "var(--surface)", border: "1px solid var(--border)" }}
           >
             {/* Header */}
             <div
-              className="sticky top-0 z-10 flex items-center justify-between px-[22px] py-[18px]"
-              style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)", borderRadius: "20px 20px 0 0" }}
+              className="sticky top-0 z-10 flex items-center justify-between px-6 py-5 transition-all duration-300"
+              style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)", borderRadius: "16px 16px 0 0" }}
             >
               <div>
-                <div className="flex items-center gap-2">
-                  <Eye className="size-4" style={{ color: "var(--accent)" }} />
-                  <span className="font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>Vista Previa</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <Eye className="size-4 transition-all duration-300" style={{ color: "var(--accent)" }} />
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-all duration-300" style={{ color: "var(--accent)" }}>Vista Previa</span>
                 </div>
-                <h3 className="font-display mt-1 text-[16px] font-medium" style={{ color: "var(--foreground)" }}>{previewEval.nombre}</h3>
+                <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>{previewEval.nombre}</h3>
               </div>
               <button
                 onClick={() => setPreviewEval(null)}
-                className="rounded-[8px] p-1.5 transition-colors hover:bg-secondary"
+                className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
                 style={{ color: "var(--muted-foreground)" }}
               >
                 <X className="size-4" />
@@ -969,22 +998,22 @@ function EvaluationsPage() {
             </div>
 
             {/* Info strip */}
-            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-secondary/40 px-6 py-3">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-secondary/40 px-6 py-3 transition-all duration-300">
+              <span className="flex items-center gap-1.5 text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                 <ClipboardList className="size-3.5" />
                 {previewEval.config.num_preguntas} preguntas
               </span>
               {previewEval.tiempo_limite > 0 && (
-                <span className="flex items-center gap-1.5 text-xs text-amber-600">
+                <span className="flex items-center gap-1.5 text-xs transition-colors duration-300" style={{ color: "#FBBF24" }}>
                   <Clock className="size-3.5" />
                   {previewEval.tiempo_limite} min
                 </span>
               )}
-              <span className="flex items-center gap-1.5 text-xs text-emerald-600">
+              <span className="flex items-center gap-1.5 text-xs transition-colors duration-300" style={{ color: "#10B981" }}>
                 <CheckCircle className="size-3.5" />
-                Aprueba con {previewEval.config.porcentaje_aprobacion}%
+                Aprueba {previewEval.config.porcentaje_aprobacion}%
               </span>
-              <span className="ml-auto rounded bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+              <span className="ml-auto rounded px-2 py-0.5 text-[10px] font-bold transition-all duration-300" style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}>
                 VISTA PREVIA — sin registro de respuestas
               </span>
             </div>
@@ -993,34 +1022,35 @@ function EvaluationsPage() {
             <div className="p-6">
               {loadingPreview ? (
                 <div className="flex items-center justify-center py-12">
-                  <div className="h-6 w-6 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                  <div className="h-6 w-6 animate-spin rounded-full border-4 transition-all duration-300" style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }} />
                 </div>
               ) : previewQuestions.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm transition-all duration-300 animate-fade-in" style={{ color: "var(--muted-foreground)" }}>
                   No hay preguntas en el banco que coincidan con la configuración de esta evaluación.
                 </div>
               ) : (
                 <div className="space-y-6">
                   {previewQuestions.map((q, idx) => (
-                    <div key={q.id}>
+                    <div key={q.id} style={{ animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 30}ms both` }}>
                       <div className="flex items-start gap-3">
-                        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-accent/10 font-mono text-xs font-bold text-accent">
+                        <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full transition-all duration-300 font-mono text-xs font-bold" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
                           {idx + 1}
                         </span>
                         <div className="flex-1 space-y-3">
                           {q.contexto && (
-                            <p className="rounded border-l-2 border-accent/40 bg-accent/5 px-3 py-1.5 text-xs text-muted-foreground">
+                            <p className="rounded border-l-2 px-3 py-1.5 text-xs transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--muted-foreground)" }}>
                               {q.contexto}
                             </p>
                           )}
-                          <p className="text-sm font-medium leading-relaxed">{q.question_text}</p>
+                          <p className="text-sm font-medium leading-relaxed transition-colors duration-300" style={{ color: "var(--foreground)" }}>{q.question_text}</p>
                           <ul className="space-y-2">
                             {q.options.map((opt: string, i: number) => (
                               <li
                                 key={i}
-                                className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground"
+                                className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-all duration-300 hover:border-accent/50 hover:bg-secondary/40"
+                                style={{ borderColor: "var(--border)", background: "var(--background)", color: "var(--muted-foreground)" }}
                               >
-                                <span className="grid size-5 shrink-0 place-items-center rounded-sm border border-border font-mono text-[10px] font-bold">
+                                <span className="grid size-5 shrink-0 place-items-center rounded-sm border font-mono text-[10px] font-bold transition-all duration-300" style={{ borderColor: "var(--border)" }}>
                                   {String.fromCharCode(65 + i)}
                                 </span>
                                 {opt}
@@ -1030,7 +1060,7 @@ function EvaluationsPage() {
                         </div>
                       </div>
                       {idx < previewQuestions.length - 1 && (
-                        <div className="mt-6 border-b border-border" />
+                        <div className="mt-6 border-b border-border transition-all duration-300" />
                       )}
                     </div>
                   ))}
@@ -1038,8 +1068,8 @@ function EvaluationsPage() {
               )}
             </div>
 
-            <div className="border-t border-border px-6 py-4">
-              <Button variant="outline" className="w-full" onClick={() => setPreviewEval(null)}>
+            <div className="border-t border-border px-6 py-4 transition-all duration-300">
+              <Button variant="outline" className="w-full transition-all duration-300 hover:scale-105" onClick={() => setPreviewEval(null)}>
                 Cerrar Vista Previa
               </Button>
             </div>
@@ -1048,21 +1078,21 @@ function EvaluationsPage() {
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
           <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-2xl"
-            style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)" }}
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-2xl transition-all duration-300"
+            style={{ borderRadius: 16, background: "var(--surface)", border: "1px solid var(--border)" }}
           >
             <div
-              className="sticky top-0 z-10 flex items-center justify-between bg-card px-[22px] py-[18px]"
+              className="sticky top-0 z-10 flex items-center justify-between bg-card px-6 py-5 transition-all duration-300"
               style={{ borderBottom: "1px solid var(--border)" }}
             >
-              <h3 className="font-display text-[17px] font-medium" style={{ color: "var(--foreground)" }}>
+              <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>
                 {editing ? "Editar" : "Nueva"} Evaluación
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="rounded-[8px] p-1.5 transition-colors hover:bg-secondary"
+                className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
                 style={{ color: "var(--muted-foreground)" }}
               >
                 <X className="size-4" />
@@ -1071,8 +1101,8 @@ function EvaluationsPage() {
 
             <form onSubmit={handleSave} className="space-y-5 p-6">
               <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <div className="animate-fade-in" style={{ animationDelay: "0ms" }}>
+                  <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     Nombre *
                   </label>
                   <input
@@ -1080,23 +1110,25 @@ function EvaluationsPage() {
                     value={form.nombre}
                     onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                     placeholder="Ej: Evaluación de Seguridad Industrial"
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="w-full rounded-md border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                <div className="animate-fade-in" style={{ animationDelay: "50ms" }}>
+                  <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     Descripción
                   </label>
                   <textarea
                     rows={2}
                     value={form.descripcion}
                     onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-                    className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    className="w-full resize-none rounded-md border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  <div className="animate-fade-in" style={{ animationDelay: "100ms" }}>
+                    <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                       Tiempo límite (min, 0 = sin límite)
                     </label>
                     <input
@@ -1106,11 +1138,12 @@ function EvaluationsPage() {
                       onChange={(e) =>
                         setForm({ ...form, tiempo_limite: +e.target.value })
                       }
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="w-full rounded-md border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                      style={{ borderColor: "var(--border)", background: "var(--background)" }}
                     />
                   </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  <div className="animate-fade-in" style={{ animationDelay: "150ms" }}>
+                    <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                       Intentos permitidos
                     </label>
                     <input
@@ -1120,7 +1153,8 @@ function EvaluationsPage() {
                       onChange={(e) =>
                         setForm({ ...form, intentos_permitidos: +e.target.value })
                       }
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                      className="w-full rounded-md border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                      style={{ borderColor: "var(--border)", background: "var(--background)" }}
                     />
                   </div>
                 </div>
