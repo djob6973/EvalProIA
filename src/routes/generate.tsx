@@ -590,6 +590,7 @@ function GeneratePage() {
                 )}
               </Button>
             </Card>
+          </div>
 
           {/* RIGHT: Enhanced Pipeline Panel */}
           <div className="space-y-6 animate-slide-in-left">
