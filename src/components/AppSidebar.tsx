@@ -13,8 +13,11 @@ import {
   LogOut,
   Layers,
   KeyRound,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 
 const adminNav = [
   { title: "Panel", url: "/dashboard", icon: LayoutDashboard, group: "Gestión" },
@@ -34,10 +37,16 @@ const participantNav = [
   { title: "Mi Cuenta", url: "/account", icon: KeyRound, group: "Cuenta" },
 ];
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
+};
+
+export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
+  const isMobile = useIsMobile();
 
   const isParticipantRole = profile?.role === 'participant';
   const isOnParticipantPath = ["/participant", "/my-history", "/my-results", "/take"].some(
@@ -60,28 +69,42 @@ export function AppSidebar() {
     }
   };
 
-  return (
-    <aside className="fixed left-0 top-0 hidden h-screen w-[260px] flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] md:flex">
+  const renderNavItem = (item: typeof adminNav[number]) => {
+    const active = path === item.url;
+    return (
+      <Link
+        key={item.url}
+        to={item.url}
+        onClick={() => isMobile && setMobileOpen(false)}
+        className={
+          "flex items-center gap-3 rounded-[14px] px-3 py-3 text-[14px] font-medium transition-all duration-150 " +
+          (active
+            ? "bg-[var(--sidebar-primary)] text-[var(--sidebar-primary-foreground)] shadow-[0_8px_24px_rgba(237,86,80,0.12)]"
+            : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]")
+        }
+      >
+        <item.icon className="size-[18px] shrink-0" strokeWidth={1.5} />
+        {item.title}
+      </Link>
+    );
+  };
+
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="border-b border-[var(--sidebar-border)] px-[22px] py-[22px] pb-[18px]">
-        <Link to="/dashboard" className="flex items-center gap-[11px]">
+      <div className="border-b border-[var(--sidebar-border)] px-6 py-6 pb-5">
+        <Link to="/dashboard" className="flex items-center gap-3">
           <div
-            className="flex size-9 items-center justify-center text-white flex-shrink-0"
-            style={{ borderRadius: "11px", background: "#333333" }}
+            className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
+            style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
           >
             <Brain className="size-[18px]" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col leading-none">
-            <span
-              className="font-display text-[17px] font-medium tracking-tight"
-              style={{ color: "var(--foreground)" }}
-            >
+            <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
               EvalPro
             </span>
-            <span
-              className="mt-[3px] font-mono text-[9px] uppercase tracking-[.16em]"
-              style={{ color: "var(--text-faint)" }}
-            >
+            <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
               Sistema de Evaluación
             </span>
           </div>
@@ -89,100 +112,91 @@ export function AppSidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-[14px] py-[16px] flex flex-col gap-[22px]">
+      <nav className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-6">
         {groups.map((group) => (
           <div key={group}>
-            <div
-              className="mb-2 px-3 font-mono text-[9px] font-bold uppercase tracking-[.16em]"
-              style={{ color: "var(--text-faint)" }}
-            >
+            <div className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[var(--text-faint)]">
               {group}
             </div>
-            <div className="flex flex-col gap-[3px]">
-              {nav
-                .filter((n) => n.group === group)
-                .map((item) => {
-                  const active = path === item.url;
-                  return (
-                    <Link
-                      key={item.url}
-                      to={item.url}
-                      className="flex items-center gap-[11px] w-full text-left rounded-[10px] px-3 py-[9px] text-[14px] font-medium transition-colors duration-100"
-                      style={
-                        active
-                          ? { background: "var(--accent)", color: "#fff", fontWeight: 700 }
-                          : { background: "transparent", color: "var(--muted-foreground)" }
-                      }
-                    >
-                      <item.icon className="size-[17px] shrink-0" strokeWidth={1.5} />
-                      {item.title}
-                    </Link>
-                  );
-                })}
+            <div className="flex flex-col gap-2">
+              {nav.filter((n) => n.group === group).map(renderNavItem)}
             </div>
           </div>
         ))}
       </nav>
 
       {/* Footer */}
-      <div className="mt-auto border-t border-[var(--sidebar-border)] p-[14px]">
+      <div className="mt-auto border-t border-[var(--sidebar-border)] p-5">
         {!isParticipantRole && (
-          <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-3 block">
-            <div
-              className="rounded-[10px] border px-3 py-[9px] text-center font-mono text-[9px] uppercase tracking-[.14em] transition-colors"
-              style={{
-                borderColor: "var(--border-strong)",
-                color: "var(--muted-foreground)",
-              }}
-            >
+          <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-4 block">
+            <div className="rounded-full border border-[var(--border-strong)] bg-[var(--sidebar-accent)] px-4 py-3 text-center font-mono text-[10px] uppercase tracking-[.2em] text-[var(--sidebar-foreground)] transition hover:border-[var(--sidebar-primary)] hover:text-[var(--sidebar-primary)]">
               Cambiar a {isParticipantPath ? "Administrador" : "Participante"}
             </div>
           </Link>
         )}
-        <div className="flex items-center gap-[11px] px-[2px] py-1">
+        <div className="flex items-center gap-3 px-1 py-1">
           <div
-            className="grid size-9 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold text-white"
-            style={{ background: "#333333" }}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--sidebar-primary)] font-mono text-[11px] font-bold text-[var(--sidebar-primary-foreground)]"
           >
             {userInitials}
           </div>
           <div className="min-w-0 flex-1">
-            <div
-              className="truncate text-[13px] font-bold leading-tight"
-              style={{ color: "var(--foreground)" }}
-            >
+            <div className="truncate text-[13px] font-semibold text-[var(--foreground)]">
               {displayName}
             </div>
-            <div className="mt-0.5 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+            <div className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
               {profile?.role === 'both' ? "Admin + Participante" : isParticipantRole ? "Participante" : "Administrador"}
             </div>
           </div>
           <button
             onClick={handleLogout}
             title="Cerrar sesión"
-            className="grid size-8 place-items-center rounded-[8px] border transition-all duration-100"
-            style={{
-              borderColor: "var(--border)",
-              background: "transparent",
-              color: "var(--muted-foreground)",
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget;
-              el.style.background = "var(--coral-soft)";
-              el.style.color = "var(--coral-text)";
-              el.style.borderColor = "var(--coral-soft)";
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget;
-              el.style.background = "transparent";
-              el.style.color = "var(--muted-foreground)";
-              el.style.borderColor = "var(--border)";
-            }}
+            className="grid h-10 w-10 place-items-center rounded-[14px] border border-[var(--border)] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
           >
-            <LogOut className="size-[15px]" strokeWidth={1.5} />
+            <LogOut className="size-[16px]" strokeWidth={1.5} />
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <aside className="fixed left-0 top-0 hidden h-screen w-[260px] flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] md:flex">
+        {sidebarContent}
+      </aside>
+
+      <Sheet open={isMobile ? mobileOpen : false} onOpenChange={setMobileOpen}>
+        <SheetContent
+          side="left"
+          className="max-w-[320px] bg-[var(--sidebar)] p-0 shadow-2xl"
+        >
+          <div className="flex items-center justify-between border-b border-[var(--sidebar-border)] px-5 py-5">
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
+                style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+              >
+                <Brain className="size-[18px]" strokeWidth={1.5} />
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="font-display text-[17px] font-semibold tracking-tight text-[var(--foreground)]">
+                  EvalPro
+                </span>
+                <span className="font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
+                  Menú
+                </span>
+              </div>
+            </div>
+            <SheetClose asChild>
+              <button className="grid h-10 w-10 place-items-center rounded-[14px] border border-[var(--border)] text-[var(--muted-foreground)] transition hover:bg-[var(--sidebar-accent)]">
+                <X className="size-[18px]" strokeWidth={1.5} />
+              </button>
+            </SheetClose>
+          </div>
+          <div className="flex h-full flex-col">{sidebarContent}</div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

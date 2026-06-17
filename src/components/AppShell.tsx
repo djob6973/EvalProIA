@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Menu } from "lucide-react";
 
 interface AppShellProps {
   breadcrumb: { label: string; href?: string }[];
@@ -15,6 +15,7 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [isDark, setIsDark] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Handles runtime session expiry (token revoked while already on a page).
   useEffect(() => {
@@ -53,35 +54,44 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
 
   return (
     <div className="min-h-screen w-full" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-      <AppSidebar />
+      <AppSidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
       <main className="md:pl-[260px]">
         {/* Header */}
         <header
-          className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 px-8"
+          className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 px-4 md:px-8"
           style={{
             background: "color-mix(in srgb, var(--surface) 85%, transparent)",
             backdropFilter: "blur(10px)",
             borderBottom: "1px solid var(--border)",
           }}
         >
-          <nav className="flex items-center gap-[10px] text-[14px]">
-            {breadcrumb.map((b, i) => (
-              <span key={i} className="flex items-center gap-[10px]">
-                {i > 0 && (
-                  <span style={{ color: "var(--text-faint)" }}>/</span>
-                )}
-                <span
-                  style={
-                    i === breadcrumb.length - 1
-                      ? { fontWeight: 700, color: "var(--foreground)" }
-                      : { color: "var(--muted-foreground)" }
-                  }
-                >
-                  {b.label}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="grid place-items-center rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--muted-foreground)] transition hover:bg-[var(--sidebar-accent)] md:hidden"
+              aria-label="Abrir menú"
+            >
+              <Menu className="size-[18px]" />
+            </button>
+            <nav className="hidden items-center gap-[10px] text-[14px] md:flex">
+              {breadcrumb.map((b, i) => (
+                <span key={i} className="flex items-center gap-[10px]">
+                  {i > 0 && (
+                    <span style={{ color: "var(--text-faint)" }}>/</span>
+                  )}
+                  <span
+                    style={
+                      i === breadcrumb.length - 1
+                        ? { fontWeight: 700, color: "var(--foreground)" }
+                        : { color: "var(--muted-foreground)" }
+                    }
+                  >
+                    {b.label}
+                  </span>
                 </span>
-              </span>
-            ))}
-          </nav>
+              ))}
+            </nav>
+          </div>
           <div className="flex items-center gap-[10px]">
             <button
               onClick={toggleTheme}
