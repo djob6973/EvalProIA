@@ -67,7 +67,7 @@ export function AppSidebar() {
         <Link to="/dashboard" className="flex items-center gap-[11px]">
           <div
             className="flex size-9 items-center justify-center text-white flex-shrink-0"
-            style={{ borderRadius: "11px", background: "var(--primary)" }}
+            style={{ borderRadius: "11px", background: "#333333" }}
           >
             <Brain className="size-[18px]" strokeWidth={1.5} />
           </div>
@@ -142,7 +142,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-[11px] px-[2px] py-1">
           <div
             className="grid size-9 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold text-white"
-            style={{ background: "var(--primary)" }}
+            style={{ background: "#333333" }}
           >
             {userInitials}
           </div>
