@@ -590,17 +590,6 @@ function GeneratePage() {
                 )}
               </Button>
             </Card>
-                    type="number"
-                    min={1}
-                    value={tiempoLimite}
-                    onChange={(e) => setTiempoLimite(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                  />
-                </Field>
-              </div>
-
-              <div className="mt-8 space-y-4 p-5 rounded-lg border border-border/50 bg-secondary/30 animate-fade-in">
-          </div>
 
           {/* RIGHT: Enhanced Pipeline Panel */}
           <div className="space-y-6 animate-slide-in-left">
