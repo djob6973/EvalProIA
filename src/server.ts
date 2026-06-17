@@ -4,6 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { runMigrations } from "./lib/migrate";
 import { handleLogin, handleSignout, handleMe } from "./lib/auth-handlers";
+import { handleSetupCheck, handleSetupCreate } from "./lib/setup-handler";
 import { handleApiRequest } from "./lib/api-handlers";
 
 type ServerEntry = {
@@ -78,6 +79,12 @@ export default {
     try {
       const url = new URL(request.url);
       const { pathname } = url;
+
+      // ── First-run setup (no auth required) ────────────────────────────
+      if (pathname === "/api/setup" && request.method === "GET")
+        return handleSetupCheck(request);
+      if (pathname === "/api/setup" && request.method === "POST")
+        return handleSetupCreate(request);
 
       // ── Auth routes (intercepted before TanStack Start) ────────────────
       if (pathname === "/api/auth/login" && request.method === "POST")

@@ -101,7 +101,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/setup"];
 
 // Module-level cache — avoids an /api/me round-trip on every navigation.
 let profileCache: { userId: string; expiresAt: number } | null = null;

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as QuestionBankRouteImport } from './routes/question-bank'
@@ -31,6 +32,11 @@ import { Route as EvaluationsIdResultsRouteImport } from './routes/evaluations.$
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/question-bank': typeof QuestionBankRoute
   '/results': typeof ResultsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
   '/evaluation-results/$id': typeof EvaluationResultsIdRoute
   '/my-results/$id': typeof MyResultsIdRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/question-bank': typeof QuestionBankRoute
   '/results': typeof ResultsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
   '/evaluation-results/$id': typeof EvaluationResultsIdRoute
   '/my-results/$id': typeof MyResultsIdRoute
@@ -174,6 +182,7 @@ export interface FileRoutesById {
   '/question-bank': typeof QuestionBankRoute
   '/results': typeof ResultsRoute
   '/settings': typeof SettingsRoute
+  '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
   '/evaluation-results/$id': typeof EvaluationResultsIdRoute
   '/my-results/$id': typeof MyResultsIdRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/question-bank'
     | '/results'
     | '/settings'
+    | '/setup'
     | '/users'
     | '/evaluation-results/$id'
     | '/my-results/$id'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/question-bank'
     | '/results'
     | '/settings'
+    | '/setup'
     | '/users'
     | '/evaluation-results/$id'
     | '/my-results/$id'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/question-bank'
     | '/results'
     | '/settings'
+    | '/setup'
     | '/users'
     | '/evaluation-results/$id'
     | '/my-results/$id'
@@ -257,6 +269,7 @@ export interface RootRouteChildren {
   QuestionBankRoute: typeof QuestionBankRoute
   ResultsRoute: typeof ResultsRoute
   SettingsRoute: typeof SettingsRoute
+  SetupRoute: typeof SetupRoute
   UsersRoute: typeof UsersRoute
   EvaluationResultsIdRoute: typeof EvaluationResultsIdRoute
   MyResultsIdRoute: typeof MyResultsIdRoute
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -420,6 +440,7 @@ const rootRouteChildren: RootRouteChildren = {
   QuestionBankRoute: QuestionBankRoute,
   ResultsRoute: ResultsRoute,
   SettingsRoute: SettingsRoute,
+  SetupRoute: SetupRoute,
   UsersRoute: UsersRoute,
   EvaluationResultsIdRoute: EvaluationResultsIdRoute,
   MyResultsIdRoute: MyResultsIdRoute,
