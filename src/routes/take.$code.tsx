@@ -253,8 +253,11 @@ function TakeEvaluationRoute() {
       >
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando evaluación...</p>
+            <div
+              className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
+              style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+            />
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>Cargando evaluación...</p>
           </div>
         </div>
       </AppShell>
@@ -271,7 +274,7 @@ function TakeEvaluationRoute() {
       >
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <p className="text-sm text-destructive mb-4">{error || 'Evaluación no encontrada'}</p>
+            <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error || 'Evaluación no encontrada'}</p>
             <Button asChild>
               <Link to="/participant">
                 <ArrowLeft className="size-4" /> Volver
@@ -287,7 +290,7 @@ function TakeEvaluationRoute() {
     // Usar config.num_preguntas de la evaluación para calcular el peso
     const numPreguntas = evaluation.config?.num_preguntas || questions.length;
     const pesoPorPregunta = numPreguntas > 0 ? (100 / numPreguntas).toFixed(2) : "0.00";
-    
+
     return (
       <AppShell
         breadcrumb={[
@@ -303,68 +306,114 @@ function TakeEvaluationRoute() {
           </Button>
         }
       >
-        <div className="mx-auto max-w-2xl">
-          <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-            <div className="flex items-start justify-between gap-6">
+        <div className="mx-auto max-w-[640px]">
+          <div
+            className="overflow-hidden rounded-[20px]"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-start justify-between gap-6 px-[22px] py-[22px] border-b"
+              style={{ borderColor: "var(--border)" }}
+            >
               <div className="min-w-0">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                <span
+                  className="font-mono text-[10px] font-bold uppercase tracking-[.1em]"
+                  style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "2px 8px" }}
+                >
                   {code}
                 </span>
-                <h2 className="mt-1 text-xl font-bold">{evaluation.title}</h2>
-                <p className="mt-2 text-sm text-muted-foreground">{evaluation.description}</p>
+                <h2 className="font-display mt-[10px] text-[22px] font-medium leading-tight" style={{ color: "var(--foreground)" }}>
+                  {evaluation.title}
+                </h2>
+                {evaluation.description && (
+                  <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
+                    {evaluation.description}
+                  </p>
+                )}
               </div>
-              <div className="shrink-0 space-y-2 text-right text-sm text-muted-foreground">
+              <div className="shrink-0 flex flex-col gap-[6px] text-right text-[13px]" style={{ color: "var(--muted-foreground)" }}>
                 {evaluation.tiempo_limite > 0 && (
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-[6px]">
                     <Clock className="size-4" /> {evaluation.tiempo_limite} min
                   </div>
                 )}
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center justify-end gap-[6px]">
                   <FileText className="size-4" /> {questions.length} preguntas
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-accent/10 p-4 text-sm">
-                <div className="mb-1 font-medium text-foreground">Peso por pregunta</div>
-                <div className="font-mono font-bold text-accent">{pesoPorPregunta}% cada una</div>
+            {/* Stats */}
+            <div className="grid gap-[12px] sm:grid-cols-2 px-[22px] pt-[18px]">
+              <div
+                className="rounded-[12px] p-[14px]"
+                style={{ background: "var(--coral-soft)" }}
+              >
+                <div className="text-[12px] font-medium" style={{ color: "var(--coral-text)" }}>Peso por pregunta</div>
+                <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "var(--coral-text)" }}>
+                  {pesoPorPregunta}% cada una
+                </div>
               </div>
               {evaluation.config?.porcentaje_aprobacion != null && (
-                <div className="rounded-lg bg-emerald-500/10 p-4 text-sm">
-                  <div className="mb-1 font-medium text-foreground">Puntaje para aprobar</div>
-                  <div className="font-mono font-bold text-emerald-600">{evaluation.config.porcentaje_aprobacion}% o más</div>
+                <div
+                  className="rounded-[12px] p-[14px]"
+                  style={{ background: "#ECFDF5" }}
+                >
+                  <div className="text-[12px] font-medium" style={{ color: "#065F46" }}>Puntaje para aprobar</div>
+                  <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "#065F46" }}>
+                    {evaluation.config.porcentaje_aprobacion}% o más
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 rounded-lg bg-secondary/60 p-4 text-sm text-muted-foreground">
-              <div className="mb-2 font-medium text-foreground">Antes de comenzar</div>
-              <ul className="list-inside list-disc space-y-1">
-                <li>Asegúrate de tener una conexión estable.</li>
-                <li>Lee cada pregunta cuidadosamente antes de responder.</li>
-                <li>En preguntas de selección múltiple, marca todas las opciones correctas.</li>
-                <li>Solo dispones de un envío por intento.</li>
+            {/* Instructions */}
+            <div
+              className="mx-[22px] mt-[16px] rounded-[12px] p-[16px] text-[13px]"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+            >
+              <div className="mb-[8px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--text-faint)" }}>
+                Antes de comenzar
+              </div>
+              <ul className="flex flex-col gap-[5px]" style={{ color: "var(--muted-foreground)" }}>
+                {[
+                  "Asegúrate de tener una conexión estable.",
+                  "Lee cada pregunta cuidadosamente antes de responder.",
+                  "En preguntas de selección múltiple, marca todas las opciones correctas.",
+                  "Solo dispones de un envío por intento.",
+                ].map((rule) => (
+                  <li key={rule} className="flex items-start gap-[8px]">
+                    <span className="mt-[4px] size-[5px] shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
+                    {rule}
+                  </li>
+                ))}
               </ul>
             </div>
 
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap gap-2">
+            {/* Footer */}
+            <div className="flex flex-col gap-[12px] px-[22px] py-[22px] sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-[6px]">
                 {evaluation.categorias && evaluation.categorias.length > 0 ? (
                   evaluation.categorias.map((c: string) => (
                     <span
                       key={c}
-                      className="flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground"
+                      className="flex items-center gap-1 rounded-full px-2 py-1 text-[12px]"
+                      style={{ background: "var(--surface-2)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }}
                     >
                       <Tag className="size-3" /> {c}
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-muted-foreground">Sin categorías</span>
+                  <span className="text-[12px]" style={{ color: "var(--muted-foreground)" }}>Sin categorías</span>
                 )}
               </div>
               {existingProgress ? (
-                <div className="flex gap-2">
+                <div className="flex gap-[10px]">
                   <Button
                     variant="outline"
                     onClick={() => handleStart(true)}
@@ -530,84 +579,113 @@ function QuizRunner({
         { label: `Pregunta ${i + 1}` },
       ]}
       actions={
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-[10px]">
           {tiempoLimite && tiempoLimite > 0 && (
-            <div className={`flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-xs ${
-              isTimeWarning 
-                ? 'border-destructive bg-destructive/10 text-destructive animate-pulse' 
-                : 'border-border bg-card'
-            }`}>
+            <div
+              className="flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] font-mono text-[12px] font-bold"
+              style={
+                isTimeWarning
+                  ? { borderColor: "var(--destructive)", background: "var(--coral-soft)", color: "var(--coral-text)" }
+                  : { borderColor: "var(--border)", background: "var(--surface)", color: "var(--foreground)" }
+              }
+            >
               <Clock className="size-3.5" />
               {formatTime(timeRemaining)}
             </div>
           )}
-          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 font-mono text-xs">
-            <FileText className="size-3.5 text-muted-foreground" />
+          <div
+            className="flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] font-mono text-[12px]"
+            style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted-foreground)" }}
+          >
+            <FileText className="size-3.5" />
             {nombre}
           </div>
         </div>
       }
     >
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-[640px] flex flex-col gap-[20px]">
+        {/* Progress bar */}
         <div>
-          <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span className="font-mono uppercase tracking-widest">
-              {nombre} · Pregunta {i + 1} de {questions.length}
+          <div className="mb-[8px] flex items-center justify-between">
+            <span className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
+              Pregunta {i + 1} de {questions.length}
             </span>
-            <span className="font-mono">{Math.round(progress)}%</span>
+            <span className="font-mono text-[12px] font-bold" style={{ color: "var(--accent)" }}>
+              {Math.round(progress)}%
+            </span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+          <div className="h-[4px] overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
             <div
-              className="h-full rounded-full bg-accent transition-all"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${progress}%`, background: "var(--accent)" }}
             />
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
+        {/* Question card */}
+        <div
+          className="rounded-[20px] p-[22px]"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
           {q.contexto && (
-            <div className="mb-4 rounded-lg bg-secondary/60 p-4 text-sm text-muted-foreground">
-              <div className="mb-1 font-medium text-foreground">Contexto</div>
+            <div
+              className="mb-[16px] rounded-[12px] p-[14px] text-[13px]"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
+            >
+              <div className="mb-[4px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--text-faint)" }}>
+                Contexto
+              </div>
               {q.contexto}
             </div>
           )}
-          <div className="mb-2 flex items-center gap-2">
-            <h2 className="text-lg font-bold leading-snug">{q.question_text}</h2>
+          <div className="flex items-start gap-[10px] flex-wrap mb-[18px]">
+            <h2 className="flex-1 text-[17px] font-medium leading-snug" style={{ color: "var(--foreground)" }}>
+              {q.question_text}
+            </h2>
             {isMultipleChoice && (
-              <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-bold text-accent">
+              <span
+                className="shrink-0 rounded-full px-[10px] py-[3px] font-mono text-[9px] font-bold uppercase tracking-[.1em]"
+                style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+              >
                 Selección Múltiple
               </span>
             )}
           </div>
-          <div className="mt-6 space-y-3">
+          <div className="flex flex-col gap-[10px]">
             {q.options.map((opt: string, idx: number) => {
               const isSelected = isMultipleChoice
                 ? (answers[q.id] as string[] || []).includes(idx.toString())
                 : answers[q.id] === idx.toString();
-              
+
               return (
                 <button
                   key={idx}
                   onClick={() => handleSelectOption(idx)}
                   disabled={submitting}
-                  className={`flex w-full items-center gap-4 rounded-lg border px-4 py-3 text-left text-sm transition-all ${
+                  className="flex w-full items-center gap-[14px] rounded-[12px] border px-[16px] py-[12px] text-left text-[14px] transition-all"
+                  style={
                     isSelected
-                      ? "border-accent bg-accent/5 text-foreground"
-                      : "border-border bg-card hover:border-foreground/20 hover:bg-secondary/40"
-                  } ${submitting ? "opacity-50 cursor-not-allowed" : ""}`}
+                      ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)" }
+                      : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--foreground)", opacity: submitting ? 0.5 : 1 }
+                  }
                 >
                   <div
-                    className={`grid size-6 shrink-0 place-items-center rounded-md border font-mono text-xs ${
+                    className="grid size-[26px] shrink-0 place-items-center rounded-[7px] font-mono text-[11px] font-bold"
+                    style={
                       isSelected
-                        ? "border-accent bg-accent text-accent-foreground"
-                        : "border-border text-muted-foreground"
-                    }`}
+                        ? { background: "var(--accent)", color: "#fff", border: "none" }
+                        : { background: "var(--surface)", border: "1px solid var(--border-strong)", color: "var(--muted-foreground)" }
+                    }
                   >
                     {isMultipleChoice ? (
                       isSelected ? (
-                        <CheckCircle className="size-4" />
+                        <CheckCircle className="size-[14px]" />
                       ) : (
-                        <div className="size-3 rounded-full border-2 border-current" />
+                        <div className="size-[10px] rounded-full border-2 border-current" />
                       )
                     ) : (
                       String.fromCharCode(65 + idx)
@@ -620,6 +698,7 @@ function QuizRunner({
           </div>
         </div>
 
+        {/* Navigation */}
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"

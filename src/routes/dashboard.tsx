@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowUpRight, Sparkles, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
@@ -16,6 +15,18 @@ export const Route = createFileRoute("/dashboard")({
   }),
   component: Dashboard,
 });
+
+function StatusPill({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="inline-flex items-center gap-[6px] rounded-full px-[10px] py-[3px] text-[11px] font-bold"
+      style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+    >
+      <span className="inline-block size-[6px] rounded-full bg-current" />
+      {children}
+    </span>
+  );
+}
 
 function Dashboard() {
   const { profile } = useAuth();
@@ -36,7 +47,7 @@ function Dashboard() {
   useEffect(() => {
     async function loadStats() {
       if (!isAdmin) return;
-      
+
       try {
         setLoading(true);
         const data = await statsService.getDashboardStats();
@@ -52,23 +63,19 @@ function Dashboard() {
     loadStats();
   }, [isAdmin]);
 
-  // KPIs calculados desde datos reales
   const kpis = stats ? [
-    { label: "Total Evaluaciones", value: String(stats.totalEvaluations), delta: "Evaluaciones creadas", positive: null },
-    { label: "Participantes", value: String(stats.totalParticipants), delta: "Usuarios registrados", positive: null },
-    { label: "Puntaje Promedio", value: `${stats.averageScore}/100`, delta: "Rendimiento global", positive: null },
-    { label: "Preguntas Totales", value: String(stats.totalQuestions), delta: "Generadas por IA", positive: null },
+    { label: "Total Evaluaciones", value: String(stats.totalEvaluations), delta: "Evaluaciones creadas", highlight: false },
+    { label: "Participantes", value: String(stats.totalParticipants), delta: "Usuarios registrados", highlight: false },
+    { label: "Puntaje Promedio", value: String(stats.averageScore), suffix: "/100", delta: "Rendimiento global", highlight: true },
+    { label: "Preguntas Totales", value: String(stats.totalQuestions), delta: "Generadas por IA", highlight: false },
   ] : [];
 
-  // Evaluaciones recientes desde datos reales
   const evaluations = stats?.recentEvaluations?.slice(0, 4).map((ev: any) => ({
     name: ev.title,
     participants: ev.participants,
-    status: "live" as const,
     score: ev.averageScore > 0 ? `${ev.averageScore}%` : "--"
   })) || [];
 
-  // Actividad reciente desde datos reales
   const activity = stats?.recentActivity?.slice(0, 4).map((act: any) => ({
     live: act.type === 'result',
     text: act.text,
@@ -77,13 +84,16 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}
-      >
+      <AppShell breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando datos del dashboard...</p>
+            <div
+              className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
+              style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+            />
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
+              Cargando datos del dashboard...
+            </p>
           </div>
         </div>
       </AppShell>
@@ -92,12 +102,10 @@ function Dashboard() {
 
   if (error) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}
-      >
+      <AppShell breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <p className="text-sm text-destructive mb-4">{error}</p>
+            <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
             <Button onClick={() => window.location.reload()}>Reintentar</Button>
           </div>
         </div>
@@ -116,44 +124,80 @@ function Dashboard() {
         </Button>
       }
     >
-      <div className="space-y-8">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {kpis.map((k: any) => (
-            <div key={k.label} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+      <div className="flex flex-col gap-[28px]">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 gap-[16px] lg:grid-cols-4">
+          {kpis.map((k) => (
+            <div
+              key={k.label}
+              className="rounded-[20px] p-[22px]"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              <div className="font-mono text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--muted-foreground)" }}>
                 {k.label}
               </div>
-              <div className="mt-2 font-mono text-3xl font-bold tracking-tight">{k.value}</div>
               <div
-                className={`mt-2 text-xs font-medium ${
-                  k.positive ? "text-emerald-600" : "text-muted-foreground"
-                }`}
+                className="mt-[10px] font-display text-[34px] font-medium leading-none tracking-tight tabular-nums"
+                style={{ color: k.highlight ? "var(--accent)" : "var(--foreground)" }}
               >
+                {k.value}
+                {k.highlight && k.suffix && (
+                  <span className="text-[18px] font-normal" style={{ color: "var(--text-faint)" }}>
+                    {k.suffix}
+                  </span>
+                )}
+              </div>
+              <div className="mt-[6px] text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                 {k.delta}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <div className="flex items-center justify-between border-b border-border bg-secondary/50 p-6">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="size-4 text-accent" />
-                  <h2 className="font-bold">Generador Inteligente de Preguntas</h2>
+        {/* Main grid */}
+        <div className="grid gap-[24px] lg:grid-cols-[2fr_1fr] items-start">
+          {/* Left column */}
+          <div className="flex flex-col gap-[24px]">
+            {/* AI Generator card */}
+            <div
+              className="overflow-hidden rounded-[20px]"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-[22px] py-[18px] border-b"
+                style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+              >
+                <div className="flex items-center gap-[10px]">
+                  <Sparkles className="size-4" style={{ color: "var(--accent)" }} />
+                  <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
+                    Generador Inteligente de Preguntas
+                  </h2>
                 </div>
-                <span className="rounded bg-accent/10 px-2 py-0.5 font-mono text-[10px] font-bold uppercase text-accent">
+                <span
+                  className="rounded-full px-[10px] py-1 font-mono text-[9px] font-bold uppercase tracking-[.08em]"
+                  style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+                >
                   Impulsado por GPT-4
                 </span>
               </div>
-              <div className="p-6">
+              <div className="p-[22px]">
                 <Link
                   to="/generate"
-                  className="flex h-32 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-colors hover:bg-secondary/50"
+                  className="flex h-32 w-full flex-col items-center justify-center gap-[6px] rounded-[14px] border-2 border-dashed transition-colors"
+                  style={{ borderColor: "var(--border-strong)", color: "var(--muted-foreground)" }}
                 >
-                  <span className="text-sm font-medium">Arrastra documentación aquí para extraer preguntas</span>
-                  <span className="mt-1 text-[10px]">Acepta PDF, DOCX, TXT — procesado por IA</span>
+                  <span className="text-[14px] font-medium" style={{ color: "var(--foreground)" }}>
+                    Arrastra documentación aquí para extraer preguntas
+                  </span>
+                  <span className="text-[11px]">Acepta PDF, DOCX, TXT — procesado por IA</span>
                 </Link>
                 <div className="mt-4 flex justify-end">
                   <Button asChild variant="ghost" size="sm">
@@ -165,33 +209,62 @@ function Dashboard() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card shadow-sm">
-              <div className="flex items-center justify-between border-b border-border p-6">
-                <h2 className="font-bold">Evaluaciones Recientes</h2>
-                <Link to="/evaluations" className="text-xs font-medium text-accent hover:underline">
+            {/* Recent evaluations */}
+            <div
+              className="overflow-hidden rounded-[20px]"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              <div
+                className="flex items-center justify-between px-[22px] py-[18px] border-b"
+                style={{ borderColor: "var(--border)" }}
+              >
+                <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
+                  Evaluaciones Recientes
+                </h2>
+                <Link
+                  to="/evaluations"
+                  className="text-[13px] font-medium"
+                  style={{ color: "var(--accent)" }}
+                >
                   Ver todas
                 </Link>
               </div>
-              <table className="w-full text-left">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <th className="px-6 py-3 font-bold">Nombre</th>
-                    <th className="px-6 py-3 font-bold">Participantes</th>
-                    <th className="px-6 py-3 font-bold">Estado</th>
-                    <th className="px-6 py-3 font-bold text-right">Promedio</th>
+                  <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                    {["Nombre", "Participantes", "Estado", "Promedio"].map((h, i) => (
+                      <th
+                        key={h}
+                        className={`px-[22px] py-[11px] font-mono text-[9px] font-bold uppercase tracking-[.12em] ${i === 3 ? "text-right" : ""}`}
+                        style={{ color: "var(--text-faint)" }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="text-sm">
-                  {evaluations.map((e: any) => (
-                    <tr key={e.name} className="border-b border-border/50 last:border-0 hover:bg-secondary/40">
-                      <td className="px-6 py-4 font-medium">{e.name}</td>
-                      <td className="px-6 py-4 font-mono text-muted-foreground">
+                <tbody className="text-[14px]">
+                  {evaluations.map((e: any, i: number) => (
+                    <tr
+                      key={e.name + i}
+                      style={{ borderBottom: i < evaluations.length - 1 ? "1px solid var(--border)" : "none" }}
+                    >
+                      <td className="px-[22px] py-[14px] font-medium" style={{ color: "var(--foreground)" }}>
+                        {e.name}
+                      </td>
+                      <td className="px-[22px] py-[14px] font-mono text-[13px]" style={{ color: "var(--muted-foreground)" }}>
                         {String(e.participants).padStart(2, "0")}
                       </td>
-                      <td className="px-6 py-4">
-                        <StatusBadge status={e.status} />
+                      <td className="px-[22px] py-[14px]">
+                        <StatusPill>Activa</StatusPill>
                       </td>
-                      <td className="px-6 py-4 text-right font-mono font-medium text-accent">{e.score}</td>
+                      <td className="px-[22px] py-[14px] text-right font-display font-medium" style={{ color: "var(--accent)" }}>
+                        {e.score}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -199,40 +272,59 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="space-y-4 rounded-xl bg-primary p-6 text-primary-foreground">
-              <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary-foreground/50">
+          {/* Right column */}
+          <div className="flex flex-col gap-[24px]">
+            {/* Activity panel */}
+            <div className="rounded-[20px] p-[22px]" style={{ background: "var(--primary)", color: "#F1F1F1" }}>
+              <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "rgba(241,241,241,0.5)" }}>
                 Actividad en Tiempo Real
               </div>
-              <div className="space-y-4">
+              <div className="mt-[18px] flex flex-col gap-[16px]">
                 {activity.map((a: any, i: number) => (
-                  <div key={i} className="flex gap-3">
-                    <div
-                      className={`mt-1.5 size-2 shrink-0 rounded-full ${
-                        a.live ? "bg-emerald-500" : "bg-primary-foreground/30"
-                      } ${a.live ? "animate-pulse" : ""}`}
+                  <div key={i} className="flex gap-[11px]">
+                    <span
+                      className="mt-[5px] size-2 shrink-0 rounded-full flex-shrink-0"
+                      style={{
+                        background: a.live ? "var(--accent)" : "rgba(241,241,241,0.3)",
+                        animation: a.live ? "pulse 1.6s ease infinite" : "none",
+                      }}
                     />
                     <div>
-                      <div className="text-xs font-medium">{a.text}</div>
-                      <div className="mt-0.5 text-[10px] text-primary-foreground/50">{a.meta}</div>
+                      <div className="text-[13px] font-medium">{a.text}</div>
+                      <div className="mt-[2px] text-[11px]" style={{ color: "rgba(241,241,241,0.5)" }}>{a.meta}</div>
                     </div>
                   </div>
                 ))}
               </div>
-              <Button asChild variant="ghost" className="mt-2 w-full rounded border border-primary-foreground/15 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors hover:bg-primary-foreground/5">
-                <Link to="/activity">
-                  Ver Registro Completo
-                </Link>
-              </Button>
+              <Link
+                to="/activity"
+                className="mt-[18px] block w-full rounded-[8px] border py-[9px] text-center font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors"
+                style={{ borderColor: "rgba(241,241,241,0.15)", color: "rgba(241,241,241,0.7)" }}
+              >
+                Ver Registro Completo
+              </Link>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6">
+            {/* Prompt strategy */}
+            <div
+              className="rounded-[20px] p-[22px]"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
               <div className="mb-4 flex items-center gap-2">
-                <TrendingUp className="size-4 text-accent" />
-                <h3 className="font-bold">Estrategia de Prompt</h3>
+                <TrendingUp className="size-4" style={{ color: "var(--accent)" }} />
+                <h3 className="font-display text-[16px] font-medium m-0" style={{ color: "var(--foreground)" }}>
+                  Estrategia de Prompt
+                </h3>
               </div>
-              <div className="mb-4 grid aspect-video place-items-center rounded-lg bg-secondary">
-                <svg viewBox="0 0 200 80" className="h-full w-full p-4 text-accent">
+              <div
+                className="mb-4 rounded-[14px] overflow-hidden"
+                style={{ aspectRatio: "16/7", background: "var(--surface-2)" }}
+              >
+                <svg viewBox="0 0 200 80" className="h-full w-full p-[14px]" style={{ color: "var(--accent)" }} preserveAspectRatio="none">
                   <polyline
                     fill="none"
                     stroke="currentColor"
@@ -248,8 +340,9 @@ function Dashboard() {
                   />
                 </svg>
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                El modelo actual utiliza <strong className="text-foreground">Extracción Semántica v4</strong>.
+              <p className="text-[13px] leading-relaxed m-0" style={{ color: "var(--muted-foreground)" }}>
+                El modelo actual utiliza{" "}
+                <strong style={{ color: "var(--foreground)" }}>Extracción Semántica v4</strong>.
                 La calidad de evaluación ha aumentado un 14% desde el último ajuste de prompt.
               </p>
             </div>

@@ -52,51 +52,118 @@ function AccountPage() {
     }
   }
 
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Usuario';
+  const userInitials = profile?.full_name
+    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';
+  const roleLabel = profile?.role === 'both' ? 'Admin + Participante' : profile?.role === 'admin' ? 'Administrador' : 'Participante';
+
   return (
-    <AppShell breadcrumb={[{ label: "Mi Cuenta" }]}>
-      <div className="mx-auto max-w-md">
-        <div className="rounded-xl border border-border bg-card shadow-sm">
-          <div className="border-b border-border p-6">
-            <h2 className="font-bold">Seguridad de la Cuenta</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {profile?.email}
-            </p>
+    <AppShell breadcrumb={[{ label: "Cuenta" }, { label: "Mi Cuenta" }]}>
+      <div className="mx-auto max-w-[480px] flex flex-col gap-[20px]">
+        {/* Profile card */}
+        <div
+          className="rounded-[20px] p-[22px] flex items-center gap-[16px]"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div
+            className="grid size-[52px] shrink-0 place-items-center rounded-full font-mono text-[16px] font-bold text-white"
+            style={{ background: "var(--primary)" }}
+          >
+            {userInitials}
           </div>
-          <div className="p-6">
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-[17px] font-medium leading-tight" style={{ color: "var(--foreground)" }}>
+              {displayName}
+            </div>
+            <div className="mt-[2px] text-[13px]" style={{ color: "var(--muted-foreground)" }}>
+              {profile?.email}
+            </div>
+            <span
+              className="mt-[6px] inline-block font-mono text-[9px] font-bold uppercase tracking-[.12em]"
+              style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "2px 8px" }}
+            >
+              {roleLabel}
+            </span>
+          </div>
+        </div>
+
+        {/* Password form card */}
+        <div
+          className="overflow-hidden rounded-[20px]"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-[22px] py-[18px] border-b"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
+              Seguridad de la Cuenta
+            </h2>
+          </div>
+          <div className="p-[22px]">
             {success && (
-              <div className="mb-4 rounded-md bg-green-500/10 p-3 text-sm text-green-500">
+              <div
+                className="mb-[16px] rounded-[10px] p-3 text-[13px] font-medium"
+                style={{ background: "#ECFDF5", color: "#059669" }}
+              >
                 Contraseña actualizada correctamente.
               </div>
             )}
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-[14px]">
               {error && (
-                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+                <div
+                  className="rounded-[10px] p-3 text-[13px]"
+                  style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+                >
+                  {error}
+                </div>
               )}
-              <div className="space-y-1.5">
-                <Label htmlFor="current" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="flex flex-col gap-[6px]">
+                <Label
+                  htmlFor="current"
+                  className="font-mono text-[9px] font-bold uppercase tracking-[.12em]"
+                  style={{ color: "var(--text-faint)" }}
+                >
                   Contraseña actual
                 </Label>
                 <Input id="current" type="password" placeholder="••••••••"
                   value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
                   disabled={isLoading} />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="new" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="flex flex-col gap-[6px]">
+                <Label
+                  htmlFor="new"
+                  className="font-mono text-[9px] font-bold uppercase tracking-[.12em]"
+                  style={{ color: "var(--text-faint)" }}
+                >
                   Nueva contraseña
                 </Label>
                 <Input id="new" type="password" placeholder="••••••••"
                   value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
                   disabled={isLoading} />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="confirm" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="flex flex-col gap-[6px]">
+                <Label
+                  htmlFor="confirm"
+                  className="font-mono text-[9px] font-bold uppercase tracking-[.12em]"
+                  style={{ color: "var(--text-faint)" }}
+                >
                   Confirmar nueva contraseña
                 </Label>
                 <Input id="confirm" type="password" placeholder="••••••••"
                   value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={isLoading} />
               </div>
-              <Button type="submit" disabled={isLoading} className="w-full">
+              <Button type="submit" disabled={isLoading} className="w-full mt-[6px]">
                 {isLoading ? "Guardando..." : "Cambiar contraseña"}
               </Button>
             </form>

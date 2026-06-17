@@ -1,14 +1,15 @@
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 type Status = "live" | "completed" | "in_progress" | "draft" | "closed" | "queued";
 
-const styles: Record<Status, string> = {
-  live: "bg-emerald-100 text-emerald-700",
-  completed: "bg-emerald-100 text-emerald-700",
-  in_progress: "bg-amber-100 text-amber-700",
-  draft: "bg-amber-100 text-amber-700",
-  closed: "bg-slate-100 text-slate-500",
-  queued: "bg-slate-100 text-slate-500",
+const styles: Record<Status, CSSProperties> = {
+  live: { background: "var(--coral-soft)", color: "var(--coral-text)" },
+  completed: { background: "#dcfce7", color: "#166534" },
+  in_progress: { background: "#fef9c3", color: "#854d0e" },
+  draft: { background: "#fef9c3", color: "#854d0e" },
+  closed: { background: "var(--surface-2)", color: "var(--muted-foreground)" },
+  queued: { background: "var(--surface-2)", color: "var(--muted-foreground)" },
 };
 
 const labels: Record<Status, string> = {
@@ -24,11 +25,12 @@ export function StatusBadge({ status, className }: { status: Status; className?:
   return (
     <span
       className={cn(
-        "inline-block rounded px-2 py-0.5 text-[10px] font-bold tracking-wider",
-        styles[status],
+        "inline-flex items-center gap-[6px] rounded-full px-[10px] py-[3px] text-[11px] font-bold",
         className,
       )}
+      style={styles[status]}
     >
+      <span className="inline-block size-[6px] rounded-full bg-current" />
       {labels[status]}
     </span>
   );

@@ -38,9 +38,8 @@ export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
   const { signOut, profile } = useAuth();
-  
+
   const isParticipantRole = profile?.role === 'participant';
-  // /account is neutral — doesn't trigger participant context.
   const isOnParticipantPath = ["/participant", "/my-history", "/my-results", "/take"].some(
     (p) => path.startsWith(p)
   );
@@ -49,7 +48,6 @@ export function AppSidebar() {
   const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
-  // Obtener iniciales del nombre del usuario
   const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Usuario';
   const userInitials = profile?.full_name
     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -63,28 +61,44 @@ export function AppSidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-col border-r border-border bg-sidebar md:flex">
-      <div className="border-b border-border p-6">
-        <Link to="/dashboard" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Brain className="size-4" />
+    <aside className="fixed left-0 top-0 hidden h-screen w-[260px] flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] md:flex">
+      {/* Logo */}
+      <div className="border-b border-[var(--sidebar-border)] px-[22px] py-[22px] pb-[18px]">
+        <Link to="/dashboard" className="flex items-center gap-[11px]">
+          <div
+            className="flex size-9 items-center justify-center text-white flex-shrink-0"
+            style={{ borderRadius: "11px", background: "var(--primary)" }}
+          >
+            <Brain className="size-[18px]" strokeWidth={1.5} />
           </div>
           <div className="flex flex-col leading-none">
-            <span className="text-base font-bold tracking-tight">EvalPro</span>
-            <span className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span
+              className="font-display text-[17px] font-medium tracking-tight"
+              style={{ color: "var(--foreground)" }}
+            >
+              EvalPro
+            </span>
+            <span
+              className="mt-[3px] font-mono text-[9px] uppercase tracking-[.16em]"
+              style={{ color: "var(--text-faint)" }}
+            >
               Sistema de Evaluación
             </span>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto p-4">
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-[14px] py-[16px] flex flex-col gap-[22px]">
         {groups.map((group) => (
           <div key={group}>
-            <div className="mb-2 px-3 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <div
+              className="mb-2 px-3 font-mono text-[9px] font-bold uppercase tracking-[.16em]"
+              style={{ color: "var(--text-faint)" }}
+            >
               {group}
             </div>
-            <div className="space-y-0.5">
+            <div className="flex flex-col gap-[3px]">
               {nav
                 .filter((n) => n.group === group)
                 .map((item) => {
@@ -93,15 +107,15 @@ export function AppSidebar() {
                     <Link
                       key={item.url}
                       to={item.url}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      className="flex items-center gap-[11px] w-full text-left rounded-[10px] px-3 py-[9px] text-[14px] font-medium transition-colors duration-100"
+                      style={
                         active
-                          ? "bg-accent/10 text-accent"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                      }`}
+                          ? { background: "var(--accent)", color: "#fff", fontWeight: 700 }
+                          : { background: "transparent", color: "var(--muted-foreground)" }
+                      }
                     >
-                      <item.icon className="size-4 shrink-0" strokeWidth={2} />
+                      <item.icon className="size-[17px] shrink-0" strokeWidth={1.5} />
                       {item.title}
-                      {active && <span className="ml-auto size-1.5 rounded-full bg-accent" />}
                     </Link>
                   );
                 })}
@@ -110,31 +124,63 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      <div className="mt-auto border-t border-border p-4">
+      {/* Footer */}
+      <div className="mt-auto border-t border-[var(--sidebar-border)] p-[14px]">
         {!isParticipantRole && (
           <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-3 block">
-            <div className="rounded-md border border-border bg-secondary/50 px-3 py-2 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:bg-secondary">
+            <div
+              className="rounded-[10px] border px-3 py-[9px] text-center font-mono text-[9px] uppercase tracking-[.14em] transition-colors"
+              style={{
+                borderColor: "var(--border-strong)",
+                color: "var(--muted-foreground)",
+              }}
+            >
               Cambiar a {isParticipantPath ? "Administrador" : "Participante"}
             </div>
           </Link>
         )}
-        <button
-          onClick={handleLogout}
-          className="mb-3 flex w-full items-center justify-center gap-2 rounded-md border border-border bg-secondary/50 px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:bg-secondary"
-        >
-          <LogOut className="size-3" />
-          Cerrar Sesión
-        </button>
-        <div className="flex items-center gap-3 px-1">
-          <div className="grid size-9 place-items-center rounded-full bg-primary font-mono text-xs font-bold text-primary-foreground">
+        <div className="flex items-center gap-[11px] px-[2px] py-1">
+          <div
+            className="grid size-9 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold text-white"
+            style={{ background: "var(--primary)" }}
+          >
             {userInitials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold leading-tight">{displayName}</div>
-            <div className="mt-0.5 text-xs text-muted-foreground">
+            <div
+              className="truncate text-[13px] font-bold leading-tight"
+              style={{ color: "var(--foreground)" }}
+            >
+              {displayName}
+            </div>
+            <div className="mt-0.5 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
               {profile?.role === 'both' ? "Admin + Participante" : isParticipantRole ? "Participante" : "Administrador"}
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            className="grid size-8 place-items-center rounded-[8px] border transition-all duration-100"
+            style={{
+              borderColor: "var(--border)",
+              background: "transparent",
+              color: "var(--muted-foreground)",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget;
+              el.style.background = "var(--coral-soft)";
+              el.style.color = "var(--coral-text)";
+              el.style.borderColor = "var(--coral-soft)";
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget;
+              el.style.background = "transparent";
+              el.style.color = "var(--muted-foreground)";
+              el.style.borderColor = "var(--border)";
+            }}
+          >
+            <LogOut className="size-[15px]" strokeWidth={1.5} />
+          </button>
         </div>
       </div>
     </aside>

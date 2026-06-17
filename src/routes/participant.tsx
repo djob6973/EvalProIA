@@ -87,8 +87,11 @@ function ParticipantHome() {
       <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mis Evaluaciones" }]}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando evaluaciones...</p>
+            <div
+              className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
+              style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+            />
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>Cargando evaluaciones...</p>
           </div>
         </div>
       </AppShell>
@@ -100,7 +103,7 @@ function ParticipantHome() {
       <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mis Evaluaciones" }]}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <p className="text-sm text-destructive mb-4">{error}</p>
+            <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
             <Button onClick={() => window.location.reload()}>Reintentar</Button>
           </div>
         </div>
@@ -110,43 +113,82 @@ function ParticipantHome() {
 
   return (
     <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mis Evaluaciones" }]}>
-      <div className="space-y-8">
-        <div className="rounded-xl border border-border bg-card p-8 shadow-sm">
-          <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      <div className="flex flex-col gap-[28px]">
+        {/* Welcome banner */}
+        <div
+          className="rounded-[20px] p-[22px]"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
             Bienvenido de vuelta
           </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight">Hola, {userName}.</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Tienes <span className="font-medium text-foreground">{availableEvaluations.length} evaluaciones activas</span> disponibles.
-            {completedEvaluations.length > 0 && ` Has completado ${completedEvaluations.length} evaluación${completedEvaluations.length !== 1 ? 'es' : ''}.`}
+          <h1 className="font-display mt-2 text-[28px] font-medium leading-tight tracking-tight" style={{ color: "var(--foreground)" }}>
+            Hola, {userName}.
+          </h1>
+          <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
+            Tienes{" "}
+            <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
+              {availableEvaluations.length} evaluaciones activas
+            </span>{" "}
+            disponibles.
+            {completedEvaluations.length > 0 && (
+              <>
+                {" "}Has completado{" "}
+                <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
+                  {completedEvaluations.length} evaluación{completedEvaluations.length !== 1 ? 'es' : ''}
+                </span>.
+              </>
+            )}
           </p>
         </div>
 
+        {/* Available evaluations */}
         {availableEvaluations.length > 0 && (
           <div>
-            <h2 className="mb-4 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <div className="mb-[14px] font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
               Evaluaciones Disponibles
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            </div>
+            <div className="grid gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
               {availableEvaluations.map((e) => (
                 <div
                   key={e.id}
-                  className={`flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md ${
-                    e.locked ? "opacity-60" : ""
-                  }`}
+                  className="flex flex-col gap-[14px] rounded-[20px] transition-shadow hover:shadow-md"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    padding: 22,
+                    boxShadow: "var(--shadow-sm)",
+                    opacity: e.locked ? 0.65 : 1,
+                  }}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span
+                      className="font-mono text-[10px] font-bold uppercase tracking-[.1em]"
+                      style={{
+                        background: "var(--coral-soft)",
+                        color: "var(--coral-text)",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                      }}
+                    >
                       {e.code}
                     </span>
-                    {e.locked && <Lock className="size-4 text-muted-foreground" />}
+                    {e.locked && <Lock className="size-4" style={{ color: "var(--muted-foreground)" }} />}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold leading-tight">{e.title}</h3>
+                    <h3 className="font-display text-[17px] font-medium leading-tight" style={{ color: "var(--foreground)" }}>
+                      {e.title}
+                    </h3>
                     {e.description && (
-                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{e.description}</p>
+                      <p className="mt-1 text-[13px] line-clamp-2" style={{ color: "var(--muted-foreground)" }}>
+                        {e.description}
+                      </p>
                     )}
-                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    <div className="mt-[10px] flex flex-wrap items-center gap-3 text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                       <span className="flex items-center gap-1">
                         <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
                       </span>
@@ -156,9 +198,9 @@ function ParticipantHome() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-[8px] space-y-1">
                       {e.created_at && (
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <div className="flex items-center gap-1 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
                           <Calendar className="size-3 shrink-0" />
                           <span>Creada: {formatDateTime(e.created_at)}</span>
                         </div>
@@ -172,7 +214,10 @@ function ParticipantHome() {
                     </div>
                   </div>
                   {e.locked ? (
-                    <div className="rounded-md bg-secondary px-3 py-2 text-center text-xs font-medium text-muted-foreground">
+                    <div
+                      className="rounded-[10px] px-3 py-2 text-center text-[13px] font-medium"
+                      style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
+                    >
                       {e.lockMsg}
                     </div>
                   ) : (
@@ -188,37 +233,49 @@ function ParticipantHome() {
           </div>
         )}
 
+        {/* Completed evaluations */}
         {completedEvaluations.length > 0 && (
           <div>
-            <h2 className="mb-4 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <div className="mb-[14px] font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
               Evaluaciones Completadas
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            </div>
+            <div className="grid gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
               {completedEvaluations.map((e) => {
                 const result = userResults.find((r: any) => r.evaluation_id === e.id);
                 return (
                   <div
                     key={e.id}
-                    className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-sm"
+                    className="flex flex-col gap-[14px] rounded-[20px]"
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      padding: 22,
+                      boxShadow: "var(--shadow-sm)",
+                    }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="rounded bg-emerald-100 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-emerald-700">
+                      <span
+                        className="font-mono text-[10px] font-bold uppercase tracking-[.1em]"
+                        style={{ background: "#ECFDF5", color: "#065F46", borderRadius: 6, padding: "2px 8px" }}
+                      >
                         {e.code}
                       </span>
-                      <span className="font-mono text-sm font-bold text-accent">
+                      <span className="font-display text-[20px] font-medium" style={{ color: "var(--accent)" }}>
                         {result?.score}%
                       </span>
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-bold leading-tight">{e.title}</h3>
-                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <h3 className="font-display text-[17px] font-medium leading-tight" style={{ color: "var(--foreground)" }}>
+                        {e.title}
+                      </h3>
+                      <div className="mt-[10px] flex flex-wrap items-center gap-3 text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                         <span className="flex items-center gap-1">
                           <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
                         </span>
                       </div>
                       {result?.completed_at && (
-                        <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <CheckCircle className="size-3 shrink-0 text-emerald-600" />
+                        <div className="mt-[8px] flex items-center gap-1 text-[11px]" style={{ color: "#059669" }}>
+                          <CheckCircle className="size-3 shrink-0" />
                           <span>Presentada: {formatDateTime(result.completed_at)}</span>
                         </div>
                       )}
@@ -235,10 +292,18 @@ function ParticipantHome() {
           </div>
         )}
 
+        {/* Empty state */}
         {availableEvaluations.length === 0 && completedEvaluations.length === 0 && (
-          <div className="rounded-xl border border-border bg-card p-12 text-center">
-            <FileQuestion className="mx-auto mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
+          <div
+            className="rounded-[20px] p-12 text-center"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <FileQuestion className="mx-auto mb-3 size-10" style={{ color: "var(--text-faint)" }} />
+            <p className="text-[14px]" style={{ color: "var(--muted-foreground)" }}>
               No hay evaluaciones disponibles en este momento.
             </p>
           </div>

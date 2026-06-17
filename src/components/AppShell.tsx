@@ -24,8 +24,11 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--background)" }}>
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"
+          style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -33,19 +36,29 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground">
+    <div className="min-h-screen w-full" style={{ background: "var(--background)", color: "var(--foreground)" }}>
       <AppSidebar />
-      <main className="md:pl-64">
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-card/80 px-6 backdrop-blur-md md:px-8">
-          <nav className="flex items-center gap-2 text-sm">
+      <main className="md:pl-[260px]">
+        {/* Header */}
+        <header
+          className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 px-8"
+          style={{
+            background: "color-mix(in srgb, var(--surface) 85%, transparent)",
+            backdropFilter: "blur(10px)",
+            borderBottom: "1px solid var(--border)",
+          }}
+        >
+          <nav className="flex items-center gap-[10px] text-[14px]">
             {breadcrumb.map((b, i) => (
-              <span key={i} className="flex items-center gap-2">
-                {i > 0 && <span className="text-border">/</span>}
+              <span key={i} className="flex items-center gap-[10px]">
+                {i > 0 && (
+                  <span style={{ color: "var(--text-faint)" }}>/</span>
+                )}
                 <span
-                  className={
+                  style={
                     i === breadcrumb.length - 1
-                      ? "font-medium text-foreground"
-                      : "text-muted-foreground"
+                      ? { fontWeight: 700, color: "var(--foreground)" }
+                      : { color: "var(--muted-foreground)" }
                   }
                 >
                   {b.label}
@@ -53,13 +66,18 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
               </span>
             ))}
           </nav>
-          <div className="flex items-center gap-2">{actions}</div>
+          <div className="flex items-center gap-[10px]">{actions}</div>
         </header>
-        <div
-          key={pathname}
-          className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-2 duration-200 px-6 py-8 md:px-8"
-        >
-          {children}
+
+        {/* Content */}
+        <div className="overflow-y-auto">
+          <div
+            key={pathname}
+            className="mx-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
+            style={{ maxWidth: "1180px", padding: "32px" }}
+          >
+            {children}
+          </div>
         </div>
       </main>
     </div>
