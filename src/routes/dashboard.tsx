@@ -275,7 +275,7 @@ function Dashboard() {
           {/* Right column */}
           <div className="flex flex-col gap-[24px]">
             {/* Activity panel */}
-            <div className="rounded-[20px] p-[22px]" style={{ background: "var(--primary)", color: "#F1F1F1" }}>
+            <div className="rounded-[20px] p-[22px]" style={{ background: "#333333", color: "#F1F1F1" }}>
               <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "rgba(241,241,241,0.5)" }}>
                 Actividad en Tiempo Real
               </div>
