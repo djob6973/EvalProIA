@@ -388,9 +388,10 @@ function SettingsPage() {
                       onClick={() => setField("maxTokens", t)}
                       className={`rounded px-2 py-0.5 text-[10px] font-mono transition-colors ${
                         config.maxTokens === t
-                          ? "bg-primary text-primary-foreground"
+                          ? "text-white"
                           : "bg-secondary text-muted-foreground hover:bg-secondary/80"
                       }`}
+                      style={config.maxTokens === t ? { background: "#333333" } : undefined}
                     >
                       {t >= 1000 ? `${t / 1000}k` : t}
                     </button>
@@ -448,12 +449,12 @@ function SettingsPage() {
             />
           </div>
 
-          <div className="rounded-xl bg-primary p-6 text-primary-foreground">
-            <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary-foreground/50">
+          <div className="rounded-xl p-6" style={{ background: "#333333", color: "#F1F1F1" }}>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(241,241,241,0.5)" }}>
               Estrategia Actual
             </div>
             <h3 className="mt-2 font-bold">Extracción Semántica v4</h3>
-            <p className="mt-2 text-xs leading-relaxed text-primary-foreground/70">
+            <p className="mt-2 text-xs leading-relaxed" style={{ color: "rgba(241,241,241,0.7)" }}>
               La calidad subió <strong className="text-emerald-400">+14%</strong> desde la última
               revisión del prompt. Mantén el foco en la fidelidad del esquema.
             </p>

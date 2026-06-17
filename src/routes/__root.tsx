@@ -19,7 +19,7 @@ function NotFoundComponent() {
       {/* Header with branding */}
       <header className="flex items-center gap-2.5 border-b border-border px-8 py-5">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <div className="flex size-8 items-center justify-center rounded-md" style={{ background: "#333333", color: "#fff" }}>
             <Brain className="size-4" />
           </div>
           <div className="flex flex-col leading-none">

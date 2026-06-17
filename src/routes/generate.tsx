@@ -559,8 +559,8 @@ function GeneratePage() {
 
           {/* RIGHT: Pipeline */}
           <div className="space-y-6">
-            <div className="rounded-xl bg-primary p-6 text-primary-foreground">
-              <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-primary-foreground/50">
+            <div className="rounded-xl p-6" style={{ background: "#333333", color: "#F1F1F1" }}>
+              <div className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(241,241,241,0.5)" }}>
                 Flujo de Extracción
               </div>
               <ol className="mt-4 space-y-3 text-xs">

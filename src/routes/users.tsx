@@ -310,7 +310,7 @@ function UsersPage() {
                   <tr key={u.id} className="border-b border-border/50 last:border-0 hover:bg-secondary/40">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="grid size-8 place-items-center rounded-full bg-primary font-mono text-[10px] font-bold text-primary-foreground">
+                        <div className="grid size-8 place-items-center rounded-full font-mono text-[10px] font-bold text-white" style={{ background: "#333333" }}>
                           {u.full_name
                             ?.split(" ")
                             .map((n: string) => n[0])
