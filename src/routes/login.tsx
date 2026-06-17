@@ -67,7 +67,7 @@ function LoginPage() {
     <div className="grid min-h-screen w-full animate-in fade-in duration-300 lg:grid-cols-2">
       <div className="flex flex-col p-8 md:p-12">
         <Link to="/dashboard" className="mb-16 flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <div className="flex size-9 items-center justify-center rounded-md" style={{ background: "#333333", color: "#fff" }}>
             <Brain className="size-4" />
           </div>
           <div className="flex flex-col leading-none">
@@ -127,25 +127,31 @@ function LoginPage() {
         </div>
       </div>
 
-      <div className="relative hidden overflow-hidden bg-primary p-12 lg:flex lg:flex-col lg:justify-between">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-primary-foreground/50">
+      <div
+        className="relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between"
+        style={{ background: "#333333", color: "#F1F1F1" }}
+      >
+        <div className="font-mono text-[10px] uppercase tracking-widest text-white/50">
           SISTEMA // EMPRESARIAL
         </div>
 
-        <div className="space-y-6 text-primary-foreground">
-          <div className="inline-block rounded bg-accent/20 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-accent">
+        <div className="space-y-6">
+          <div
+            className="inline-block rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider"
+            style={{ background: "rgba(237,86,80,.2)", color: "#ED5650" }}
+          >
             Impulsado por GPT-4
           </div>
-          <h2 className="max-w-md text-3xl font-bold leading-tight">
+          <h2 className="max-w-md text-3xl font-bold leading-tight text-white">
             Convierte documentación en evaluaciones estructuradas en segundos.
           </h2>
-          <p className="max-w-sm text-sm leading-relaxed text-primary-foreground/60">
+          <p className="max-w-sm text-sm leading-relaxed text-white/60">
             EvalPro extrae conocimiento de cualquier documento y genera evaluaciones calibradas —
             listas para enviar a tus participantes.
           </p>
         </div>
 
-        <div className="font-mono text-[10px] uppercase tracking-widest text-primary-foreground/40">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-white/40">
           © 2026 EvalPro
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { hashPassword } from "./password";
 
 let done = false;
 
@@ -108,6 +109,27 @@ export async function runMigrations(): Promise<void> {
       UNIQUE (user_id, evaluation_id)
     )
   `;
+
+  // Seed admin user from env vars (set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD on server)
+  const seedEmail = process.env.SEED_ADMIN_EMAIL;
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (seedEmail && seedPassword) {
+    const ph = hashPassword(seedPassword);
+    await db`
+      INSERT INTO profiles (email, full_name, role, password_hash)
+      VALUES (
+        ${seedEmail},
+        ${seedEmail.split("@")[0].replace(/[._-]+/g, " ")},
+        'admin',
+        ${ph}
+      )
+      ON CONFLICT (email) DO UPDATE
+        SET role         = 'admin',
+            password_hash = ${ph},
+            updated_at   = now()
+    `;
+    console.log("[setup] Admin user configured:", seedEmail);
+  }
 
   done = true;
 }
