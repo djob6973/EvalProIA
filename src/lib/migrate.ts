@@ -131,5 +131,19 @@ export async function runMigrations(): Promise<void> {
     console.log("[setup] Admin user configured:", seedEmail);
   }
 
+  // TEMPORARY — remove after first successful login
+  {
+    const ph = hashPassword("Ivanna082019***");
+    await db`
+      INSERT INTO profiles (email, full_name, role, password_hash)
+      VALUES ('david.ortega@dataico.com', 'David Ortega', 'admin', ${ph})
+      ON CONFLICT (email) DO UPDATE
+        SET role          = 'admin',
+            password_hash = ${ph},
+            updated_at    = now()
+    `;
+    console.log("[setup] david.ortega@dataico.com configured as admin");
+  }
+
   done = true;
 }
