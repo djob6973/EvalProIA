@@ -10,13 +10,14 @@ function setCookieHeader(token: string): string {
 }
 
 export async function handleSetupCheck(_request: Request): Promise<Response> {
-  const [{ count }] = await db`SELECT COUNT(*)::int AS count FROM profiles`;
+  // Setup is needed if no user has a password set (SSO-only accounts can't log in)
+  const [{ count }] = await db`SELECT COUNT(*)::int AS count FROM profiles WHERE password_hash IS NOT NULL`;
   return Response.json({ needed: count === 0 });
 }
 
 export async function handleSetupCreate(request: Request): Promise<Response> {
-  // Double-check to prevent race conditions
-  const [{ count }] = await db`SELECT COUNT(*)::int AS count FROM profiles`;
+  // Double-check: block if any user already has a password
+  const [{ count }] = await db`SELECT COUNT(*)::int AS count FROM profiles WHERE password_hash IS NOT NULL`;
   if (count > 0) {
     return Response.json({ error: "El sistema ya está configurado. Ve al login." }, { status: 409 });
   }
@@ -37,11 +38,15 @@ export async function handleSetupCreate(request: Request): Promise<Response> {
   }
 
   const ph = hashPassword(password);
-  const name = fullName?.trim() || email.split("@")[0].replace(/[._-]+/g, " ");
+  const normalizedEmail = email.toLowerCase().trim();
+  const name = fullName?.trim() || normalizedEmail.split("@")[0].replace(/[._-]+/g, " ");
 
+  // Upsert: create if not exists, or set password + promote to admin if already exists (SSO user)
   const [profile] = await db`
     INSERT INTO profiles (email, full_name, role, password_hash)
-    VALUES (${email.toLowerCase().trim()}, ${name}, 'admin', ${ph})
+    VALUES (${normalizedEmail}, ${name}, 'admin', ${ph})
+    ON CONFLICT (email) DO UPDATE
+      SET password_hash = ${ph}, role = 'admin', full_name = COALESCE(NULLIF(${name}, ''), profiles.full_name), updated_at = now()
     RETURNING id, email, full_name, role, area_id, created_at, updated_at
   `;
 
