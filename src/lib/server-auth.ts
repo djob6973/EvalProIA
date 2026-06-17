@@ -42,15 +42,20 @@ async function getOrProvision(email: string): Promise<AuthUser> {
 export async function getAuthContext(
   request: Request
 ): Promise<AuthUser | null> {
-  // 1. Dokku platform — Google SSO (oauth2-proxy injects this header)
-  const forwarded = request.headers.get("x-forwarded-email");
-  if (forwarded) return getOrProvision(forwarded);
+  // 1. Google SSO via oauth2-proxy — only trusted when explicitly enabled.
+  // Without this gate any client could spoof x-forwarded-email and bypass auth.
+  if (process.env.TRUST_FORWARDED_EMAIL === "true") {
+    const forwarded = request.headers.get("x-forwarded-email");
+    if (forwarded) return getOrProvision(forwarded);
+  }
 
-  // 2. Local dev without login page
-  const devEmail = process.env.DEV_USER_EMAIL;
-  if (devEmail) return getOrProvision(devEmail);
+  // 2. Local dev shortcut — disabled in production so it never blocks signout.
+  if (process.env.NODE_ENV !== "production") {
+    const devEmail = process.env.DEV_USER_EMAIL;
+    if (devEmail) return getOrProvision(devEmail);
+  }
 
-  // 3. Cookie-based session (local dev with login page)
+  // 3. Cookie-based session
   const token = parseCookie(
     request.headers.get("cookie"),
     "smartpath_session"
