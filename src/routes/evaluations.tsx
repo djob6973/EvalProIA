@@ -138,25 +138,36 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-card shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+      <div
+        className="flex max-h-[85vh] w-full max-w-lg flex-col shadow-2xl"
+        style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        <div
+          className="flex items-center justify-between px-[22px] py-[18px]"
+          style={{ borderBottom: "1px solid var(--border)" }}
+        >
           <div className="min-w-0">
-            <h3 className="font-semibold">Asignar Participantes</h3>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">{evaluation.nombre}</p>
+            <h3 className="font-display text-[17px] font-medium" style={{ color: "var(--foreground)" }}>Asignar Participantes</h3>
+            <p className="mt-0.5 truncate text-[12px]" style={{ color: "var(--muted-foreground)" }}>{evaluation.nombre}</p>
           </div>
-          <button onClick={onClose} className="ml-4 shrink-0 text-muted-foreground hover:text-foreground">
-            <X className="size-5" />
+          <button
+            onClick={onClose}
+            className="ml-4 shrink-0 rounded-[8px] p-1.5 transition-colors hover:bg-secondary"
+            style={{ color: "var(--muted-foreground)" }}
+          >
+            <X className="size-4" />
           </button>
         </div>
 
         <div className="border-b border-border px-6 py-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar participante…"
-              className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+              style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
@@ -253,57 +264,80 @@ const EvaluationCard = memo(function EvaluationCard({
   const areaName = ev.area_id ? areas.find((a) => a.id === ev.area_id)?.name : null;
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div
+      className="transition-shadow hover:shadow-md"
+      style={{ borderRadius: 20, padding: "22px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              {ev.id}
-            </span>
-            <h3 className="font-semibold">{ev.nombre}</h3>
+          <div className="mb-2 flex items-center gap-[10px] flex-wrap">
             <span
-              className={`rounded px-2 py-0.5 text-[10px] font-bold tracking-wider ${
+              className="font-mono text-[10px] font-bold uppercase tracking-[.1em]"
+              style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "2px 8px" }}
+            >
+              {ev.id.slice(0, 8).toUpperCase()}
+            </span>
+            <h3 className="font-display text-[16px] font-medium" style={{ color: "var(--foreground)" }}>{ev.nombre}</h3>
+            <span
+              className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider"
+              style={
                 expired
-                  ? "bg-red-100 text-red-700"
+                  ? { background: "rgba(220,38,38,.12)", color: "#EF4444" }
                   : ev.activa
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-slate-100 text-slate-500"
-              }`}
+                  ? { background: "var(--coral-soft)", color: "var(--coral-text)" }
+                  : { background: "var(--surface-2)", color: "var(--muted-foreground)" }
+              }
             >
               {expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA"}
             </span>
           </div>
           {ev.descripcion && (
-            <p className="mb-3 text-sm text-muted-foreground">{ev.descripcion}</p>
+            <p className="mb-3 text-[13px]" style={{ color: "var(--muted-foreground)" }}>{ev.descripcion}</p>
           )}
-          <div className="flex flex-wrap gap-2">
-            <span className="flex items-center gap-1 rounded-full bg-accent/10 px-2 py-1 text-xs text-accent">
+          <div className="flex flex-wrap gap-[6px]">
+            <span
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+              style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+            >
               <ClipboardList className="size-3" />
               {ev.config.num_preguntas} preguntas
             </span>
-            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs text-emerald-700">
-              <span className="font-mono font-bold">
-                {(100 / ev.config.num_preguntas).toFixed(2)}%
-              </span>
-              <span className="text-muted-foreground">c/u</span>
+            <span
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+              style={{ background: "rgba(5,150,105,.12)", color: "#10B981" }}
+            >
+              <span className="font-mono font-bold">{(100 / ev.config.num_preguntas).toFixed(2)}%</span>
+              <span style={{ color: "var(--muted-foreground)" }}>c/u</span>
             </span>
             {ev.config.porcentaje_aprobacion != null && (
-              <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700">
+              <span
+                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                style={{ background: "rgba(59,130,246,.12)", color: "#60A5FA" }}
+              >
                 <CheckCircle className="size-3" />
                 Aprueba con {ev.config.porcentaje_aprobacion}%
               </span>
             )}
             {ev.tiempo_limite > 0 && (
-              <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-700">
+              <span
+                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}
+              >
                 <Clock className="size-3" />
                 {ev.tiempo_limite} min
               </span>
             )}
-            <span className="rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
+            <span
+              className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+              style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
+            >
               {ev.intentos_permitidos} intento{ev.intentos_permitidos !== 1 ? "s" : ""}
             </span>
             {areaName && (
-              <span className="flex items-center gap-1 rounded-full bg-violet-100 px-2 py-1 text-xs text-violet-700">
+              <span
+                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}
+              >
                 <Layers className="size-3" />
                 {areaName}
               </span>
@@ -311,60 +345,73 @@ const EvaluationCard = memo(function EvaluationCard({
             {ev.categorias.slice(0, 4).map((c) => (
               <span
                 key={c}
-                className="flex items-center gap-1 rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground"
+                className="flex items-center gap-1 rounded-full px-2 py-1 text-[11px]"
+                style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
               >
                 <Tag className="size-3" />
                 {c}
               </span>
             ))}
             {ev.categorias.length > 4 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
                 +{ev.categorias.length - 4} más
               </span>
             )}
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-3">
             {ev.created_at && (
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
                 <Calendar className="size-3" />
                 Creada: {formatDateTime(ev.created_at)}
               </span>
             )}
             {ev.fecha_vencimiento && (
-              <span className={`flex items-center gap-1 text-[11px] font-medium ${expired ? "text-red-600" : "text-amber-600"}`}>
+              <span className="flex items-center gap-1 text-[11px] font-medium" style={{ color: expired ? "#EF4444" : "#FBBF24" }}>
                 <CalendarX className="size-3" />
                 Vence: {formatDateTime(ev.fecha_vencimiento)}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-[2px]">
           <a
             href={`/evaluation-results/${ev.id}`}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            style={{ color: "var(--muted-foreground)" }}
             title="Ver resultados"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             <BarChart3 className="size-4" />
           </a>
           <button
             onClick={() => onPreview(ev)}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            style={{ color: "var(--muted-foreground)" }}
             title="Vista previa"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             <Eye className="size-4" />
           </button>
           <button
             onClick={() => onAssign(ev)}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            style={{ color: "var(--muted-foreground)" }}
             title="Asignar participantes"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             <Users className="size-4" />
           </button>
           <button
             onClick={() => onDuplicate(ev)}
             disabled={duplicatingId === ev.id}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent disabled:opacity-50"
+            className="rounded-[8px] p-2 transition-colors hover:bg-secondary disabled:opacity-50"
+            style={{ color: "var(--muted-foreground)" }}
             title="Duplicar evaluación"
+            onMouseEnter={(e) => { if (duplicatingId !== ev.id) e.currentTarget.style.color = "var(--accent)"; }}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             {duplicatingId === ev.id ? (
               <Loader2 className="size-4 animate-spin" />
@@ -374,13 +421,21 @@ const EvaluationCard = memo(function EvaluationCard({
           </button>
           <button
             onClick={() => onEdit(ev)}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-accent"
+            className="rounded-[8px] p-2 transition-colors hover:bg-secondary"
+            style={{ color: "var(--muted-foreground)" }}
+            title="Editar evaluación"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             <Edit2 className="size-4" />
           </button>
           <button
             onClick={() => onDelete(ev.id)}
-            className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="rounded-[8px] p-2 transition-colors hover:bg-destructive/10"
+            style={{ color: "var(--muted-foreground)" }}
+            title="Eliminar evaluación"
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--destructive)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
           >
             <Trash2 className="size-4" />
           </button>
@@ -767,11 +822,13 @@ function EvaluationsPage() {
     >
       {toast && (
         <div
-          className={`fixed right-6 top-20 z-50 flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium shadow-lg ${
-            toast.type === "error"
-              ? "bg-destructive text-destructive-foreground"
-              : "bg-emerald-600 text-white"
-          }`}
+          className="fixed right-6 top-20 z-50 flex items-center gap-2 px-4 py-3 text-[13px] font-medium shadow-lg"
+          style={{
+            borderRadius: 12,
+            ...(toast.type === "error"
+              ? { background: "var(--destructive)", color: "var(--destructive-foreground)" }
+              : { background: "#059669", color: "#fff" }),
+          }}
         >
           <CheckCircle className="size-4" />
           {toast.msg}
@@ -781,18 +838,20 @@ function EvaluationsPage() {
       <div className="space-y-6">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar evaluaciones…"
-              className="w-full rounded-md border border-input bg-card py-2 pl-9 pr-3 text-sm"
+              className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+              style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
             />
           </div>
           <select
             value={filterCategoria}
             onChange={(e) => setFilterCategoria(e.target.value)}
-            className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+            className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+            style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
           >
             <option value="todas">Todas las categorías</option>
             {categories.map((c) => (
@@ -804,7 +863,8 @@ function EvaluationsPage() {
           <select
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value as typeof filterEstado)}
-            className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+            className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+            style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
           >
             <option value="todos">Todos los estados</option>
             <option value="activa">Activas</option>
@@ -814,7 +874,8 @@ function EvaluationsPage() {
             <select
               value={filterArea}
               onChange={(e) => setFilterArea(e.target.value)}
-              className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+              className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent"
+              style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
             >
               <option value="todas">Todas las áreas</option>
               <option value="sin_area">Sin área</option>
@@ -825,15 +886,18 @@ function EvaluationsPage() {
               ))}
             </select>
           )}
-          <div className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <div className="ml-auto font-mono text-[10px] uppercase tracking-[.12em]" style={{ color: "var(--text-faint)" }}>
             {filtered.length} de {items.length}
           </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-12 text-center">
-            <ClipboardList className="mx-auto mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
+          <div
+            className="p-12 text-center"
+            style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+          >
+            <ClipboardList className="mx-auto mb-3 size-10" style={{ color: "var(--text-faint)" }} />
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
               No hay evaluaciones. Crea la primera con "Nueva Evaluación".
             </p>
           </div>
@@ -879,18 +943,28 @@ function EvaluationsPage() {
       {/* ── PREVIEW MODAL ── */}
       {previewEval && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4">
-          <div className="my-8 w-full max-w-2xl rounded-2xl bg-card shadow-2xl">
+          <div
+            className="my-8 w-full max-w-2xl shadow-2xl"
+            style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-border bg-card px-6 py-4">
+            <div
+              className="sticky top-0 z-10 flex items-center justify-between px-[22px] py-[18px]"
+              style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)", borderRadius: "20px 20px 0 0" }}
+            >
               <div>
                 <div className="flex items-center gap-2">
-                  <Eye className="size-4 text-accent" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-accent">Vista Previa</span>
+                  <Eye className="size-4" style={{ color: "var(--accent)" }} />
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>Vista Previa</span>
                 </div>
-                <h3 className="mt-0.5 font-bold">{previewEval.nombre}</h3>
+                <h3 className="font-display mt-1 text-[16px] font-medium" style={{ color: "var(--foreground)" }}>{previewEval.nombre}</h3>
               </div>
-              <button onClick={() => setPreviewEval(null)} className="text-muted-foreground hover:text-foreground">
-                <X className="size-5" />
+              <button
+                onClick={() => setPreviewEval(null)}
+                className="rounded-[8px] p-1.5 transition-colors hover:bg-secondary"
+                style={{ color: "var(--muted-foreground)" }}
+              >
+                <X className="size-4" />
               </button>
             </div>
 
@@ -975,16 +1049,23 @@ function EvaluationsPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-card shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4">
-              <h3 className="font-semibold">
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto shadow-2xl"
+            style={{ borderRadius: 20, background: "var(--surface)", border: "1px solid var(--border)" }}
+          >
+            <div
+              className="sticky top-0 z-10 flex items-center justify-between bg-card px-[22px] py-[18px]"
+              style={{ borderBottom: "1px solid var(--border)" }}
+            >
+              <h3 className="font-display text-[17px] font-medium" style={{ color: "var(--foreground)" }}>
                 {editing ? "Editar" : "Nueva"} Evaluación
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-[8px] p-1.5 transition-colors hover:bg-secondary"
+                style={{ color: "var(--muted-foreground)" }}
               >
-                <X className="size-5" />
+                <X className="size-4" />
               </button>
             </div>
 

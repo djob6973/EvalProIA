@@ -1,7 +1,8 @@
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { Sun, Moon } from "lucide-react";
 
 interface AppShellProps {
   breadcrumb: { label: string; href?: string }[];
@@ -13,14 +14,29 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [isDark, setIsDark] = useState(false);
 
   // Handles runtime session expiry (token revoked while already on a page).
-  // The router-level beforeLoad covers the initial navigation guard.
   useEffect(() => {
     if (!loading && !user) {
       navigate({ to: "/login" });
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("ep-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const dark = stored === "dark" || (!stored && prefersDark);
+    setIsDark(dark);
+    document.documentElement.classList.toggle("dark", dark);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("ep-theme", next ? "dark" : "light");
+  };
 
   if (loading) {
     return (
@@ -66,7 +82,17 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
               </span>
             ))}
           </nav>
-          <div className="flex items-center gap-[10px]">{actions}</div>
+          <div className="flex items-center gap-[10px]">
+            <button
+              onClick={toggleTheme}
+              className="grid place-items-center rounded-[10px] p-2 transition-colors hover:bg-secondary"
+              style={{ color: "var(--muted-foreground)" }}
+              title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            >
+              {isDark ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
+            </button>
+            {actions}
+          </div>
         </header>
 
         {/* Content */}
