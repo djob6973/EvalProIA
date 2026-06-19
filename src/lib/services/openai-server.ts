@@ -269,7 +269,7 @@ export async function generateQuestionsServer(
   maxTokens = 8192,
   retries = 3
 ): Promise<GeneratedQuestion[]> {
-  const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno del servidor');
@@ -368,7 +368,7 @@ type ExtractImageTextInput = {
 export const extractImageTextFn = createServerFn({ method: 'POST' })
   .inputValidator((data: ExtractImageTextInput) => data)
   .handler(async ({ data }) => {
-    const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY no está configurada en el servidor');
     }

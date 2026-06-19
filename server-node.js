@@ -68,6 +68,20 @@ const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
 
+    // ── Health check (must come before HTTPS redirect so Dokku can probe it) ─
+    if (url.pathname === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
+    // ── HTTPS redirect in production (nginx sets X-Forwarded-Proto: http) ───
+    if (process.env.NODE_ENV === 'production' && req.headers['x-forwarded-proto'] === 'http') {
+      res.writeHead(301, { Location: `https://${req.headers.host}${req.url}` });
+      res.end();
+      return;
+    }
+
     // ── Static files ────────────────────────────────────────────────────────
     if (url.pathname.startsWith('/assets/') || url.pathname.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
       const filePath = join(__dirname, 'dist/client', url.pathname);
@@ -217,4 +231,8 @@ const server = createServer(async (req, res) => {
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
+});
+
+process.on('SIGTERM', () => {
+  server.close(() => process.exit(0));
 });
