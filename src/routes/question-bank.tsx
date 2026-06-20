@@ -598,6 +598,11 @@ function QuestionBankPage() {
                             );
                           })}
                         </ul>
+                        {q.justificacion && (
+                          <p className="mt-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
+                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>Justificación:</strong> {q.justificacion}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0 opacity-70 transition-all duration-300 group-hover:opacity-100">
                         <button
