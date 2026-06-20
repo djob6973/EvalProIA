@@ -426,7 +426,7 @@ async function listResults(): Promise<Response> {
       user_id: r.user_id,
       evaluation_id: r.evaluation_id,
       score: r.score,
-      answers: r.answers,
+      answers: typeof r.answers === 'string' ? JSON.parse(r.answers) : r.answers,
       started_at: r.started_at,
       completed_at: r.completed_at,
       evaluations: { title: r.eval_title, area_id: r.eval_area_id },
@@ -454,7 +454,7 @@ async function resultsByUser(userId: string): Promise<Response> {
       user_id: r.user_id,
       evaluation_id: r.evaluation_id,
       score: r.score,
-      answers: r.answers,
+      answers: typeof r.answers === 'string' ? JSON.parse(r.answers) : r.answers,
       started_at: r.started_at,
       completed_at: r.completed_at,
       evaluations: {
@@ -484,7 +484,7 @@ async function resultsByEval(evalId: string): Promise<Response> {
       user_id: r.user_id,
       evaluation_id: r.evaluation_id,
       score: r.score,
-      answers: r.answers,
+      answers: typeof r.answers === 'string' ? JSON.parse(r.answers) : r.answers,
       started_at: r.started_at,
       completed_at: r.completed_at,
       profiles: { full_name: r.profile_full_name, email: r.profile_email },
@@ -495,6 +495,7 @@ async function resultsByEval(evalId: string): Promise<Response> {
 async function getResult(id: string): Promise<Response> {
   const [row] = await db`SELECT * FROM results WHERE id = ${id}`;
   if (!row) return json({ error: "No encontrado" }, 404);
+  if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   return json(row);
 }
 
@@ -509,10 +510,11 @@ async function createResult(request: Request): Promise<Response> {
     INSERT INTO results (user_id, evaluation_id, score, answers, started_at)
     VALUES (
       ${user_id}, ${evaluation_id}, ${score},
-      ${JSON.stringify(answers)}, ${started_at ?? null}
+      ${db.json(answers)}, ${started_at ?? null}
     )
     RETURNING *
   `;
+  if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   return json(row, 201);
 }
 
