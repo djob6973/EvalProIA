@@ -429,22 +429,22 @@ function GeneratePage() {
               subtitle="Define los parámetros de generación"
               disabled={!extractedText}
             >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-fade-in">
-                <Field label="Número de Preguntas" hint="5-50">
+              <div className="grid grid-cols-2 gap-4 animate-fade-in">
+                <Field label="N.º de Preguntas" hint="1 – 50">
                   <input
                     type="number"
                     min={1}
                     max={50}
                     value={numPreguntas}
                     onChange={(e) => setNumPreguntas(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+                    className="field-base"
                   />
                 </Field>
                 <Field label="Dificultad">
                   <select
                     value={dificultad}
                     onChange={(e) => setDificultad(e.target.value)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+                    className="field-base"
                   >
                     <option value="facil">Fácil</option>
                     <option value="medio">Medio</option>
@@ -463,7 +463,7 @@ function GeneratePage() {
                         setCategoria(e.target.value);
                       }
                     }}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+                    className="field-base"
                   >
                     <option value="">Sin categoría</option>
                     {categorias.map((cat) => (
@@ -478,64 +478,56 @@ function GeneratePage() {
                       onChange={(e) => setCategoria(e.target.value)}
                       placeholder="Nombre de la nueva categoría"
                       autoFocus
-                      className="mt-2 w-full rounded-md border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                      className="mt-2 field-base"
                     />
                   )}
                 </Field>
-                <Field label="Tiempo Límite (min)" hint="30 min default">
+                <Field label="Tiempo Límite (min)" hint="default: 30">
                   <input
                     type="number"
                     min={1}
                     value={tiempoLimite}
                     onChange={(e) => setTiempoLimite(parseInt(e.target.value) || 1)}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm transition-colors hover:border-accent/50 focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
+                    className="field-base"
                   />
                 </Field>
               </div>
 
-              <div className="mt-8 space-y-4 p-5 rounded-lg border border-border/50 bg-secondary/30 animate-fade-in">
+              <div className="mt-6 space-y-4 p-5 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-fade-in">
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
                       Distribución por Tipo de Pregunta
-                    </label>
-                    <p className="mt-1 text-[10px] text-muted-foreground/70">
-                      Ajusta los porcentajes para definir la composición de preguntas
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-[var(--text-faint)]">
+                      Ajusta los porcentajes — deben sumar 100%
                     </p>
                   </div>
                   <span
-                    className={`rounded-full px-3 py-1 font-mono text-[10px] font-bold transition-all duration-300 ${
+                    className={`rounded-full px-3 py-1 font-mono text-[10px] font-bold ${
                       total === 100
-                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm"
-                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-sm"
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                     }`}
                   >
                     Total: {total}%
                   </span>
                 </div>
-                {(Object.keys(distribucion) as QuestionType[]).map((tipo, idx) => (
-                  <div key={tipo} className="space-y-2">
+                {(Object.keys(distribucion) as QuestionType[]).map((tipo) => (
+                  <div key={tipo} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-foreground">{TYPE_LABELS[tipo]}</span>
-                      <span className="font-mono font-bold text-accent">{distribucion[tipo]}%</span>
+                      <span className="font-medium text-[var(--foreground)]">{TYPE_LABELS[tipo]}</span>
+                      <span className="font-mono font-bold text-accent w-8 text-right">{distribucion[tipo]}%</span>
                     </div>
-                    <div className="relative">
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={distribucion[tipo]}
-                        onChange={(e) => updateDistribucion(tipo, parseInt(e.target.value))}
-                        className="w-full h-2 bg-border rounded-lg appearance-none cursor-pointer accent-accent transition-opacity hover:opacity-100 opacity-90"
-                      />
-                      <div 
-                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-accent rounded-full pointer-events-none transition-all"
-                        style={{
-                          left: `calc(${distribucion[tipo]}% - 8px)`,
-                          boxShadow: '0 0 12px rgba(237, 86, 80, 0.3)'
-                        }}
-                      />
-                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={distribucion[tipo]}
+                      onChange={(e) => updateDistribucion(tipo, parseInt(e.target.value))}
+                      className="w-full cursor-pointer accent-accent"
+                      style={{ accentColor: "var(--accent)" }}
+                    />
                   </div>
                 ))}
               </div>
