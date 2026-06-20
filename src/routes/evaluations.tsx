@@ -214,10 +214,41 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   ctx.lineTo(W - PAD, 68);
   ctx.stroke();
 
-  // ── Title + description (y: 68–135) ──────────────────
+  // ── Title + Semana pill + description (y: 68–135) ──────
+  const createdDate = ev.created_at ? new Date(ev.created_at) : null;
+  const weekNum = createdDate ? getISOWeek(createdDate) : null;
+
+  // Measure Semana pill width first so title can truncate accordingly
+  let weekPillW = 0;
+  if (weekNum) {
+    ctx.font = "bold 11px system-ui, sans-serif";
+    weekPillW = ctx.measureText(`Semana ${weekNum}`).width + 20 + 10; // +10 gap
+  }
+
   ctx.font = "bold 21px 'Space Grotesk', system-ui, sans-serif";
   ctx.fillStyle = "#0f172a";
-  ctx.fillText(truncateFit(ev.nombre, W - PAD * 2), PAD, 97);
+  ctx.fillText(truncateFit(ev.nombre, W - PAD * 2 - weekPillW), PAD, 97);
+
+  // Semana pill — right-aligned, vertically centered with title
+  if (weekNum) {
+    const wLabel = `Semana ${weekNum}`;
+    ctx.font = "bold 11px system-ui, sans-serif";
+    const wW = ctx.measureText(wLabel).width + 20;
+    const pillX = W - PAD - wW;
+    ctx.fillStyle = "#FFE7E6";
+    ctx.beginPath();
+    ctx.roundRect(pillX, 81, wW, 22, 11);
+    ctx.fill();
+    ctx.strokeStyle = "#FBBDB9";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(pillX, 81, wW, 22, 11);
+    ctx.stroke();
+    ctx.fillStyle = "#B13833";
+    ctx.textAlign = "center";
+    ctx.fillText(wLabel, pillX + wW / 2, 96);
+    ctx.textAlign = "left";
+  }
 
   if (ev.descripcion) {
     ctx.font = "13px system-ui, sans-serif";
@@ -274,68 +305,73 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   });
   ctx.textAlign = "left";
 
-  // ── Fechas (y: 250–285) ───────────────────────────────
-  // Zona izquierda: Creada, zona central: Semana, zona derecha: Vence
-  const DATES_Y = 263;
-  const createdDate = ev.created_at ? new Date(ev.created_at) : null;
-  const weekNum = createdDate ? getISOWeek(createdDate) : null;
+  // ── Fechas (y: 248–312) — bloque 2 columnas ─────────
+  const DATES_BOX_Y = 248, DATES_BOX_H = 64;
+  const hasDates = !!(createdDate || ev.fecha_vencimiento);
 
-  // Creada (izquierda)
-  if (createdDate) {
-    const dStr = createdDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
-    ctx.font = "11px system-ui, sans-serif";
-    ctx.fillStyle = "#94a3b8";
-    ctx.fillText("Creada", PAD, DATES_Y - 14);
-    ctx.font = "bold 13px system-ui, sans-serif";
-    ctx.fillStyle = "#334155";
-    ctx.fillText(dStr, PAD, DATES_Y);
-  }
-
-  // Semana (centro)
-  if (weekNum) {
-    const wLabel = `Semana ${weekNum}`;
-    ctx.font = "bold 12px system-ui, sans-serif";
-    const wW = ctx.measureText(wLabel).width + 20;
-    const wX = W / 2 - wW / 2;
-    ctx.fillStyle = "#FFE7E6";
+  if (hasDates) {
+    ctx.fillStyle = "#f8fafc";
     ctx.beginPath();
-    ctx.roundRect(wX, DATES_Y - 24, wW, 28, 14);
+    ctx.roundRect(PAD, DATES_BOX_Y, STATS_W, DATES_BOX_H, 12);
     ctx.fill();
-    ctx.strokeStyle = "#FBBDB9";
+    ctx.strokeStyle = "#e2e8f0";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(wX, DATES_Y - 24, wW, 28, 14);
+    ctx.roundRect(PAD, DATES_BOX_Y, STATS_W, DATES_BOX_H, 12);
     ctx.stroke();
-    ctx.fillStyle = "#B13833";
-    ctx.textAlign = "center";
-    ctx.fillText(wLabel, W / 2, DATES_Y - 6);
-    ctx.textAlign = "left";
-  }
 
-  // Vence (derecha)
-  if (ev.fecha_vencimiento) {
-    const vStr = new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
-    ctx.font = "11px system-ui, sans-serif";
-    ctx.fillStyle = expired ? "#ef4444aa" : "#94a3b8";
-    ctx.textAlign = "right";
-    ctx.fillText("Vence", W - PAD, DATES_Y - 14);
-    ctx.font = "bold 13px system-ui, sans-serif";
-    ctx.fillStyle = expired ? "#ef4444" : "#334155";
-    ctx.fillText(vStr, W - PAD, DATES_Y);
+    const LABEL_Y = DATES_BOX_Y + 22;
+    const VALUE_Y = DATES_BOX_Y + 50;
+
+    if (createdDate && ev.fecha_vencimiento) {
+      // Divider vertical central
+      ctx.beginPath();
+      ctx.moveTo(W / 2, DATES_BOX_Y + 12);
+      ctx.lineTo(W / 2, DATES_BOX_Y + DATES_BOX_H - 12);
+      ctx.stroke();
+    }
+
+    // Creada
+    if (createdDate) {
+      const dStr = createdDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      const cX = ev.fecha_vencimiento ? PAD + STATS_W / 4 : W / 2;
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "center";
+      ctx.fillText("CREADA", cX, LABEL_Y);
+      ctx.font = "bold 14px system-ui, sans-serif";
+      ctx.fillStyle = "#334155";
+      ctx.fillText(dStr, cX, VALUE_Y);
+    }
+
+    // Vence
+    if (ev.fecha_vencimiento) {
+      const vStr = new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      const vX = createdDate ? W - PAD - STATS_W / 4 : W / 2;
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.fillStyle = expired ? "#ef444480" : "#94a3b8";
+      ctx.textAlign = "center";
+      ctx.fillText("VENCE", vX, LABEL_Y);
+      ctx.font = "bold 14px system-ui, sans-serif";
+      ctx.fillStyle = expired ? "#ef4444" : "#334155";
+      ctx.fillText(vStr, vX, VALUE_Y);
+    }
+
     ctx.textAlign = "left";
   }
 
   // Línea divisora antes de tags
+  const TAGS_DIVIDER_Y = hasDates ? DATES_BOX_Y + DATES_BOX_H + 10 : STATS_Y + STATS_H + 10;
   ctx.strokeStyle = "#f1f5f9";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(PAD, 290);
-  ctx.lineTo(W - PAD, 290);
+  ctx.moveTo(PAD, TAGS_DIVIDER_Y);
+  ctx.lineTo(W - PAD, TAGS_DIVIDER_Y);
   ctx.stroke();
 
-  // ── Área + categorías (y: 305) ────────────────────────
+  // ── Área + categorías ────────────────────────────────
   let tx = PAD;
-  const tagBaseY = 317, tagH = 22, tagR = 11;
+  const tagBaseY = TAGS_DIVIDER_Y + 17, tagH = 22, tagR = 11;
 
   if (areaName) {
     ctx.font = "11px system-ui, sans-serif";
