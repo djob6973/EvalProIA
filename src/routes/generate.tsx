@@ -316,39 +316,6 @@ function GeneratePage() {
       }
     >
       <div className="space-y-8">
-        {/* Progress Stepper with Enhanced Design */}
-        <ol className="grid gap-3 sm:grid-cols-4 animate-fade-in">
-          {[
-            { n: 1, label: "Cargar Documento", done: !!file },
-            { n: 2, label: "Extraer Contenido", done: !!extractedText },
-            { n: 3, label: "Configurar y Generar", done: questions.length > 0 },
-            { n: 4, label: "Revisar y Guardar", done: saved },
-          ].map((s, idx) => (
-            <li
-              key={s.n}
-              className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-all duration-300 ${
-                s.done 
-                  ? "border-accent/40 bg-accent/10 shadow-sm hover:shadow-md hover:border-accent/60" 
-                  : "border-border bg-card hover:border-border/80"
-              }`}
-              style={{
-                animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 50}ms both`
-              }}
-            >
-              <div
-                className={`grid size-7 place-items-center rounded-full font-mono text-xs font-bold transition-all duration-300 ${
-                  s.done 
-                    ? "bg-accent text-accent-foreground scale-110" 
-                    : "bg-secondary text-muted-foreground"
-                }`}
-              >
-                {s.done ? <Check className="size-4 animate-scale-in" /> : s.n}
-              </div>
-              <span className="text-sm font-medium">{s.label}</span>
-            </li>
-          ))}
-        </ol>
-
         <div className="grid gap-6 lg:grid-cols-3">
           {/* LEFT: Upload + Extraction + Config */}
           <div className="space-y-6 lg:col-span-2">
@@ -538,9 +505,9 @@ function GeneratePage() {
                   </div>
                   <span
                     className={`rounded-full px-3 py-1 font-mono text-[10px] font-bold transition-all duration-300 ${
-                      total === 100 
-                        ? "bg-emerald-100 text-emerald-700 shadow-sm" 
-                        : "bg-amber-100 text-amber-700 shadow-sm"
+                      total === 100
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-sm"
                     }`}
                   >
                     Total: {total}%
@@ -594,60 +561,60 @@ function GeneratePage() {
 
           {/* RIGHT: Enhanced Pipeline Panel */}
           <div className="space-y-6 animate-slide-in-left">
-            {/* Flujo de Extracción - Enhanced Design */}
-            <div className="rounded-xl p-6 transition-all duration-300 hover:shadow-lg" style={{ background: "#2E2E2E", color: "#F1F1F1" }}>
-              <div className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(241,241,241,0.6)" }}>
-                ✨ Flujo de Extracción
-              </div>
-              <ol className="mt-5 space-y-3.5 text-xs">
-                {[
-                  { label: "Cargar documento", completed: !!file },
-                  { label: "Extracción de texto con IA", completed: !!extractedText },
-                  { label: "Configurar parámetros", completed: false },
-                  { label: "Generar preguntas", completed: questions.length > 0 },
-                  { label: "Revisar y seleccionar", completed: questions.length > 0 && selected.size > 0 },
-                  { label: "Guardar en Banco de Preguntas", completed: saved },
-                ].map((s, i) => {
-                  const isCurrentStep = 
-                    (i === 0 && !file) ||
-                    (i === 1 && file && !extractedText) ||
-                    (i === 2 && extractedText && questions.length === 0) ||
-                    (i === 3 && extractedText && questions.length === 0) ||
-                    (i === 4 && questions.length > 0 && !saved) ||
-                    (i === 5 && saved);
-                  
-                  return (
-                    <li 
-                      key={i} 
-                      className="flex gap-3 transition-all duration-300 group"
-                      style={{
-                        opacity: s.completed || isCurrentStep ? 1 : 0.5,
-                        animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 100}ms both`
-                      }}
-                    >
-                      <div className={`grid size-5 shrink-0 place-items-center rounded-full border transition-all duration-300 font-mono text-[9px] font-bold ${
-                        s.completed
-                          ? "bg-accent text-white border-accent"
-                          : isCurrentStep
-                          ? "border-accent/60 bg-accent/10 text-accent group-hover:border-accent group-hover:bg-accent/20"
-                          : "border-primary-foreground/20 text-primary-foreground/50"
-                      }`}>
-                        {s.completed ? (
-                          <Check className="size-3" />
-                        ) : (
-                          <span className={isCurrentStep ? "animate-pulse" : ""}>{i + 1}</span>
-                        )}
-                      </div>
-                      <span className={`text-primary-foreground/80 transition-colors duration-300 ${
-                        s.completed ? "text-primary-foreground" : ""
-                      }`}>
-                        {s.label}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
+            {/* Flujo de Extracción */}
+            {(() => {
+              const steps = [
+                { label: "Cargar documento",             completed: !!file },
+                { label: "Extracción de texto con IA",   completed: !!extractedText },
+                { label: "Configurar parámetros",        completed: questions.length > 0 || generating },
+                { label: "Generar preguntas",            completed: questions.length > 0 },
+                { label: "Revisar y seleccionar",        completed: questions.length > 0 && selected.size > 0 },
+                { label: "Guardar en Banco de Preguntas", completed: saved },
+              ];
+              const currentStepIndex = steps.findIndex((s) => !s.completed);
+              return (
+                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-6 transition-all duration-300 hover:shadow-lg">
+                  <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)]">
+                    ✨ Flujo de Extracción
+                  </div>
+                  <ol className="mt-5 space-y-3.5 text-xs">
+                    {steps.map((s, i) => {
+                      const isCurrent = i === currentStepIndex;
+                      return (
+                        <li
+                          key={i}
+                          className="flex gap-3 transition-all duration-300 group"
+                          style={{ opacity: s.completed || isCurrent ? 1 : 0.4 }}
+                        >
+                          <div className={`grid size-5 shrink-0 place-items-center rounded-full border font-mono text-[9px] font-bold transition-all duration-300 ${
+                            s.completed
+                              ? "bg-accent text-white border-accent"
+                              : isCurrent
+                              ? "border-accent/70 bg-accent/10 text-accent"
+                              : "border-[var(--border)] text-[var(--muted-foreground)]"
+                          }`}>
+                            {s.completed ? (
+                              <Check className="size-3" />
+                            ) : (
+                              <span className={isCurrent ? "animate-pulse" : ""}>{i + 1}</span>
+                            )}
+                          </div>
+                          <span className={`transition-colors duration-300 ${
+                            s.completed
+                              ? "text-[var(--foreground)] font-medium"
+                              : isCurrent
+                              ? "text-[var(--foreground)] font-semibold"
+                              : "text-[var(--muted-foreground)]"
+                          }`}>
+                            {s.label}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              );
+            })()}
 
             {/* Recomendaciones - Enhanced Design */}
             <div className="rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:shadow-lg hover:border-accent/30">
@@ -851,7 +818,9 @@ function GeneratePage() {
                                   <div
                                     key={i}
                                     className={`flex items-center gap-2 rounded-md border px-2 py-1.5 transition-all duration-300 ${
-                                      isCorrect ? "border-emerald-300 bg-emerald-50" : "border-border bg-background hover:border-accent/30"
+                                      isCorrect
+                                        ? "border-emerald-500/50 bg-emerald-500/10"
+                                        : "border-border bg-background hover:border-accent/30"
                                     }`}
                                   >
                                     <button
@@ -875,7 +844,7 @@ function GeneratePage() {
                                       }}
                                       className="flex-1 bg-transparent text-xs focus:outline-none"
                                     />
-                                    {isCorrect && <Check className="size-3.5 shrink-0 text-emerald-600" />}
+                                    {isCorrect && <Check className="size-3.5 shrink-0 text-emerald-500 dark:text-emerald-400" />}
                                   </div>
                                 );
                               })}
@@ -943,7 +912,7 @@ function GeneratePage() {
                                     key={i}
                                     className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs transition-all duration-300 ${
                                       correct
-                                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                                         : "border-border bg-background text-muted-foreground group-hover:border-accent/20"
                                     }`}
                                   >
@@ -951,7 +920,7 @@ function GeneratePage() {
                                       {String.fromCharCode(65 + i)}
                                     </span>
                                     <span className="flex-1">{opt}</span>
-                                    {correct && <Check className="size-3.5 shrink-0 text-emerald-600" />}
+                                    {correct && <Check className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />}
                                   </li>
                                 );
                               })}
