@@ -89,89 +89,89 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
     );
   };
 
-  const sidebarContent = (
-    <>
-      {/* Logo */}
-      <div className="border-b border-[var(--sidebar-border)] px-6 py-6 pb-5">
-        <Link to="/dashboard" className="flex items-center gap-3">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
-            style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
-          >
-            <Brain className="size-[18px]" strokeWidth={1.5} />
+  const logoSection = (
+    <div className="shrink-0 border-b border-[var(--sidebar-border)] px-6 py-6 pb-5">
+      <Link to="/dashboard" className="flex items-center gap-3">
+        <div
+          className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
+          style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+        >
+          <Brain className="size-[18px]" strokeWidth={1.5} />
+        </div>
+        <div className="flex flex-col leading-none">
+          <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
+            EvalPro
+          </span>
+          <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
+            Sistema de Evaluación
+          </span>
+        </div>
+      </Link>
+    </div>
+  );
+
+  const navSection = (
+    <nav className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-6">
+      {groups.map((group) => (
+        <div key={group}>
+          <div className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[var(--text-faint)]">
+            {group}
           </div>
-          <div className="flex flex-col leading-none">
-            <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
-              EvalPro
-            </span>
-            <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
-              Sistema de Evaluación
-            </span>
+          <div className="flex flex-col gap-2">
+            {nav.filter((n) => n.group === group).map(renderNavItem)}
+          </div>
+        </div>
+      ))}
+    </nav>
+  );
+
+  const footerSection = (
+    <div className="shrink-0 border-t border-[var(--sidebar-border)] p-5">
+      {!isParticipantRole && (
+        <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-4 block">
+          <div className="rounded-full border border-[var(--border-strong)] bg-[var(--sidebar-accent)] px-4 py-3 text-center font-mono text-[10px] uppercase tracking-[.2em] text-[var(--sidebar-foreground)] transition hover:border-[var(--sidebar-primary)] hover:text-[var(--sidebar-primary)]">
+            Cambiar a {isParticipantPath ? "Administrador" : "Participante"}
           </div>
         </Link>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-6">
-        {groups.map((group) => (
-          <div key={group}>
-            <div className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[var(--text-faint)]">
-              {group}
-            </div>
-            <div className="flex flex-col gap-2">
-              {nav.filter((n) => n.group === group).map(renderNavItem)}
-            </div>
-          </div>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="mt-auto border-t border-[var(--sidebar-border)] p-5">
-        {!isParticipantRole && (
-          <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-4 block">
-            <div className="rounded-full border border-[var(--border-strong)] bg-[var(--sidebar-accent)] px-4 py-3 text-center font-mono text-[10px] uppercase tracking-[.2em] text-[var(--sidebar-foreground)] transition hover:border-[var(--sidebar-primary)] hover:text-[var(--sidebar-primary)]">
-              Cambiar a {isParticipantPath ? "Administrador" : "Participante"}
-            </div>
-          </Link>
-        )}
-        <div className="flex items-center gap-3 px-1 py-1">
-          <div
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--sidebar-primary)] font-mono text-[11px] font-bold text-[var(--sidebar-primary-foreground)]"
-          >
-            {userInitials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-semibold text-[var(--foreground)]">
-              {displayName}
-            </div>
-            <div className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
-              {profile?.role === 'both' ? "Admin + Participante" : isParticipantRole ? "Participante" : "Administrador"}
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            title="Cerrar sesión"
-            className="grid h-10 w-10 place-items-center rounded-[14px] border border-[var(--border)] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
-          >
-            <LogOut className="size-[16px]" strokeWidth={1.5} />
-          </button>
+      )}
+      <div className="flex items-center gap-3 px-1 py-1">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--sidebar-primary)] font-mono text-[11px] font-bold text-[var(--sidebar-primary-foreground)]">
+          {userInitials}
         </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-semibold text-[var(--foreground)]">
+            {displayName}
+          </div>
+          <div className="mt-0.5 text-[11px] text-[var(--muted-foreground)]">
+            {profile?.role === 'both' ? "Admin + Participante" : isParticipantRole ? "Participante" : "Administrador"}
+          </div>
+        </div>
+        <button
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          className="grid h-10 w-10 place-items-center rounded-[14px] border border-[var(--border)] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
+        >
+          <LogOut className="size-[16px]" strokeWidth={1.5} />
+        </button>
       </div>
-    </>
+    </div>
   );
 
   return (
     <>
       <aside className="fixed left-0 top-0 hidden h-screen w-[260px] flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] md:flex">
-        {sidebarContent}
+        {logoSection}
+        {navSection}
+        {footerSection}
       </aside>
 
       <Sheet open={isMobile ? mobileOpen : false} onOpenChange={setMobileOpen}>
         <SheetContent
           side="left"
-          className="max-w-[320px] bg-[var(--sidebar)] p-0 shadow-2xl"
+          className="flex flex-col w-[300px] max-w-[85vw] bg-[var(--sidebar)] p-0 shadow-2xl"
         >
-          <div className="flex items-center justify-between border-b border-[var(--sidebar-border)] px-5 py-5">
+          {/* Header móvil con logo y botón de cierre */}
+          <div className="shrink-0 flex items-center justify-between border-b border-[var(--sidebar-border)] px-5 py-5">
             <div className="flex items-center gap-3">
               <div
                 className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
@@ -194,7 +194,8 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
               </button>
             </SheetClose>
           </div>
-          <div className="flex h-full flex-col">{sidebarContent}</div>
+          {navSection}
+          {footerSection}
         </SheetContent>
       </Sheet>
     </>
