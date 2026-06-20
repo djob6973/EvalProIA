@@ -92,6 +92,18 @@ function getISOWeek(date: Date): number {
   return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
 
+// ── EvalPro logo SVG (inline para canvas) ───────────────────────────────────
+const EVALPRO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#1e293b"/><g transform="translate(12,12) scale(1.667)" fill="none" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></g></svg>`;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines = 2): string[] {
   if (!text) return [];
   const words = text.split(" ");
@@ -111,148 +123,242 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   return lines.slice(0, maxLines);
 }
 
-function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null) {
+// Draws the pill chip used in the info section
+function drawChip(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number,
+  label: string, value: string,
+  bg: string, valueColor: string
+): number {
+  ctx.font = "12px system-ui, sans-serif";
+  const fullText = `${label}: ${value}`;
+  const chipW = ctx.measureText(fullText).width + 22;
+  const chipH = 26;
+
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.roundRect(x, y, chipW, chipH, 13);
+  ctx.fill();
+
+  ctx.fillStyle = "#64748b";
+  ctx.fillText(`${label}: `, x + 11, y + 17);
+  const labelW = ctx.measureText(`${label}: `).width;
+  ctx.fillStyle = valueColor;
+  ctx.font = "bold 12px system-ui, sans-serif";
+  ctx.fillText(value, x + 11 + labelW, y + 17);
+
+  return chipW + 8; // advance
+}
+
+async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+
+  // 2× for retina sharpness
   const W = 800, H = 420;
-  canvas.width = W;
-  canvas.height = H;
+  canvas.width = W * 2;
+  canvas.height = H * 2;
+  canvas.style.width = `${W}px`;
+  canvas.style.height = `${H}px`;
+  ctx.scale(2, 2);
 
+  const ACCENT = "#ED5650";
   const expired = isExpired(ev);
-  const stateColor = expired ? "#ef4444" : ev.activa ? "#e9664a" : "#94a3b8";
+  const stateColor = expired ? "#ef4444" : ev.activa ? "#10b981" : "#94a3b8";
+  const stateLabel = expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA";
 
-  // Background
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, "#0f172a");
-  bg.addColorStop(1, "#1a1040");
-  ctx.fillStyle = bg;
+  // ── 1. Background blanco ───────────────────────────────
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
-  // Left accent stripe
-  ctx.fillStyle = stateColor;
-  ctx.fillRect(0, 0, 5, H);
+  // ── 2. Top accent bar ──────────────────────────────────
+  ctx.fillStyle = ACCENT;
+  ctx.fillRect(0, 0, W, 5);
 
-  // Top header bg
-  ctx.fillStyle = "rgba(255,255,255,0.04)";
-  ctx.fillRect(0, 0, W, 58);
+  // Sombra sutil debajo del accent bar
+  const accentShadow = ctx.createLinearGradient(0, 5, 0, 18);
+  accentShadow.addColorStop(0, "rgba(237,86,80,0.08)");
+  accentShadow.addColorStop(1, "transparent");
+  ctx.fillStyle = accentShadow;
+  ctx.fillRect(0, 5, W, 13);
 
-  // Brand
-  ctx.font = "bold 11px system-ui, sans-serif";
-  ctx.fillStyle = stateColor;
-  ctx.fillText("EVALPRO", 24, 34);
-
-  // Status badge
-  const statusLabel = expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA";
-  const badgeText = statusLabel;
-  ctx.font = "bold 10px system-ui, sans-serif";
-  const badgeW = ctx.measureText(badgeText).width + 20;
-  ctx.fillStyle = stateColor + "33";
-  ctx.beginPath();
-  ctx.roundRect(W - badgeW - 20, 18, badgeW, 22, 6);
-  ctx.fill();
-  ctx.fillStyle = stateColor;
-  ctx.textAlign = "center";
-  ctx.fillText(badgeText, W - badgeW / 2 - 20, 33);
-  ctx.textAlign = "left";
-
-  // Area tag
-  if (areaName) {
-    ctx.font = "11px system-ui, sans-serif";
-    ctx.fillStyle = "rgba(167,139,250,0.9)";
-    const areaX = 24 + ctx.measureText("EVALPRO").width + 14;
-    ctx.fillText(`· ${areaName}`, areaX, 34);
+  // ── 3. Header: logo + wordmark + badge (y: 5–72) ──────
+  // Logo SVG
+  try {
+    const blob = new Blob([EVALPRO_LOGO_SVG], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const logo = await loadImage(url);
+    ctx.drawImage(logo, 28, 15, 38, 38);
+    URL.revokeObjectURL(url);
+  } catch {
+    // fallback pill
+    ctx.fillStyle = "#1e293b";
+    ctx.beginPath();
+    ctx.roundRect(28, 15, 38, 38, 8);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 13px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("EP", 47, 38);
+    ctx.textAlign = "left";
   }
 
-  // Title
-  ctx.font = "bold 26px system-ui, sans-serif";
-  ctx.fillStyle = "#ffffff";
-  const titleLines = wrapCanvasText(ctx, ev.nombre, W - 60, 1);
-  ctx.fillText(titleLines[0] || "", 24, 98);
+  // Wordmark "EvalPro"
+  ctx.font = "bold 20px 'Space Grotesk', system-ui, sans-serif";
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText("Eval", 76, 40);
+  const evalW = ctx.measureText("Eval").width;
+  ctx.fillStyle = ACCENT;
+  ctx.fillText("Pro", 76 + evalW, 40);
 
-  // Description
-  ctx.font = "14px system-ui, sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.58)";
-  const descLines = wrapCanvasText(ctx, ev.descripcion || "", W - 60, 2);
-  descLines.forEach((line, i) => ctx.fillText(line, 24, 124 + i * 22));
-
-  // Divider
-  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  // Estado badge (top-right)
+  ctx.font = "bold 10px system-ui, sans-serif";
+  const badgeW = ctx.measureText(stateLabel).width + 20;
+  const badgeX = W - badgeW - 28;
+  ctx.fillStyle = stateColor + "1c";
+  ctx.beginPath();
+  ctx.roundRect(badgeX, 22, badgeW, 20, 10);
+  ctx.fill();
+  ctx.strokeStyle = stateColor + "55";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(24, 175);
-  ctx.lineTo(W - 24, 175);
+  ctx.roundRect(badgeX, 22, badgeW, 20, 10);
+  ctx.stroke();
+  ctx.fillStyle = stateColor;
+  ctx.textAlign = "center";
+  ctx.fillText(stateLabel, badgeX + badgeW / 2, 35);
+  ctx.textAlign = "left";
+
+  // Línea divisora header/body
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(28, 68);
+  ctx.lineTo(W - 28, 68);
   ctx.stroke();
 
-  // Info row 1: aprobación · preguntas · tiempo
-  const infos1: string[] = [
-    `✓  Aprueba ${ev.config.porcentaje_aprobacion}%`,
-    `◻  ${ev.config.num_preguntas} preguntas`,
-    ev.tiempo_limite > 0 ? `⏱  ${ev.tiempo_limite} min` : `⏱  Sin límite`,
-  ];
-  ctx.font = "13px system-ui, sans-serif";
-  let x1 = 24;
-  infos1.forEach((info, i) => {
-    ctx.fillStyle = i === 0 ? "#10b981" : "rgba(255,255,255,0.7)";
-    ctx.fillText(info, x1, 208);
-    x1 += ctx.measureText(info).width + 28;
-    if (i < infos1.length - 1) {
-      ctx.fillStyle = "rgba(255,255,255,0.2)";
-      ctx.fillText("·", x1 - 18, 208);
-    }
-  });
+  // ── 4. Título (y: 68–115) ─────────────────────────────
+  ctx.font = "bold 22px 'Space Grotesk', system-ui, sans-serif";
+  ctx.fillStyle = "#0f172a";
+  const titleLines = wrapCanvasText(ctx, ev.nombre, W - 56, 2);
+  titleLines.forEach((line, i) => ctx.fillText(line, 28, 96 + i * 26));
 
-  // Info row 2: fecha creación · semana · vencimiento
-  const createdDate = ev.created_at ? new Date(ev.created_at) : null;
-  const createdStr = createdDate
-    ? createdDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
-    : "";
-  const weekNum = createdDate ? getISOWeek(createdDate) : null;
-  const venceStr = ev.fecha_vencimiento
-    ? new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
-    : "Sin vencimiento";
-
-  const infos2: Array<{ text: string; color: string }> = [
-    ...(createdStr ? [{ text: `📅  Creada: ${createdStr}`, color: "rgba(255,255,255,0.7)" }] : []),
-    ...(weekNum ? [{ text: `Semana ${weekNum}`, color: "#e9664a" }] : []),
-    { text: `⏰  Vence: ${venceStr}`, color: expired ? "#ef4444" : "rgba(255,255,255,0.7)" },
-  ];
-  ctx.font = "13px system-ui, sans-serif";
-  let x2 = 24;
-  infos2.forEach((info, i) => {
-    ctx.fillStyle = info.color;
-    ctx.fillText(info.text, x2, 244);
-    x2 += ctx.measureText(info.text).width + 28;
-    if (i < infos2.length - 1) {
-      ctx.fillStyle = "rgba(255,255,255,0.2)";
-      ctx.fillText("·", x2 - 18, 244);
-    }
-  });
-
-  // Categorías
-  if (ev.categorias.length > 0) {
-    ctx.font = "11px system-ui, sans-serif";
-    let cx = 24;
-    ev.categorias.slice(0, 5).forEach((cat) => {
-      const cw = ctx.measureText(cat).width + 16;
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      ctx.beginPath();
-      ctx.roundRect(cx, 268, cw, 20, 10);
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
-      ctx.fillText(cat, cx + 8, 282);
-      cx += cw + 6;
-    });
+  // ── 5. Descripción (y: ~118–155) ──────────────────────
+  const descStartY = titleLines.length > 1 ? 150 : 124;
+  if (ev.descripcion) {
+    ctx.font = "13px system-ui, sans-serif";
+    ctx.fillStyle = "#64748b";
+    const descLines = wrapCanvasText(ctx, ev.descripcion, W - 56, 2);
+    descLines.forEach((line, i) => ctx.fillText(line, 28, descStartY + i * 18));
   }
 
-  // Footer
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.fillRect(0, H - 50, W, 50);
+  // ── 6. Info chips (y: ~175–210) ───────────────────────
+  const chipsY = ev.descripcion ? descStartY + 38 : descStartY + 10;
+  let cx = 28;
+  cx += drawChip(ctx, cx, chipsY, "Aprueba", `${ev.config.porcentaje_aprobacion}%`, "#ecfdf5", "#059669");
+  cx += drawChip(ctx, cx, chipsY, "Preguntas", String(ev.config.num_preguntas), "#eff6ff", "#2563eb");
+  cx += drawChip(ctx, cx, chipsY, "Tiempo", ev.tiempo_limite > 0 ? `${ev.tiempo_limite} min` : "Sin límite", "#fffbeb", "#d97706");
+  cx += drawChip(ctx, cx, chipsY, "Intentos", String(ev.intentos_permitidos), "#f5f3ff", "#7c3aed");
+
+  // ── 7. Fechas + semana (y: chipsY+42) ─────────────────
+  const datesY = chipsY + 45;
+  const createdDate = ev.created_at ? new Date(ev.created_at) : null;
+  const weekNum = createdDate ? getISOWeek(createdDate) : null;
+
+  let dx = 28;
+  ctx.font = "12px system-ui, sans-serif";
+
+  if (createdDate) {
+    const dateStr = createdDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+    ctx.fillStyle = "#94a3b8";
+    ctx.fillText("Creada", dx, datesY);
+    dx += ctx.measureText("Creada").width + 5;
+    ctx.fillStyle = "#334155";
+    ctx.font = "bold 12px system-ui, sans-serif";
+    ctx.fillText(dateStr, dx, datesY);
+    dx += ctx.measureText(dateStr).width + 22;
+    ctx.font = "12px system-ui, sans-serif";
+  }
+
+  if (weekNum) {
+    // Pill "Semana 25" con fondo coral suave
+    ctx.font = "bold 11px system-ui, sans-serif";
+    const wLabel = `Sem. ${weekNum}`;
+    const wW = ctx.measureText(wLabel).width + 14;
+    ctx.fillStyle = "#FFE7E6";
+    ctx.beginPath();
+    ctx.roundRect(dx, datesY - 14, wW, 19, 9);
+    ctx.fill();
+    ctx.fillStyle = "#B13833";
+    ctx.fillText(wLabel, dx + 7, datesY);
+    dx += wW + 22;
+    ctx.font = "12px system-ui, sans-serif";
+  }
+
+  if (ev.fecha_vencimiento) {
+    const vDate = new Date(ev.fecha_vencimiento);
+    const vStr = vDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+    ctx.fillStyle = expired ? "#ef444480" : "#94a3b8";
+    ctx.fillText("Vence", dx, datesY);
+    dx += ctx.measureText("Vence").width + 5;
+    ctx.fillStyle = expired ? "#ef4444" : "#334155";
+    ctx.font = "bold 12px system-ui, sans-serif";
+    ctx.fillText(vStr, dx, datesY);
+    ctx.font = "12px system-ui, sans-serif";
+  }
+
+  // ── 8. Área + categorías (y: datesY+30) ───────────────
+  const tagsY = datesY + 30;
+  let tx = 28;
+
+  if (areaName) {
+    ctx.font = "11px system-ui, sans-serif";
+    const aW = ctx.measureText(areaName).width + 14;
+    ctx.fillStyle = "rgba(109,40,217,0.1)";
+    ctx.beginPath();
+    ctx.roundRect(tx, tagsY - 12, aW, 18, 9);
+    ctx.fill();
+    ctx.fillStyle = "#7c3aed";
+    ctx.fillText(areaName, tx + 7, tagsY);
+    tx += aW + 7;
+  }
+
+  ev.categorias.slice(0, 5).forEach((cat) => {
+    ctx.font = "11px system-ui, sans-serif";
+    const cW = ctx.measureText(cat).width + 14;
+    ctx.fillStyle = "#f1f5f9";
+    ctx.beginPath();
+    ctx.roundRect(tx, tagsY - 12, cW, 18, 9);
+    ctx.fill();
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(cat, tx + 7, tagsY);
+    tx += cW + 7;
+  });
+
+  // ── 9. Footer gris (y: H-58–H) ────────────────────────
+  const fY = H - 58;
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, fY, W, H - fY);
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, fY);
+  ctx.lineTo(W, fY);
+  ctx.stroke();
+
+  // Footer: dot accent + URL
+  ctx.fillStyle = ACCENT;
+  ctx.beginPath();
+  ctx.arc(28, fY + 29, 4, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.font = "11px system-ui, sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.3)";
-  ctx.fillText("evalpro.apps.dataico.world", 24, H - 18);
+  ctx.fillStyle = "#94a3b8";
+  ctx.fillText("evalpro.apps.dataico.world", 40, fY + 33);
+
   ctx.textAlign = "right";
-  ctx.fillStyle = stateColor + "99";
-  ctx.fillText("Compartido desde EvalPro", W - 24, H - 18);
+  ctx.fillStyle = "#cbd5e1";
+  ctx.fillText("Compartido desde EvalPro", W - 28, fY + 33);
   ctx.textAlign = "left";
 }
 
@@ -426,9 +532,12 @@ type ShareModalProps = {
 
 function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (canvasRef.current) drawShareCard(canvasRef.current, ev, areaName);
+    setReady(false);
+    if (!canvasRef.current) return;
+    drawShareCard(canvasRef.current, ev, areaName).then(() => setReady(true));
   }, [ev, areaName]);
 
   function handleDownload() {
@@ -460,18 +569,23 @@ function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="overflow-hidden rounded-xl border border-border/50">
+        <div className="p-6 space-y-3">
+          <div className="overflow-hidden rounded-xl border border-border/50 bg-[#f1f5f9] relative">
+            {!ready && (
+              <div className="absolute inset-0 flex items-center justify-center bg-secondary/60">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              </div>
+            )}
             <canvas ref={canvasRef} className="w-full" style={{ display: "block" }} />
           </div>
           <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
-            Previsualización de la tarjeta · 800 × 420 px
+            800 × 420 px · fondo blanco · diseño minimalista
           </p>
         </div>
 
         <div className="flex gap-3 px-6 pb-6">
           <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
-          <Button className="flex-1" onClick={handleDownload}>
+          <Button className="flex-1" onClick={handleDownload} disabled={!ready}>
             <Download className="size-4" /> Descargar PNG
           </Button>
         </div>
