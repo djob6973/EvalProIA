@@ -172,38 +172,42 @@ function MyResultPage() {
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{result.score}%</div>
           </div>
-          <div className="rounded-xl border border-border bg-emerald-50 p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700">
-              <CheckCircle className="size-4 text-emerald-600" />
+          <div className="rounded-xl border border-border bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 p-6 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              <CheckCircle className="size-4 text-emerald-600 dark:text-emerald-400" />
               Correctas
             </div>
-            <div className="mt-2 font-mono text-3xl font-bold text-emerald-700">{correctCount}</div>
+            <div className="mt-2 font-mono text-3xl font-bold text-emerald-700 dark:text-emerald-300">{correctCount}</div>
           </div>
-          <div className="rounded-xl border border-border bg-amber-50 p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-700">
-              <TrendingUp className="size-4 text-amber-600" />
+          <div className="rounded-xl border border-border bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 p-6 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              <TrendingUp className="size-4 text-amber-600 dark:text-amber-400" />
               Parciales
             </div>
-            <div className="mt-2 font-mono text-3xl font-bold text-amber-700">{partialCount}</div>
+            <div className="mt-2 font-mono text-3xl font-bold text-amber-700 dark:text-amber-300">{partialCount}</div>
           </div>
-          <div className="rounded-xl border border-border bg-red-50 p-6 shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-700">
-              <XCircle className="size-4 text-red-600" />
+          <div className="rounded-xl border border-border bg-red-50 dark:bg-red-950/40 dark:border-red-800 p-6 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-red-700 dark:text-red-400">
+              <XCircle className="size-4 text-red-600 dark:text-red-400" />
               Incorrectas
             </div>
-            <div className="mt-2 font-mono text-3xl font-bold text-red-700">{incorrectCount}</div>
+            <div className="mt-2 font-mono text-3xl font-bold text-red-700 dark:text-red-300">{incorrectCount}</div>
           </div>
         </div>
 
-        <div className={`rounded-xl border border-border bg-card p-6 shadow-sm ${
-          passed ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
+        <div className={`rounded-xl border p-6 shadow-sm ${
+          passed
+            ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800"
+            : "bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800"
         }`}>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            {passed ? <CheckCircle className="size-4 text-emerald-600" /> : <XCircle className="size-4 text-red-600" />}
+          <div className={`flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${
+            passed ? "text-emerald-700 dark:text-emerald-400" : "text-red-700 dark:text-red-400"
+          }`}>
+            {passed ? <CheckCircle className="size-4 text-emerald-600 dark:text-emerald-400" /> : <XCircle className="size-4 text-red-600 dark:text-red-400" />}
             Estado
           </div>
           <div className={`mt-2 font-mono text-2xl font-bold ${
-            passed ? "text-emerald-700" : "text-red-700"
+            passed ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"
           }`}>
             {passed ? "APROBADO" : "REPROBADO"}
           </div>
@@ -238,17 +242,17 @@ function MyResultPage() {
                   const isPartial = hasSomeCorrect && !isCorrect;
 
                   const statusConfig = isCorrect
-                    ? { label: "Correcta", icon: <CheckCircle className="size-3" />, card: "border-emerald-200 bg-emerald-50", badge: "bg-emerald-100 text-emerald-700" }
+                    ? { label: "Correcta", icon: <CheckCircle className="size-3" />, card: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" }
                     : isPartial
-                    ? { label: "Parcial", icon: <TrendingUp className="size-3" />, card: "border-amber-200 bg-amber-50", badge: "bg-amber-100 text-amber-700" }
-                    : { label: "Incorrecta", icon: <XCircle className="size-3" />, card: "border-red-200 bg-red-50", badge: "bg-red-100 text-red-700" };
+                    ? { label: "Parcial", icon: <TrendingUp className="size-3" />, card: "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40", badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" }
+                    : { label: "Incorrecta", icon: <XCircle className="size-3" />, card: "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/40", badge: "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" };
 
                   return (
                     <div key={questionId} className={`rounded-lg border p-4 ${statusConfig.card}`}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <span className="text-xs text-muted-foreground">Pregunta {qIndex + 1}</span>
-                          <p className="mt-1 font-medium text-sm">{question.question_text}</p>
+                          <span className={`text-xs ${statusConfig.sub}`}>Pregunta {qIndex + 1}</span>
+                          <p className={`mt-1 font-medium text-sm ${statusConfig.text}`}>{question.question_text}</p>
                         </div>
                         <span className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shrink-0 ${statusConfig.badge}`}>
                           {statusConfig.icon}
