@@ -152,7 +152,12 @@
 
   --sidebar: #202020;
   --sidebar-foreground: #F1F1F1;
+  --sidebar-primary: #ED5650;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2a2a2a;
+  --sidebar-accent-foreground: #F1F1F1;
   --sidebar-border: #383838;
+  --sidebar-ring: #ED5650;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.4);
