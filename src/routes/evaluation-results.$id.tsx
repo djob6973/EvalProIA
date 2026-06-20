@@ -409,17 +409,17 @@ function EvaluationResultsPage() {
                                                   {question.options.map((option: string, oIndex: number) => {
                                                     const isSelected = userAnswers.includes(String(oIndex));
                                                     const isOptionCorrect = correctAnswers.includes(String(oIndex));
-                                                    
+
                                                     return (
                                                       <div
                                                         key={oIndex}
                                                         className={`flex items-center gap-2 rounded px-3 py-2 text-xs ${
                                                           isSelected && isOptionCorrect
-                                                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                                            ? "bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
                                                             : isSelected && !isOptionCorrect
-                                                            ? "bg-red-100 text-red-800 border border-red-300"
+                                                            ? "bg-red-100 text-red-800 border border-red-300 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800"
                                                             : isOptionCorrect
-                                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900"
                                                             : "bg-background"
                                                         }`}
                                                       >
@@ -430,18 +430,23 @@ function EvaluationResultsPage() {
                                                         </div>
                                                         <span className="flex-1">{option}</span>
                                                         {isOptionCorrect && !isSelected && (
-                                                          <span className="text-[10px] font-medium text-emerald-600">Correcta</span>
+                                                          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">Correcta</span>
                                                         )}
                                                         {isSelected && isOptionCorrect && (
-                                                          <span className="text-[10px] font-medium text-emerald-700">Tu respuesta ✓</span>
+                                                          <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-300">Tu respuesta ✓</span>
                                                         )}
                                                         {isSelected && !isOptionCorrect && (
-                                                          <span className="text-[10px] font-medium text-red-700">Tu respuesta ✗</span>
+                                                          <span className="text-[10px] font-medium text-red-700 dark:text-red-400">Tu respuesta ✗</span>
                                                         )}
                                                       </div>
                                                     );
                                                   })}
                                                 </div>
+                                                {question.justificacion && (
+                                                  <p className="mt-2 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
+                                                    <strong style={{ color: "var(--foreground)" }}>Justificación:</strong> {question.justificacion}
+                                                  </p>
+                                                )}
                                               </div>
                                             </div>
                                           </div>
