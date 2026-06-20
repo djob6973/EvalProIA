@@ -151,9 +151,10 @@ export const questionsService = {
     });
   },
 
-  async getByIds(ids: string[]): Promise<Question[]> {
-    if (ids.length === 0) return [];
-    return apiFetch(`/api/data/questions/by-ids?ids=${ids.join(',')}`);
+  async getByIds(ids: string[] | string): Promise<Question[]> {
+    const arr: string[] = Array.isArray(ids) ? ids : (typeof ids === 'string' ? JSON.parse(ids) : []);
+    if (arr.length === 0) return [];
+    return apiFetch(`/api/data/questions/by-ids?ids=${arr.join(',')}`);
   },
 
   async getFiltered(filters: {

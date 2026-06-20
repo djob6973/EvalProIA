@@ -87,8 +87,11 @@ function TakeEvaluationRoute() {
         if (questionsData.length === 0) {
           // Al reanudar, cargar exactamente las preguntas del progreso guardado
           // para que los IDs coincidan con question_order y answers
-          if (progress && progress.question_order && progress.question_order.length > 0) {
-            questionsData = await questionsService.getByIds(progress.question_order);
+          const questionOrder: string[] = Array.isArray(progress?.question_order)
+            ? progress.question_order
+            : (typeof progress?.question_order === 'string' ? JSON.parse(progress.question_order) : []);
+          if (progress && questionOrder.length > 0) {
+            questionsData = await questionsService.getByIds(questionOrder);
           } else {
             // Query with filters at DB level — avoids downloading the full question bank
             const filteredQuestions = await questionsService.getFiltered({
@@ -127,7 +130,8 @@ function TakeEvaluationRoute() {
       initialTimeRemaining = existingProgress.time_remaining;
 
       // Cargar preguntas específicas por ID desde el orden guardado
-      const savedOrder = existingProgress.question_order || [];
+      const rawOrder = existingProgress.question_order;
+      const savedOrder: string[] = Array.isArray(rawOrder) ? rawOrder : (typeof rawOrder === 'string' ? JSON.parse(rawOrder) : []);
       
       // Crear mapa de todas las preguntas disponibles
       const questionMap = new Map(questions.map(q => [q.id, q]));

@@ -620,7 +620,10 @@ async function getProgress(userId: string, evalId: string): Promise<Response> {
     SELECT * FROM evaluation_progress
     WHERE user_id = ${userId} AND evaluation_id = ${evalId}
   `;
-  return json(row ?? null);
+  if (!row) return json(null);
+  if (typeof row.question_order === 'string') row.question_order = JSON.parse(row.question_order);
+  if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
+  return json(row);
 }
 
 async function createProgress(request: Request): Promise<Response> {
@@ -639,10 +642,12 @@ async function createProgress(request: Request): Promise<Response> {
        answers, time_remaining, question_order)
     VALUES
       (${user_id}, ${evaluation_id}, ${current_question_index ?? 0},
-       ${JSON.stringify(answers ?? {})}, ${time_remaining ?? null},
-       ${JSON.stringify(question_order ?? [])})
+       ${db.json(answers ?? {})}, ${time_remaining ?? null},
+       ${db.json(question_order ?? [])})
     RETURNING *
   `;
+  if (typeof row.question_order === 'string') row.question_order = JSON.parse(row.question_order);
+  if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   return json(row, 201);
 }
 
@@ -659,7 +664,7 @@ async function updateProgress(request: Request): Promise<Response> {
   for (const k of allowed) {
     if (k in rest) {
       patch[k] = k === "answers" || k === "question_order"
-        ? JSON.stringify(rest[k])
+        ? db.json(rest[k])
         : rest[k];
     }
   }
@@ -671,6 +676,8 @@ async function updateProgress(request: Request): Promise<Response> {
     RETURNING *
   `;
   if (!row) return json({ error: "No encontrado" }, 404);
+  if (typeof row.question_order === 'string') row.question_order = JSON.parse(row.question_order);
+  if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   return json(row);
 }
 
