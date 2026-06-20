@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useMemo, useState, useEffect, memo } from "react";
+import { useMemo, useState, useEffect, memo, useRef, useCallback } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -26,9 +26,12 @@ import {
   Copy,
   Loader2,
   Eye,
+  Share2,
+  MoreHorizontal,
+  Download,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService } from "@/lib/services/evaluations";
+import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/evaluations")({
   head: () => ({ meta: [{ title: "Evaluaciones — EvalPro" }] }),
@@ -79,6 +82,178 @@ function formatDateTime(isoString: string): string {
 function isExpired(ev: Evaluation): boolean {
   if (!ev.fecha_vencimiento) return false;
   return new Date(ev.fecha_vencimiento) < new Date();
+}
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines = 2): string[] {
+  if (!text) return [];
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (ctx.measureText(test).width <= maxWidth) {
+      current = test;
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+    if (lines.length >= maxLines) break;
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  return lines.slice(0, maxLines);
+}
+
+function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const W = 800, H = 420;
+  canvas.width = W;
+  canvas.height = H;
+
+  const expired = isExpired(ev);
+  const stateColor = expired ? "#ef4444" : ev.activa ? "#e9664a" : "#94a3b8";
+
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#0f172a");
+  bg.addColorStop(1, "#1a1040");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Left accent stripe
+  ctx.fillStyle = stateColor;
+  ctx.fillRect(0, 0, 5, H);
+
+  // Top header bg
+  ctx.fillStyle = "rgba(255,255,255,0.04)";
+  ctx.fillRect(0, 0, W, 58);
+
+  // Brand
+  ctx.font = "bold 11px system-ui, sans-serif";
+  ctx.fillStyle = stateColor;
+  ctx.fillText("EVALPRO", 24, 34);
+
+  // Status badge
+  const statusLabel = expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA";
+  const badgeText = statusLabel;
+  ctx.font = "bold 10px system-ui, sans-serif";
+  const badgeW = ctx.measureText(badgeText).width + 20;
+  ctx.fillStyle = stateColor + "33";
+  ctx.beginPath();
+  ctx.roundRect(W - badgeW - 20, 18, badgeW, 22, 6);
+  ctx.fill();
+  ctx.fillStyle = stateColor;
+  ctx.textAlign = "center";
+  ctx.fillText(badgeText, W - badgeW / 2 - 20, 33);
+  ctx.textAlign = "left";
+
+  // Area tag
+  if (areaName) {
+    ctx.font = "11px system-ui, sans-serif";
+    ctx.fillStyle = "rgba(167,139,250,0.9)";
+    const areaX = 24 + ctx.measureText("EVALPRO").width + 14;
+    ctx.fillText(`· ${areaName}`, areaX, 34);
+  }
+
+  // Title
+  ctx.font = "bold 26px system-ui, sans-serif";
+  ctx.fillStyle = "#ffffff";
+  const titleLines = wrapCanvasText(ctx, ev.nombre, W - 60, 1);
+  ctx.fillText(titleLines[0] || "", 24, 98);
+
+  // Description
+  ctx.font = "14px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.58)";
+  const descLines = wrapCanvasText(ctx, ev.descripcion || "", W - 60, 2);
+  descLines.forEach((line, i) => ctx.fillText(line, 24, 124 + i * 22));
+
+  // Divider
+  ctx.strokeStyle = "rgba(255,255,255,0.1)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(24, 175);
+  ctx.lineTo(W - 24, 175);
+  ctx.stroke();
+
+  // Info row 1: aprobación · preguntas · tiempo
+  const infos1: string[] = [
+    `✓  Aprueba ${ev.config.porcentaje_aprobacion}%`,
+    `◻  ${ev.config.num_preguntas} preguntas`,
+    ev.tiempo_limite > 0 ? `⏱  ${ev.tiempo_limite} min` : `⏱  Sin límite`,
+  ];
+  ctx.font = "13px system-ui, sans-serif";
+  let x1 = 24;
+  infos1.forEach((info, i) => {
+    ctx.fillStyle = i === 0 ? "#10b981" : "rgba(255,255,255,0.7)";
+    ctx.fillText(info, x1, 208);
+    x1 += ctx.measureText(info).width + 28;
+    if (i < infos1.length - 1) {
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fillText("·", x1 - 18, 208);
+    }
+  });
+
+  // Info row 2: fecha creación · semana · vencimiento
+  const createdDate = ev.created_at ? new Date(ev.created_at) : null;
+  const createdStr = createdDate
+    ? createdDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
+    : "";
+  const weekNum = createdDate ? getISOWeek(createdDate) : null;
+  const venceStr = ev.fecha_vencimiento
+    ? new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" })
+    : "Sin vencimiento";
+
+  const infos2: Array<{ text: string; color: string }> = [
+    ...(createdStr ? [{ text: `📅  Creada: ${createdStr}`, color: "rgba(255,255,255,0.7)" }] : []),
+    ...(weekNum ? [{ text: `Semana ${weekNum}`, color: "#e9664a" }] : []),
+    { text: `⏰  Vence: ${venceStr}`, color: expired ? "#ef4444" : "rgba(255,255,255,0.7)" },
+  ];
+  ctx.font = "13px system-ui, sans-serif";
+  let x2 = 24;
+  infos2.forEach((info, i) => {
+    ctx.fillStyle = info.color;
+    ctx.fillText(info.text, x2, 244);
+    x2 += ctx.measureText(info.text).width + 28;
+    if (i < infos2.length - 1) {
+      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fillText("·", x2 - 18, 244);
+    }
+  });
+
+  // Categorías
+  if (ev.categorias.length > 0) {
+    ctx.font = "11px system-ui, sans-serif";
+    let cx = 24;
+    ev.categorias.slice(0, 5).forEach((cat) => {
+      const cw = ctx.measureText(cat).width + 16;
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.beginPath();
+      ctx.roundRect(cx, 268, cw, 20, 10);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillText(cat, cx + 8, 282);
+      cx += cw + 6;
+    });
+  }
+
+  // Footer
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillRect(0, H - 50, W, 50);
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.fillText("evalpro.apps.dataico.world", 24, H - 18);
+  ctx.textAlign = "right";
+  ctx.fillStyle = stateColor + "99";
+  ctx.fillText("Compartido desde EvalPro", W - 24, H - 18);
+  ctx.textAlign = "left";
 }
 
 const DEFAULT_CONFIG: Config = {
@@ -243,47 +418,137 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
   );
 }
 
+type ShareModalProps = {
+  ev: Evaluation;
+  areaName: string | null;
+  onClose: () => void;
+};
+
+function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (canvasRef.current) drawShareCard(canvasRef.current, ev, areaName);
+  }, [ev, areaName]);
+
+  function handleDownload() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    const safe = ev.nombre.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    a.download = `evaluacion-${safe}.png`;
+    a.click();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 animate-fade-in">
+      <div
+        className="w-full max-w-3xl shadow-2xl"
+        style={{ borderRadius: 16, background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: "1px solid var(--border)" }}>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Share2 className="size-4" style={{ color: "var(--accent)" }} />
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Compartir Evaluación</span>
+            </div>
+            <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{ev.nombre}</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 hover:bg-secondary transition-colors" style={{ color: "var(--muted-foreground)" }}>
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="overflow-hidden rounded-xl border border-border/50">
+            <canvas ref={canvasRef} className="w-full" style={{ display: "block" }} />
+          </div>
+          <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
+            Previsualización de la tarjeta · 800 × 420 px
+          </p>
+        </div>
+
+        <div className="flex gap-3 px-6 pb-6">
+          <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
+          <Button className="flex-1" onClick={handleDownload}>
+            <Download className="size-4" /> Descargar PNG
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type EvaluationCardProps = {
   ev: Evaluation;
   areas: Area[];
   duplicatingId: string | null;
+  participantCount: number;
   onPreview: (ev: Evaluation) => void;
   onAssign: (ev: Evaluation) => void;
   onDuplicate: (ev: Evaluation) => void;
   onEdit: (ev: Evaluation) => void;
   onDelete: (id: string) => void;
+  onShare: (ev: Evaluation) => void;
 };
 
 const EvaluationCard = memo(function EvaluationCard({
   ev,
   areas,
   duplicatingId,
+  participantCount,
   onPreview,
   onAssign,
   onDuplicate,
   onEdit,
   onDelete,
+  onShare,
 }: EvaluationCardProps) {
   const expired = isExpired(ev);
   const areaName = ev.area_id ? areas.find((a) => a.id === ev.area_id)?.name : null;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const stateColor = expired ? "#ef4444" : ev.activa ? "var(--accent)" : "var(--border)";
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const createdDate = ev.created_at ? new Date(ev.created_at) : null;
+  const weekNum = createdDate ? getISOWeek(createdDate) : null;
 
   return (
     <div
-      className="group transition-all duration-300 hover:shadow-md hover:border-accent/40"
-      style={{ borderRadius: 16, padding: "20px", background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+      className="transition-all duration-300 hover:shadow-md"
+      style={{
+        borderRadius: 16,
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderLeft: `4px solid ${stateColor}`,
+        boxShadow: "var(--shadow-sm)",
+      }}
     >
-      <div className="flex items-start justify-between gap-4">
+      {/* Main body */}
+      <div className="flex items-start justify-between gap-4 p-5">
         <div className="min-w-0 flex-1">
-          <div className="mb-3 flex items-center gap-2.5 flex-wrap">
+          {/* Title row */}
+          <div className="mb-2 flex items-center gap-2.5 flex-wrap">
             <span
-              className="font-mono text-[9px] font-bold uppercase tracking-[.1em] transition-all duration-300"
+              className="font-mono text-[9px] font-bold uppercase tracking-[.1em]"
               style={{ background: "var(--coral-soft)", color: "var(--coral-text)", borderRadius: 6, padding: "3px 8px" }}
             >
               {ev.id.slice(0, 8).toUpperCase()}
             </span>
-            <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>{ev.nombre}</h3>
+            <h3 className="font-display text-[15px] font-semibold" style={{ color: "var(--foreground)" }}>{ev.nombre}</h3>
             <span
-              className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider transition-all duration-300"
+              className="rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider"
               style={
                 expired
                   ? { background: "rgba(220,38,38,.12)", color: "#EF4444" }
@@ -297,164 +562,231 @@ const EvaluationCard = memo(function EvaluationCard({
           </div>
 
           {ev.descripcion && (
-            <p className="mb-4 text-[13px] leading-relaxed transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>{ev.descripcion}</p>
+            <p className="mb-3 text-[13px] leading-relaxed" style={{ color: "var(--muted-foreground)" }}>{ev.descripcion}</p>
           )}
 
+          {/* Pills */}
           <div className="flex flex-wrap gap-2">
-            <span
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-              style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
-            >
-              <ClipboardList className="size-3" />
-              {ev.config.num_preguntas} preguntas
+            <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
+              <ClipboardList className="size-3" />{ev.config.num_preguntas} preguntas
             </span>
-            <span
-              className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-              style={{ background: "rgba(5,150,105,.12)", color: "#10B981" }}
-            >
-              <span className="font-mono font-bold">{(100 / ev.config.num_preguntas).toFixed(2)}%</span>
-              <span>c/u</span>
+            <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(5,150,105,.12)", color: "#10B981" }}>
+              <CheckCircle className="size-3" />Aprueba {ev.config.porcentaje_aprobacion}%
             </span>
-            {ev.config.porcentaje_aprobacion != null && (
-              <span
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-                style={{ background: "rgba(59,130,246,.12)", color: "#60A5FA" }}
-              >
-                <CheckCircle className="size-3" />
-                Aprueba {ev.config.porcentaje_aprobacion}%
-              </span>
-            )}
             {ev.tiempo_limite > 0 && (
-              <span
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-                style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}
-              >
-                <Clock className="size-3" />
-                {ev.tiempo_limite} min
+              <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}>
+                <Clock className="size-3" />{ev.tiempo_limite} min
               </span>
             )}
-            <span
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-              style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
-            >
+            <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
               {ev.intentos_permitidos} intento{ev.intentos_permitidos !== 1 ? "s" : ""}
             </span>
             {areaName && (
-              <span
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-                style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}
-              >
-                <Layers className="size-3" />
-                {areaName}
+              <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}>
+                <Layers className="size-3" />{areaName}
               </span>
             )}
             {ev.categorias.slice(0, 3).map((c) => (
-              <span
-                key={c}
-                className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300 hover:shadow-sm"
-                style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}
-              >
-                <Tag className="size-3" />
-                {c}
+              <span key={c} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
+                <Tag className="size-3" />{c}
               </span>
             ))}
             {ev.categorias.length > 3 && (
-              <span className="text-[11px] font-medium px-2.5 py-1" style={{ color: "var(--muted-foreground)" }}>
-                +{ev.categorias.length - 3}
-              </span>
+              <span className="text-[11px] font-medium px-2.5 py-1" style={{ color: "var(--muted-foreground)" }}>+{ev.categorias.length - 3}</span>
             )}
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-4 text-[11px] transition-all duration-300">
-            {ev.created_at && (
-              <span className="flex items-center gap-1.5 transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
+          {/* Dates + week */}
+          <div className="mt-3 flex flex-wrap gap-4 text-[11px]">
+            {createdDate && (
+              <span className="flex items-center gap-1.5" style={{ color: "var(--muted-foreground)" }}>
                 <Calendar className="size-3" />
-                Creada: {formatDateTime(ev.created_at)}
+                Creada: {formatDateTime(ev.created_at!)}
+                {weekNum && (
+                  <span className="ml-1 rounded px-1.5 py-0.5 font-bold" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
+                    Sem. {weekNum}
+                  </span>
+                )}
               </span>
             )}
             {ev.fecha_vencimiento && (
-              <span 
-                className="flex items-center gap-1.5 font-medium transition-colors duration-300" 
-                style={{ color: expired ? "#EF4444" : "#FBBF24" }}
-              >
-                <CalendarX className="size-3" />
-                Vence: {formatDateTime(ev.fecha_vencimiento)}
+              <span className="flex items-center gap-1.5 font-medium" style={{ color: expired ? "#EF4444" : "#FBBF24" }}>
+                <CalendarX className="size-3" />Vence: {formatDateTime(ev.fecha_vencimiento)}
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 opacity-70 transition-all duration-300 group-hover:opacity-100">
-          <a
-            href={`/evaluation-results/${ev.id}`}
-            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
-            style={{ color: "var(--muted-foreground)", display: 'flex' }}
-            title="Ver resultados"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <BarChart3 className="size-4" />
-          </a>
+        {/* Top-right: participant count only */}
+        {participantCount > 0 && (
+          <div className="shrink-0 text-right">
+            <div className="font-mono text-xl font-bold" style={{ color: "var(--accent)" }}>{participantCount}</div>
+            <div className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>completaron</div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer action bar */}
+      <div
+        className="flex items-center gap-1 px-4 py-2.5"
+        style={{ borderTop: "1px solid var(--border)", background: "var(--surface-2)" }}
+      >
+        {/* Primary actions */}
+        <a
+          href={`/evaluation-results/${ev.id}`}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all hover:bg-secondary"
+          style={{ color: "var(--muted-foreground)" }}
+          title="Ver resultados"
+        >
+          <BarChart3 className="size-3.5" /> Resultados
+        </a>
+        <button
+          onClick={() => onAssign(ev)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all hover:bg-secondary"
+          style={{ color: "var(--muted-foreground)" }}
+          title="Asignar participantes"
+        >
+          <Users className="size-3.5" /> Asignar
+        </button>
+        <button
+          onClick={() => onShare(ev)}
+          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all hover:bg-secondary"
+          style={{ color: "var(--muted-foreground)" }}
+          title="Compartir"
+        >
+          <Share2 className="size-3.5" /> Compartir
+        </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Secondary: ··· dropdown */}
+        <div className="relative" ref={menuRef}>
           <button
-            onClick={() => onPreview(ev)}
-            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
+            onClick={() => setMenuOpen((o) => !o)}
+            className="rounded-lg p-1.5 transition-all hover:bg-secondary"
             style={{ color: "var(--muted-foreground)" }}
-            title="Vista previa"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
+            title="Más opciones"
           >
-            <Eye className="size-4" />
+            <MoreHorizontal className="size-4" />
           </button>
-          <button
-            onClick={() => onAssign(ev)}
-            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
-            style={{ color: "var(--muted-foreground)" }}
-            title="Asignar participantes"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Users className="size-4" />
-          </button>
-          <button
-            onClick={() => onDuplicate(ev)}
-            disabled={duplicatingId === ev.id}
-            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110 disabled:opacity-50"
-            style={{ color: "var(--muted-foreground)" }}
-            title="Duplicar evaluación"
-            onMouseEnter={(e) => { if (duplicatingId !== ev.id) e.currentTarget.style.color = "var(--accent)"; }}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            {duplicatingId === ev.id ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Copy className="size-4" />
-            )}
-          </button>
-          <button
-            onClick={() => onEdit(ev)}
-            className="rounded-lg p-2 transition-all duration-300 hover:bg-secondary hover:scale-110"
-            style={{ color: "var(--muted-foreground)" }}
-            title="Editar evaluación"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Edit2 className="size-4" />
-          </button>
-          <button
-            onClick={() => onDelete(ev.id)}
-            className="rounded-lg p-2 transition-all duration-300 hover:bg-destructive/10 hover:scale-110"
-            style={{ color: "var(--muted-foreground)" }}
-            title="Eliminar evaluación"
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--destructive)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--muted-foreground)")}
-          >
-            <Trash2 className="size-4" />
-          </button>
+          {menuOpen && (
+            <div
+              className="absolute right-0 bottom-8 z-30 w-44 shadow-xl overflow-hidden"
+              style={{ borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)" }}
+            >
+              <button
+                onClick={() => { onPreview(ev); setMenuOpen(false); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-secondary transition-colors"
+                style={{ color: "var(--foreground)" }}
+              >
+                <Eye className="size-4" style={{ color: "var(--muted-foreground)" }} /> Vista previa
+              </button>
+              <button
+                onClick={() => { onDuplicate(ev); setMenuOpen(false); }}
+                disabled={duplicatingId === ev.id}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-secondary transition-colors disabled:opacity-50"
+                style={{ color: "var(--foreground)" }}
+              >
+                {duplicatingId === ev.id ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" style={{ color: "var(--muted-foreground)" }} />}
+                Duplicar
+              </button>
+              <button
+                onClick={() => { onEdit(ev); setMenuOpen(false); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-secondary transition-colors"
+                style={{ color: "var(--foreground)" }}
+              >
+                <Edit2 className="size-4" style={{ color: "var(--muted-foreground)" }} /> Editar
+              </button>
+              <div style={{ height: 1, background: "var(--border)" }} />
+              <button
+                onClick={() => { onDelete(ev.id); setMenuOpen(false); }}
+                className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-destructive/10 transition-colors"
+                style={{ color: "var(--destructive)" }}
+              >
+                <Trash2 className="size-4" /> Eliminar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 });
+
+type GroupedCardsProps = {
+  items: Evaluation[];
+  areas: Area[];
+  groupBy: "none" | "area" | "semana";
+  duplicatingId: string | null;
+  resultCounts: Record<string, number>;
+  onPreview: (ev: Evaluation) => void;
+  onAssign: (ev: Evaluation) => void;
+  onDuplicate: (ev: Evaluation) => void;
+  onEdit: (ev: Evaluation) => void;
+  onDelete: (id: string) => void;
+  onShare: (ev: Evaluation) => void;
+};
+
+function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPreview, onAssign, onDuplicate, onEdit, onDelete, onShare }: GroupedCardsProps) {
+  const renderCard = (ev: Evaluation, idx: number) => (
+    <div key={ev.id} style={{ animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 40}ms both` }}>
+      <EvaluationCard
+        ev={ev}
+        areas={areas}
+        duplicatingId={duplicatingId}
+        participantCount={resultCounts[ev.id] ?? 0}
+        onPreview={onPreview}
+        onAssign={onAssign}
+        onDuplicate={onDuplicate}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onShare={onShare}
+      />
+    </div>
+  );
+
+  if (groupBy === "none") {
+    return <div className="grid gap-4">{items.map(renderCard)}</div>;
+  }
+
+  // Build groups
+  const groupMap = new Map<string, Evaluation[]>();
+  items.forEach((ev) => {
+    let key: string;
+    if (groupBy === "area") {
+      key = ev.area_id ? (areas.find((a) => a.id === ev.area_id)?.name ?? "Sin área") : "Sin área";
+    } else {
+      key = ev.created_at ? `Semana ${getISOWeek(new Date(ev.created_at))}` : "Sin fecha";
+    }
+    if (!groupMap.has(key)) groupMap.set(key, []);
+    groupMap.get(key)!.push(ev);
+  });
+
+  return (
+    <div className="space-y-6">
+      {Array.from(groupMap.entries()).map(([groupLabel, groupItems]) => (
+        <div key={groupLabel}>
+          <div className="mb-3 flex items-center gap-3">
+            <div
+              className="rounded-lg px-3 py-1 text-[11px] font-bold uppercase tracking-wider"
+              style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+            >
+              {groupLabel}
+            </div>
+            <div className="flex-1 border-t border-border" />
+            <span className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+              {groupItems.length} evaluación{groupItems.length !== 1 ? "es" : ""}
+            </span>
+          </div>
+          <div className="grid gap-4">
+            {groupItems.map(renderCard)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function EvaluationsPage() {
   const { profile } = useAuth();
@@ -464,6 +796,9 @@ function EvaluationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [resultCounts, setResultCounts] = useState<Record<string, number>>({});
+  const [shareEval, setShareEval] = useState<Evaluation | null>(null);
+  const [groupBy, setGroupBy] = useState<"none" | "area" | "semana">("none");
 
   // Redirigir a participantes a /participant
   useEffect(() => {
@@ -481,11 +816,19 @@ function EvaluationsPage() {
     async function loadAll() {
       try {
         setLoading(true);
-        const [evalData, uniqueCategories, areasData] = await Promise.all([
+        const [evalData, uniqueCategories, areasData, allResults] = await Promise.all([
           evaluationsService.getAll(),
           getUniqueCategories(),
           areasService.getAll(),
+          resultsService.getAll().catch(() => []),
         ]);
+
+        // Compute participant counts per evaluation
+        const counts: Record<string, number> = {};
+        (allResults as any[]).forEach((r) => {
+          if (r.evaluation_id) counts[r.evaluation_id] = (counts[r.evaluation_id] || 0) + 1;
+        });
+        setResultCounts(counts);
 
         const mappedItems: Evaluation[] = evalData.map((evaluation: any) => {
           const rawCats = evaluation.categorias;
@@ -902,13 +1245,26 @@ function EvaluationsPage() {
             </select>
           )}
 
-          <div 
-            className="ml-auto font-mono text-[10px] uppercase tracking-[.12em] px-3 py-2 rounded-lg transition-all duration-300"
-            style={{ 
-              color: "var(--text-faint)",
-              background: "var(--secondary)/40",
-              border: "1px solid var(--border)"
-            }}
+          {/* Grouping toggle */}
+          <div className="flex items-center rounded-lg border border-border overflow-hidden" style={{ background: "var(--surface)" }}>
+            {(["none", "area", "semana"] as const).map((g) => (
+              <button
+                key={g}
+                onClick={() => setGroupBy(g)}
+                className="px-3 py-2 text-[11px] font-medium transition-all"
+                style={{
+                  background: groupBy === g ? "var(--accent)" : "transparent",
+                  color: groupBy === g ? "var(--accent-foreground)" : "var(--muted-foreground)",
+                }}
+              >
+                {g === "none" ? "Sin agrupar" : g === "area" ? "Por área" : "Por semana"}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className="font-mono text-[10px] uppercase tracking-[.12em] px-3 py-2 rounded-lg"
+            style={{ color: "var(--text-faint)", background: "var(--secondary)/40", border: "1px solid var(--border)" }}
           >
             {filtered.length} de {items.length}
           </div>
@@ -925,27 +1281,19 @@ function EvaluationsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {filtered.map((ev, idx) => (
-              <div
-                key={ev.id}
-                style={{
-                  animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 40}ms both`
-                }}
-              >
-                <EvaluationCard
-                  ev={ev}
-                  areas={areas}
-                  duplicatingId={duplicatingId}
-                  onPreview={openPreview}
-                  onAssign={setAssigningEval}
-                  onDuplicate={handleDuplicate}
-                  onEdit={openEdit}
-                  onDelete={handleDelete}
-                />
-              </div>
-            ))}
-          </div>
+          <GroupedCards
+            items={filtered}
+            areas={areas}
+            groupBy={groupBy}
+            duplicatingId={duplicatingId}
+            resultCounts={resultCounts}
+            onPreview={openPreview}
+            onAssign={setAssigningEval}
+            onDuplicate={handleDuplicate}
+            onEdit={openEdit}
+            onDelete={handleDelete}
+            onShare={setShareEval}
+          />
         )}
       </div>
 
@@ -966,6 +1314,14 @@ function EvaluationsPage() {
           evaluation={assigningEval}
           areas={areas}
           onClose={() => setAssigningEval(null)}
+        />
+      )}
+
+      {shareEval && (
+        <ShareModal
+          ev={shareEval}
+          areaName={shareEval.area_id ? areas.find((a) => a.id === shareEval.area_id)?.name ?? null : null}
+          onClose={() => setShareEval(null)}
         />
       )}
 
