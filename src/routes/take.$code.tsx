@@ -49,7 +49,7 @@ function TakeEvaluationRoute() {
         // Verificar si la evaluación está activa y no ha vencido
         const expired = evalData.fecha_vencimiento && new Date(evalData.fecha_vencimiento) < new Date();
         if (evalData.activa === false) {
-          setError('Esta evaluación no está disponible en este momento.');
+          setError('Esta evaluación ha sido desactivada por el administrador.');
           setLoading(false);
           return;
         }

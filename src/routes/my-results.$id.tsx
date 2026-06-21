@@ -146,7 +146,8 @@ function MyResultPage() {
   }
 
   const intentosPermitidos = evaluation?.intentos_permitidos ?? 1;
-  const puedeReintentar = intentosPermitidos > 1 && attemptCount < intentosPermitidos;
+  const evaluacionVencida = !!(evaluation?.fecha_vencimiento && new Date(evaluation.fecha_vencimiento) < new Date());
+  const puedeReintentar = intentosPermitidos > 1 && attemptCount < intentosPermitidos && evaluation?.activa !== false && !evaluacionVencida;
 
   return (
     <AppShell
