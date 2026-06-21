@@ -46,6 +46,7 @@ function EvaluationResultsPage() {
   const [questionsMap, setQuestionsMap] = useState<Record<string, any>>({});
   const [stats, setStats] = useState({ totalParticipants: 0, averageScore: 0, passRate: 0, bestScore: 0 });
   const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
+  const [attemptFilter, setAttemptFilter] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -108,6 +109,32 @@ function EvaluationResultsPage() {
     loadData();
   }, [profile, isAdmin, id, navigate]);
 
+  const resultsWithAttempt = useMemo(() => {
+    const byUser: Record<string, any[]> = {};
+    results.forEach((r: any) => {
+      if (!byUser[r.user_id]) byUser[r.user_id] = [];
+      byUser[r.user_id].push(r);
+    });
+    const attemptNumberById: Record<string, number> = {};
+    Object.values(byUser).forEach((userResults) => {
+      [...userResults]
+        .sort((a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime())
+        .forEach((r, index) => {
+          attemptNumberById[r.id] = index + 1;
+        });
+    });
+    return results.map((r: any) => ({ ...r, attemptNumber: attemptNumberById[r.id] ?? 1 }));
+  }, [results]);
+
+  const maxAttemptNumber = useMemo(() => {
+    return resultsWithAttempt.reduce((max, r) => Math.max(max, r.attemptNumber), 0);
+  }, [resultsWithAttempt]);
+
+  const displayResults = useMemo(() => {
+    if (attemptFilter === null) return resultsWithAttempt;
+    return resultsWithAttempt.filter((r) => r.attemptNumber === attemptFilter);
+  }, [resultsWithAttempt, attemptFilter]);
+
   const questionAnalytics = useMemo(() => {
     if (!results.length || !Object.keys(questionsMap).length) return [];
 
@@ -159,6 +186,7 @@ function EvaluationResultsPage() {
     const headers = [
       "Participante",
       "Email",
+      "Intento",
       "Puntaje",
       "Estado",
       "Correctas",
@@ -167,7 +195,7 @@ function EvaluationResultsPage() {
       "Tiempo",
       "Fecha Completado",
     ];
-    const rows = results.map((r: any) => {
+    const rows = resultsWithAttempt.map((r: any) => {
       let correct = 0,
         partial = 0,
         incorrect = 0;
@@ -193,6 +221,7 @@ function EvaluationResultsPage() {
       return [
         r.profiles?.full_name || "",
         r.profiles?.email || "",
+        `Intento ${r.attemptNumber}`,
         String(r.score),
         r.score >= passing ? "APROBADO" : "REPROBADO",
         String(correct),
@@ -290,19 +319,59 @@ function EvaluationResultsPage() {
 
         <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border p-6">
-            <h2 className="font-bold">Resultados por Participante</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Detalles de cada intento de evaluación</p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="font-bold">Resultados por Participante</h2>
+                <p className="mt-1 text-xs text-muted-foreground">Detalles de cada intento de evaluación</p>
+              </div>
+              {maxAttemptNumber > 1 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Filtrar por intento:</span>
+                  <button
+                    onClick={() => setAttemptFilter(null)}
+                    className={`rounded-full px-3 py-1 text-[11px] font-bold border transition-colors ${
+                      attemptFilter === null
+                        ? "bg-foreground text-background border-foreground"
+                        : "bg-transparent text-muted-foreground border-border hover:bg-secondary"
+                    }`}
+                  >
+                    Todos ({resultsWithAttempt.length})
+                  </button>
+                  {Array.from({ length: maxAttemptNumber }, (_, i) => i + 1).map((n) => {
+                    const count = resultsWithAttempt.filter((r) => r.attemptNumber === n).length;
+                    return (
+                      <button
+                        key={n}
+                        onClick={() => setAttemptFilter(n)}
+                        className={`rounded-full px-3 py-1 text-[11px] font-bold border transition-colors ${
+                          attemptFilter === n
+                            ? "bg-foreground text-background border-foreground"
+                            : "bg-transparent text-muted-foreground border-border hover:bg-secondary"
+                        }`}
+                      >
+                        Intento {n} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
           <div className="overflow-x-auto">
             {results.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground p-6">
                 <p>No hay resultados registrados para esta evaluación</p>
               </div>
+            ) : displayResults.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground p-6">
+                <p>No hay resultados para el intento {attemptFilter} seleccionado</p>
+              </div>
             ) : (
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                     <th className="px-6 py-3 font-bold">Participante</th>
+                    {maxAttemptNumber > 1 && <th className="px-6 py-3 font-bold">Intento</th>}
                     <th className="px-6 py-3 font-bold">Puntaje</th>
                     <th className="px-6 py-3 font-bold text-emerald-600 dark:text-emerald-400">✓</th>
                     <th className="px-6 py-3 font-bold text-amber-600 dark:text-amber-400">~</th>
@@ -318,7 +387,7 @@ function EvaluationResultsPage() {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {[...results].sort((a, b) => b.score - a.score).map((result: any) => {
+                  {[...displayResults].sort((a, b) => b.score - a.score).map((result: any) => {
                     let correctCount = 0;
                     let partialCount = 0;
                     let incorrectCount = 0;
@@ -366,6 +435,13 @@ function EvaluationResultsPage() {
                           <td className="px-6 py-4 font-medium">
                             {result.profiles?.full_name || "Sin nombre"}
                           </td>
+                          {maxAttemptNumber > 1 && (
+                            <td className="px-6 py-4">
+                              <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                                Intento {result.attemptNumber}
+                              </span>
+                            </td>
+                          )}
                           <td className="px-6 py-4 font-mono font-bold text-accent">{result.score}%</td>
                           <td className="px-6 py-4 font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
                             {correctCount}
@@ -416,7 +492,7 @@ function EvaluationResultsPage() {
 
                         {isExpanded && (
                           <tr className="border-b border-border/50">
-                            <td colSpan={9} className="px-6 py-5 bg-secondary/10">
+                            <td colSpan={maxAttemptNumber > 1 ? 10 : 9} className="px-6 py-5 bg-secondary/10">
                               <div className="space-y-3">
                                 {!result.answers || Object.keys(result.answers).length === 0 ? (
                                   <p className="text-sm text-muted-foreground">
