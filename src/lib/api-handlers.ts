@@ -105,6 +105,7 @@ async function route(
     if (id === "by-user" && sub2 && m === "GET") return resultsByUser(sub2);
     if (id === "by-evaluation" && sub2 && m === "GET")
       return resultsByEval(sub2);
+    if (id === "count" && !sub2 && m === "GET") return getResultCount(url);
     if (id && !sub2 && m === "GET") return getResult(id);
   }
 
@@ -497,6 +498,17 @@ async function getResult(id: string): Promise<Response> {
   if (!row) return json({ error: "No encontrado" }, 404);
   if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   return json(row);
+}
+
+async function getResultCount(url: URL): Promise<Response> {
+  const userId = url.searchParams.get("userId");
+  const evalId = url.searchParams.get("evalId");
+  if (!userId || !evalId) return json({ error: "Parámetros faltantes" }, 400);
+  const [{ count }] = await db`
+    SELECT COUNT(*)::int AS count FROM results
+    WHERE user_id = ${userId} AND evaluation_id = ${evalId}
+  `;
+  return json({ count: count as number });
 }
 
 async function createResult(request: Request): Promise<Response> {

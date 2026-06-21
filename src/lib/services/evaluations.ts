@@ -194,6 +194,13 @@ export const resultsService = {
   async getById(id: string): Promise<Result> {
     return apiFetch(`/api/data/results/${id}`);
   },
+
+  async getCountByUserAndEvaluation(userId: string, evaluationId: string): Promise<number> {
+    const data: { count: number } = await apiFetch(
+      `/api/data/results/count?userId=${encodeURIComponent(userId)}&evalId=${encodeURIComponent(evaluationId)}`
+    );
+    return data.count;
+  },
 }
 
 // ── Areas CRUD ────────────────────────────────────────────────────────────────

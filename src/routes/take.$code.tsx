@@ -34,6 +34,7 @@ function TakeEvaluationRoute() {
   const [shuffledQuestions, setShuffledQuestions] = useState<any[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [existingProgress, setExistingProgress] = useState<any>(null);
+  const [currentAttempt, setCurrentAttempt] = useState<number>(1);
 
   // Cargar evaluación y preguntas
   useEffect(() => {
@@ -73,6 +74,19 @@ function TakeEvaluationRoute() {
         }
 
         setEvaluation(evalData);
+
+        // Verificar límite de intentos (solo participantes)
+        if (!isAdminUser) {
+          const intentosPermitidos = evalData.intentos_permitidos ?? 1;
+          const intentosUsados = await resultsService.getCountByUserAndEvaluation(profile.id, code);
+          if (intentosUsados >= intentosPermitidos) {
+            const plural = intentosPermitidos === 1 ? 'intento' : 'intentos';
+            setError(`Has utilizado tus ${intentosPermitidos} ${plural} disponibles para esta evaluación.`);
+            setLoading(false);
+            return;
+          }
+          setCurrentAttempt(intentosUsados + 1);
+        }
 
         // Verificar si existe progreso previo
         const progress = await evaluationProgressService.getByUserAndEvaluation(profile.id, code);
@@ -371,6 +385,17 @@ function TakeEvaluationRoute() {
                   <div className="text-[12px] font-medium" style={{ color: "#065F46" }}>Puntaje para aprobar</div>
                   <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "#065F46" }}>
                     {evaluation.config.porcentaje_aprobacion}% o más
+                  </div>
+                </div>
+              )}
+              {(evaluation.intentos_permitidos ?? 1) > 1 && (
+                <div
+                  className="rounded-[12px] p-[14px]"
+                  style={{ background: "#EFF6FF" }}
+                >
+                  <div className="text-[12px] font-medium" style={{ color: "#1E40AF" }}>Intento</div>
+                  <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "#1E40AF" }}>
+                    {currentAttempt} de {evaluation.intentos_permitidos}
                   </div>
                 </div>
               )}

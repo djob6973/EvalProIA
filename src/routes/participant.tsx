@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Clock, FileQuestion, Lock, Calendar, CalendarX, CheckCircle } from "lucide-react";
+import { ArrowRight, Clock, FileQuestion, Lock, Calendar, CalendarX, CheckCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { evaluationsService, resultsService, evaluationParticipantsService } from "@/lib/services/evaluations";
@@ -77,10 +77,33 @@ function ParticipantHome() {
     loadData();
   }, [profile?.id]);
 
-  // Filter out evaluations the user has already completed
-  const completedEvaluationIds = new Set(userResults.map((r: any) => r.evaluation_id));
-  const availableEvaluations = evaluations.filter((ev) => !completedEvaluationIds.has(ev.id));
-  const completedEvaluations = evaluations.filter((ev) => completedEvaluationIds.has(ev.id));
+  // Agrupar resultados por evaluación
+  const resultCountByEval: Record<string, number> = {};
+  const latestResultByEval: Record<string, any> = {};
+  const bestResultByEval: Record<string, any> = {};
+  userResults.forEach((r: any) => {
+    resultCountByEval[r.evaluation_id] = (resultCountByEval[r.evaluation_id] || 0) + 1;
+    const prev = latestResultByEval[r.evaluation_id];
+    if (!prev || new Date(r.completed_at) > new Date(prev.completed_at)) {
+      latestResultByEval[r.evaluation_id] = r;
+    }
+    const best = bestResultByEval[r.evaluation_id];
+    if (!best || r.score > best.score) {
+      bestResultByEval[r.evaluation_id] = r;
+    }
+  });
+
+  // Disponibles: aún tienen intentos restantes
+  const availableEvaluations = evaluations.filter((ev) => {
+    const count = resultCountByEval[ev.id] || 0;
+    return count < (ev.intentos_permitidos ?? 1);
+  });
+
+  // Completadas: se agotaron todos los intentos
+  const completedEvaluations = evaluations.filter((ev) => {
+    const count = resultCountByEval[ev.id] || 0;
+    return count >= (ev.intentos_permitidos ?? 1);
+  });
 
   if (loading || loadingData) {
     return (
@@ -132,12 +155,11 @@ function ParticipantHome() {
           <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
             Tienes{" "}
             <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
-              {availableEvaluations.length} evaluaciones activas
-            </span>{" "}
-            disponibles.
+              {availableEvaluations.length} evaluación{availableEvaluations.length !== 1 ? 'es' : ''} disponible{availableEvaluations.length !== 1 ? 's' : ''}
+            </span>.
             {completedEvaluations.length > 0 && (
               <>
-                {" "}Has completado{" "}
+                {" "}Has agotado tus intentos en{" "}
                 <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
                   {completedEvaluations.length} evaluación{completedEvaluations.length !== 1 ? 'es' : ''}
                 </span>.
@@ -177,7 +199,14 @@ function ParticipantHome() {
                     >
                       {e.code}
                     </span>
-                    {e.locked && <Lock className="size-4" style={{ color: "var(--muted-foreground)" }} />}
+                    <div className="flex items-center gap-2">
+                      {(resultCountByEval[e.id] || 0) > 0 && (
+                        <span className="font-display text-[18px] font-medium" style={{ color: "var(--accent)" }}>
+                          {latestResultByEval[e.id]?.score}%
+                        </span>
+                      )}
+                      {e.locked && <Lock className="size-4" style={{ color: "var(--muted-foreground)" }} />}
+                    </div>
                   </div>
                   <div className="flex-1">
                     <h3 className="font-display text-[17px] font-medium leading-tight" style={{ color: "var(--foreground)" }}>
@@ -195,6 +224,11 @@ function ParticipantHome() {
                       {e.tiempo_limite > 0 && (
                         <span className="flex items-center gap-1">
                           <Clock className="size-3.5" /> {e.tiempo_limite} min
+                        </span>
+                      )}
+                      {(e.intentos_permitidos ?? 1) > 1 && (
+                        <span className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold" style={{ background: "#EFF6FF", color: "#1E40AF" }}>
+                          Intento {(resultCountByEval[e.id] || 0) + 1} de {e.intentos_permitidos}
                         </span>
                       )}
                     </div>
@@ -223,7 +257,11 @@ function ParticipantHome() {
                   ) : (
                     <Button asChild className="w-full">
                       <Link to="/take/$code" params={{ code: e.id }}>
-                        Comenzar <ArrowRight className="size-4" />
+                        {(resultCountByEval[e.id] || 0) > 0 ? (
+                          <><RefreshCw className="size-4" /> Reintentar</>
+                        ) : (
+                          <>Comenzar <ArrowRight className="size-4" /></>
+                        )}
                       </Link>
                     </Button>
                   )}
@@ -241,7 +279,9 @@ function ParticipantHome() {
             </div>
             <div className="grid gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
               {completedEvaluations.map((e) => {
-                const result = userResults.find((r: any) => r.evaluation_id === e.id);
+                const bestResult = bestResultByEval[e.id];
+                const intentosUsados = resultCountByEval[e.id] || 0;
+                const intentosPermitidos = e.intentos_permitidos ?? 1;
                 return (
                   <div
                     key={e.id}
@@ -261,7 +301,7 @@ function ParticipantHome() {
                         {e.code}
                       </span>
                       <span className="font-display text-[20px] font-medium" style={{ color: "var(--accent)" }}>
-                        {result?.score}%
+                        {bestResult?.score}%
                       </span>
                     </div>
                     <div className="flex-1">
@@ -272,17 +312,22 @@ function ParticipantHome() {
                         <span className="flex items-center gap-1">
                           <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
                         </span>
+                        {intentosPermitidos > 1 && (
+                          <span className="font-mono text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: "#F3F4F6", color: "#6B7280" }}>
+                            {intentosUsados}/{intentosPermitidos} intentos
+                          </span>
+                        )}
                       </div>
-                      {result?.completed_at && (
+                      {bestResult?.completed_at && (
                         <div className="mt-[8px] flex items-center gap-1 text-[11px]" style={{ color: "#059669" }}>
                           <CheckCircle className="size-3 shrink-0" />
-                          <span>Presentada: {formatDateTime(result.completed_at)}</span>
+                          <span>{intentosPermitidos > 1 ? 'Mejor resultado:' : 'Presentada:'} {formatDateTime(bestResult.completed_at)}</span>
                         </div>
                       )}
                     </div>
                     <Button asChild variant="outline" className="w-full">
-                      <Link to="/my-results/$id" params={{ id: result?.id }}>
-                        Ver Resultados
+                      <Link to="/my-results/$id" params={{ id: bestResult?.id }}>
+                        Ver {intentosPermitidos > 1 ? 'Mejor Resultado' : 'Resultados'}
                       </Link>
                     </Button>
                   </div>
