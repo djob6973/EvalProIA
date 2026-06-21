@@ -240,19 +240,19 @@ function TakeEvaluationRoute() {
       const startedAt = progress?.started_at || new Date().toISOString();
       
       // Guardar resultado
-      await resultsService.create({
+      const savedResult = await resultsService.create({
         user_id: profile.id,
         evaluation_id: code,
         score: Math.round(score),
         answers: answers as any,
         started_at: startedAt
       });
-      
+
       // Eliminar progreso guardado
       await evaluationProgressService.delete(profile.id, code);
-      
-      // Redirigir al historial
-      navigate({ to: "/my-history" });
+
+      // Redirigir a la página de resultados del intento
+      navigate({ to: "/my-results/$id", params: { id: savedResult.id } });
     } catch (err) {
       console.error('Error submitting evaluation:', err);
       setError('Error al enviar la evaluación');

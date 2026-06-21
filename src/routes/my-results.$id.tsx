@@ -5,7 +5,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService } from "@/lib/services/evaluations";
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle } from "lucide-react";
+import type { Evaluation } from "@/lib/services/evaluations";
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/my-results/$id")({
   head: () => ({ meta: [{ title: "Mis Resultados — EvalPro" }] }),
@@ -19,8 +20,9 @@ function MyResultPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
-  const [evaluation, setEvaluation] = useState<any>(null);
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [questionsMap, setQuestionsMap] = useState<Record<string, any>>({});
+  const [attemptCount, setAttemptCount] = useState<number>(0);
 
   useEffect(() => {
     async function loadData() {
@@ -43,6 +45,10 @@ function MyResultPage() {
         // Load evaluation details
         const evalData = await evaluationsService.getById(resultData.evaluation_id);
         setEvaluation(evalData);
+
+        // Contar intentos usados para mostrar opción de reintentar
+        const count = await resultsService.getCountByUserAndEvaluation(profile.id, resultData.evaluation_id);
+        setAttemptCount(count);
         
         // Load questions that were answered
         if (resultData.answers && Object.keys(resultData.answers).length > 0) {
@@ -139,15 +145,27 @@ function MyResultPage() {
     });
   }
 
+  const intentosPermitidos = evaluation?.intentos_permitidos ?? 1;
+  const puedeReintentar = intentosPermitidos > 1 && attemptCount < intentosPermitidos;
+
   return (
     <AppShell
       breadcrumb={[{ label: "Participante" }, { label: "Mis Resultados" }]}
       actions={
-        <Button asChild variant="outline">
-          <Link to="/participant">
-            <ArrowLeft className="size-4" /> Volver a Mis Evaluaciones
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {puedeReintentar && (
+            <Button asChild>
+              <Link to="/take/$code" params={{ code: evaluation!.id }}>
+                <RefreshCw className="size-4" /> Reintentar ({attemptCount}/{intentosPermitidos})
+              </Link>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link to="/participant">
+              <ArrowLeft className="size-4" /> Volver a Mis Evaluaciones
+            </Link>
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">
@@ -163,6 +181,27 @@ function MyResultPage() {
             })}</span>
           </div>
         </div>
+
+        {puedeReintentar && (
+          <div
+            className="rounded-xl border p-4 flex items-center justify-between gap-4"
+            style={{ background: "#EFF6FF", borderColor: "#BFDBFE" }}
+          >
+            <div>
+              <p className="font-medium text-[14px]" style={{ color: "#1E40AF" }}>
+                Tienes {intentosPermitidos - attemptCount} intento{intentosPermitidos - attemptCount !== 1 ? 's' : ''} restante{intentosPermitidos - attemptCount !== 1 ? 's' : ''}
+              </p>
+              <p className="text-[12px]" style={{ color: "#3B82F6" }}>
+                Has usado {attemptCount} de {intentosPermitidos} intentos permitidos
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link to="/take/$code" params={{ code: evaluation!.id }}>
+                <RefreshCw className="size-4" /> Reintentar
+              </Link>
+            </Button>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
