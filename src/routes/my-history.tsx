@@ -212,6 +212,26 @@ function HistoryPage() {
     return Array.from(months.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   }, [results]);
 
+  const attemptInfo = useMemo(() => {
+    const byEval: Record<string, any[]> = {};
+    results.forEach((r: any) => {
+      if (!byEval[r.evaluation_id]) byEval[r.evaluation_id] = [];
+      byEval[r.evaluation_id].push(r);
+    });
+    const attemptMap: Record<string, number> = {};
+    const totalMap: Record<string, number> = {};
+    Object.entries(byEval).forEach(([evalId, evalResults]) => {
+      const sorted = [...evalResults].sort(
+        (a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime()
+      );
+      totalMap[evalId] = sorted.length;
+      sorted.forEach((r, index) => {
+        attemptMap[r.id] = index + 1;
+      });
+    });
+    return { attemptMap, totalMap };
+  }, [results]);
+
   const filtered = useMemo(() => {
     return results.filter((r) => {
       if (query) {
@@ -434,6 +454,9 @@ function HistoryPage() {
               <div className="grid gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((result) => {
                   const cats: string[] = result.evaluations?.categorias || [];
+                  const attemptNumber = attemptInfo.attemptMap[result.id] ?? 1;
+                  const totalAttempts = attemptInfo.totalMap[result.evaluation_id] ?? 1;
+                  const showAttemptBadge = totalAttempts > 1;
                   return (
                     <div
                       key={result.id}
@@ -452,8 +475,16 @@ function HistoryPage() {
                         <ScoreBadge score={result.score} />
                       </div>
 
-                      {cats.length > 0 && (
+                      {(cats.length > 0 || showAttemptBadge) && (
                         <div className="flex flex-wrap gap-[6px]">
+                          {showAttemptBadge && (
+                            <span
+                              className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold"
+                              style={{ background: "#EFF6FF", color: "#1E40AF" }}
+                            >
+                              Intento {attemptNumber} de {totalAttempts}
+                            </span>
+                          )}
                           {cats.map((c) => (
                             <span
                               key={c}
