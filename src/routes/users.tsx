@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, X, Edit2, Trash2, KeyRound } from "lucide-react";
+import { Plus, Search, X, Edit2, Trash2, KeyRound, ChevronDown } from "lucide-react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -72,6 +72,7 @@ function UsersPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [inviteAreaId, setInviteAreaId] = useState<string>("");
   const [editAreaId, setEditAreaId] = useState<string>("");
+  const [editIsActive, setEditIsActive] = useState(true);
 
   useEffect(() => {
     fetchUsers();
@@ -159,6 +160,7 @@ function UsersPage() {
     setEditFullName(user.full_name || "");
     setEditRole(user.role);
     setEditAreaId(user.area_id || "");
+    setEditIsActive(user.is_active ?? true);
     setShowEditModal(true);
   };
 
@@ -176,7 +178,7 @@ function UsersPage() {
       const res = await fetch(`/api/data/profiles/${editingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: editFullName, role: editRole, area_id: editAreaId || null }),
+        body: JSON.stringify({ full_name: editFullName, role: editRole, area_id: editAreaId || null, is_active: editIsActive }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -521,16 +523,16 @@ function UsersPage() {
       )}
 
       {showEditModal && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
+            <div className="mb-6 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Editar Usuario</h3>
               <button
                 onClick={() => {
                   setShowEditModal(false);
                   setEditingUser(null);
                 }}
-                className="text-muted-foreground hover:text-foreground"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -558,44 +560,88 @@ function UsersPage() {
 
               {isAdmin && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-role" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Rol
                   </Label>
-                  <select
-                    id="edit-role"
-                    value={editRole}
-                    onChange={(e) => setEditRole(e.target.value as 'admin' | 'participant' | 'both')}
-                    disabled={isUpdating}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                  >
-                    <option value="participant">Participante</option>
-                    <option value="admin">Administrador</option>
-                    <option value="both">Administrador + Participante</option>
-                  </select>
+                  <div className="relative">
+                    <div className="pointer-events-none flex items-center justify-between rounded-lg border border-input bg-secondary px-3 py-2.5">
+                      <span className={
+                        editRole === 'admin'
+                          ? "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide bg-amber-500/15 text-amber-400"
+                          : editRole === 'both'
+                          ? "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide bg-violet-500/15 text-violet-400"
+                          : "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide bg-sky-500/15 text-sky-400"
+                      }>
+                        {editRole === 'admin' ? 'Administrador' : editRole === 'both' ? 'Admin + Participante' : 'Participante'}
+                      </span>
+                      <ChevronDown className="size-4 text-muted-foreground" />
+                    </div>
+                    <select
+                      value={editRole}
+                      onChange={(e) => setEditRole(e.target.value as 'admin' | 'participant' | 'both')}
+                      disabled={isUpdating}
+                      className="absolute inset-0 w-full cursor-pointer opacity-0"
+                    >
+                      <option value="participant">Participante</option>
+                      <option value="admin">Administrador</option>
+                      <option value="both">Administrador + Participante</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
               {areas.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="edit-area" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Área
                   </Label>
-                  <select
-                    id="edit-area"
-                    value={editAreaId}
-                    onChange={(e) => setEditAreaId(e.target.value)}
-                    disabled={isUpdating}
-                    className="w-full rounded-md border border-input bg-card px-3 py-2 text-sm"
-                  >
-                    <option value="">Sin área</option>
-                    {areas.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <div className="pointer-events-none flex items-center justify-between rounded-lg border border-input bg-secondary px-3 py-2.5">
+                      <span className="text-sm">
+                        {areas.find((a) => a.id === editAreaId)?.name || 'Sin área'}
+                      </span>
+                      <ChevronDown className="size-4 text-muted-foreground" />
+                    </div>
+                    <select
+                      value={editAreaId}
+                      onChange={(e) => setEditAreaId(e.target.value)}
+                      disabled={isUpdating}
+                      className="absolute inset-0 w-full cursor-pointer opacity-0"
+                    >
+                      <option value="">Sin área</option>
+                      {areas.map((a) => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
-              <div className="flex gap-2">
+              <div className="rounded-lg border border-input bg-secondary px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Estado de la cuenta</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {editIsActive ? 'El usuario puede iniciar sesión' : 'El usuario no puede iniciar sesión'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsActive(!editIsActive)}
+                    disabled={isUpdating}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      editIsActive
+                        ? 'bg-green-500/15 text-green-500'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    <span className={`inline-block size-1.5 rounded-full ${editIsActive ? 'bg-green-500' : 'bg-muted-foreground'}`} />
+                    {editIsActive ? 'Activo' : 'Inactivo'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
                 <Button
                   type="button"
                   variant="outline"
@@ -608,7 +654,11 @@ function UsersPage() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" disabled={isUpdating} className="flex-1">
+                <Button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="flex-1 border-0 bg-[#ED5650] text-white hover:bg-[#d94d47]"
+                >
                   {isUpdating ? "Guardando..." : "Guardar"}
                 </Button>
               </div>
