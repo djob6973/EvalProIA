@@ -218,6 +218,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   ctx.beginPath();
   ctx.roundRect(bX, 20, bW, 21, 10);
   ctx.stroke();
+  ctx.font = "bold 10px system-ui";
   ctx.fillStyle = stateColor;
   ctx.textAlign = "center";
   ctx.fillText(stateLabel, bX + bW / 2, 33);
