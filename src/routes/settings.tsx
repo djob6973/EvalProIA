@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useRef, useState } from "react";
-import { useSystemSettings, invalidateSystemSettings } from "@/hooks/useSystemSettings";
-import { Upload, X, ImageIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export const PROMPT_STORAGE_KEY = "evalpro_system_prompt";
 export const PROMPT_VERSION_KEY = "evalpro_prompt_version";
@@ -186,7 +184,6 @@ function SettingsPage() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === "admin" || profile?.role === "both";
   const navigate = useNavigate();
-  const { settings } = useSystemSettings();
 
   // ── Prompt state ──────────────────────────────────────────────────────────
   const [persistedPrompt, setPersistedPrompt] = useState<string>(getSystemPrompt);
@@ -203,79 +200,6 @@ function SettingsPage() {
     config.temperature !== persistedConfig.temperature ||
     config.maxTokens !== persistedConfig.maxTokens ||
     config.retries !== persistedConfig.retries;
-
-  // ── Brand logo state ──────────────────────────────────────────────────────
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [logoSaving, setLogoSaving] = useState(false);
-  const [logoError, setLogoError] = useState<string | null>(null);
-  const [logoSuccess, setLogoSuccess] = useState(false);
-  const [showLogoDeleteConfirm, setShowLogoDeleteConfirm] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-
-  const currentLogo = settings.brand_logo ?? null;
-
-  function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setLogoError(null);
-    setLogoSuccess(false);
-
-    const validTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp"];
-    if (!validTypes.includes(file.type))
-      return setLogoError("Solo se aceptan imágenes PNG, JPG, SVG o WebP.");
-
-    if (file.size > 1_000_000)
-      return setLogoError("La imagen no debe superar 1 MB.");
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setLogoPreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
-
-    if (logoInputRef.current) logoInputRef.current.value = "";
-  }
-
-  async function saveLogo() {
-    if (!logoPreview) return;
-    setLogoSaving(true);
-    setLogoError(null);
-    try {
-      const res = await fetch("/api/data/settings/brand-logo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataUrl: logoPreview }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Error al guardar");
-      }
-      invalidateSystemSettings();
-      setLogoSuccess(true);
-      setLogoPreview(null);
-    } catch (err: any) {
-      setLogoError(err.message);
-    } finally {
-      setLogoSaving(false);
-    }
-  }
-
-  async function deleteLogo() {
-    setLogoSaving(true);
-    setLogoError(null);
-    try {
-      const res = await fetch("/api/data/settings/brand-logo", { method: "DELETE" });
-      if (!res.ok) throw new Error("Error al eliminar");
-      invalidateSystemSettings();
-      setLogoPreview(null);
-      setShowLogoDeleteConfirm(false);
-    } catch (err: any) {
-      setLogoError(err.message);
-    } finally {
-      setLogoSaving(false);
-    }
-  }
 
   useEffect(() => {
     if (profile && !isAdmin) navigate({ to: "/account" });
@@ -350,101 +274,7 @@ function SettingsPage() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "Herramientas" }, { label: "Configuración" }]}>
-      {/* ── Brand logo ────────────────────────────────────────────────────── */}
-      <div className="mb-6 rounded-xl border border-border bg-card shadow-sm">
-        <div className="border-b border-border p-6">
-          <h2 className="font-bold">Logo de la Organización</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Se mostrará en el sidebar junto al logo del sistema. Formatos: PNG, JPG, SVG, WebP. Máx. 1 MB.
-          </p>
-        </div>
-        <div className="p-6">
-          <div className="flex flex-wrap items-start gap-6">
-            {/* Vista previa actual / nueva */}
-            <div className="flex flex-col gap-3">
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {logoPreview ? "Vista previa" : currentLogo ? "Logo actual" : "Sin logo"}
-              </div>
-              <div className="flex h-24 w-48 items-center justify-center rounded-xl border-2 border-dashed border-border bg-secondary/30">
-                {logoPreview || currentLogo ? (
-                  <img
-                    src={logoPreview ?? currentLogo!}
-                    alt="Logo organización"
-                    className="max-h-20 max-w-44 object-contain"
-                  />
-                ) : (
-                  <ImageIcon className="size-8 text-muted-foreground/40" strokeWidth={1.5} />
-                )}
-              </div>
-            </div>
-
-            {/* Acciones */}
-            <div className="flex flex-col gap-3 pt-1">
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/svg+xml,image/webp"
-                className="hidden"
-                onChange={handleLogoFile}
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logoInputRef.current?.click()}
-                disabled={logoSaving}
-              >
-                <Upload className="mr-2 size-4" strokeWidth={1.5} />
-                {currentLogo || logoPreview ? "Cambiar logo" : "Subir logo"}
-              </Button>
-
-              {logoPreview && (
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={saveLogo} disabled={logoSaving}>
-                    {logoSaving ? "Guardando…" : "Guardar"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { setLogoPreview(null); setLogoError(null); }}
-                    disabled={logoSaving}
-                  >
-                    <X className="size-4" strokeWidth={1.5} />
-                  </Button>
-                </div>
-              )}
-
-              {currentLogo && !logoPreview && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setShowLogoDeleteConfirm(true)}
-                  disabled={logoSaving}
-                >
-                  Eliminar logo
-                </Button>
-              )}
-
-              {logoError && (
-                <p className="text-xs text-destructive">{logoError}</p>
-              )}
-              {logoSuccess && !logoPreview && (
-                <p className="text-xs text-emerald-600">Logo guardado correctamente.</p>
-              )}
-            </div>
-          </div>
-        </div>
-        <ConfirmDialog
-          open={showLogoDeleteConfirm}
-          title="¿Eliminar logo de la organización?"
-          description="Se eliminará el logo de marca del sistema. El logo de EvalPro permanecerá intacto."
-          confirmLabel="Eliminar"
-          onConfirm={deleteLogo}
-          onCancel={() => setShowLogoDeleteConfirm(false)}
-        />
-      </div>
-
+    <AppShell breadcrumb={[{ label: "Herramientas" }, { label: "Configuración de Prompts" }]}>
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Prompt editor ─────────────────────────────────────────────── */}
         <div className="space-y-6 lg:col-span-2">

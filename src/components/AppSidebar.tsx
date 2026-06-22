@@ -14,6 +14,7 @@ import {
   Layers,
   KeyRound,
   X,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -29,6 +30,7 @@ const adminNav = [
   { title: "Generador IA", url: "/generate", icon: Sparkles, group: "Herramientas" },
   { title: "Resultados Globales", url: "/results", icon: BarChart3, group: "Herramientas" },
   { title: "Configuración de Prompts", url: "/settings", icon: Settings, group: "Herramientas" },
+  { title: "Configuración", url: "/config", icon: SlidersHorizontal, group: "Herramientas" },
   { title: "Mi Cuenta", url: "/account", icon: KeyRound, group: "Cuenta" },
 ];
 
