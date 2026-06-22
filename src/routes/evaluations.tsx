@@ -154,57 +154,61 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
-  // ── Accent bar ────────────────────────────────────────
+  // ── Vertical accent bar (left edge) ──────────────────
   ctx.fillStyle = ACCENT;
-  ctx.fillRect(0, 0, W, 5);
-  const shadow = ctx.createLinearGradient(0, 5, 0, 20);
-  shadow.addColorStop(0, "rgba(237,86,80,0.07)");
-  shadow.addColorStop(1, "transparent");
-  ctx.fillStyle = shadow;
-  ctx.fillRect(0, 5, W, 15);
+  ctx.fillRect(0, 0, 5, H);
+  const barShadow = ctx.createLinearGradient(5, 0, 24, 0);
+  barShadow.addColorStop(0, "rgba(237,86,80,0.09)");
+  barShadow.addColorStop(1, "transparent");
+  ctx.fillStyle = barShadow;
+  ctx.fillRect(5, 0, 19, H);
 
-  // ── Header (y: 5–70) ──────────────────────────────────
+  // ── Header (y: 14–70) ─────────────────────────────────
   const LOGO_H = 38;
-  let textX = PAD; // where "EvalPro" text starts
 
+  // Status badge — measure first so EvalPro can anchor against it
+  ctx.font = "bold 10px system-ui";
+  const bW = ctx.measureText(stateLabel).width + 20;
+  const bX = W - bW - PAD;
+
+  // EvalPro block: Brain icon + "Eval" + "Pro"
+  ctx.font = "bold 19px 'Space Grotesk', system-ui, sans-serif";
+  const evalW = ctx.measureText("Eval").width;
+  const proW  = ctx.measureText("Pro").width;
+  const evalProBlockW = LOGO_H + 10 + evalW + proW;
+
+  // With org logo: EvalPro floats to the right (gap before badge)
+  // Without org logo: EvalPro anchors to the left at PAD
+  const evalProX = brandLogo ? bX - 20 - evalProBlockW : PAD;
+
+  // Org logo — left side (only when present)
   if (brandLogo) {
-    // Org logo on the left, scale to fit LOGO_H tall, max 90px wide
     try {
       const img = await loadImage(brandLogo);
-      const maxW = 90;
+      const maxW = 100;
       const scale = Math.min(maxW / img.width, LOGO_H / img.height);
       const dW = img.width * scale;
       const dH = img.height * scale;
       ctx.drawImage(img, PAD, 14 + (LOGO_H - dH) / 2, dW, dH);
-      textX = PAD + dW + 12;
-    } catch {
-      textX = PAD;
-    }
+    } catch { /* skip */ }
   }
 
-  // Brain icon (always shown, right of org logo or at PAD if no org logo)
+  // Brain icon (EvalPro isotipo)
   try {
     const blob = new Blob([EVALPRO_LOGO_SVG], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const logo = await loadImage(url);
-    ctx.drawImage(logo, textX, 14, LOGO_H, LOGO_H);
+    ctx.drawImage(logo, evalProX, 14, LOGO_H, LOGO_H);
     URL.revokeObjectURL(url);
   } catch { /* skip */ }
 
-  const brainRight = textX + LOGO_H + 10;
-
-  // "EvalPro" text to the right of Brain
+  // "EvalPro" text
+  const textStartX = evalProX + LOGO_H + 10;
   ctx.font = "bold 19px 'Space Grotesk', system-ui, sans-serif";
   ctx.fillStyle = "#0f172a";
-  ctx.fillText("Eval", brainRight, 38);
-  const evalW = ctx.measureText("Eval").width;
+  ctx.fillText("Eval", textStartX, 38);
   ctx.fillStyle = ACCENT;
-  ctx.fillText("Pro", brainRight + evalW, 38);
-
-  // Status badge
-  ctx.font = "bold 10px system-ui";
-  const bW = ctx.measureText(stateLabel).width + 20;
-  const bX = W - bW - PAD;
+  ctx.fillText("Pro", textStartX + evalW, 38);
   ctx.fillStyle = stateColor + "18";
   ctx.beginPath();
   ctx.roundRect(bX, 20, bW, 21, 10);
