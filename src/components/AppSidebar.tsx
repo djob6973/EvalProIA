@@ -94,36 +94,35 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
   };
 
   const logoSection = (
-    <div className="shrink-0 border-b border-[var(--sidebar-border)] px-6 py-5">
+    <div className="shrink-0 border-b border-[var(--sidebar-border)] px-6 py-6 pb-5">
       <Link to="/dashboard" className="flex items-center gap-3">
         <div
-          className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white"
           style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
         >
           <Brain className="size-[18px]" strokeWidth={1.5} />
         </div>
-        <div className="flex flex-col leading-none">
-          <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
-            EvalPro
-          </span>
+        <div className="flex min-w-0 flex-col leading-none">
+          <div className="flex items-center gap-2">
+            <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
+              EvalPro
+            </span>
+            {settings.brand_logo && (
+              <>
+                <span className="text-[var(--border-strong)]">|</span>
+                <img
+                  src={settings.brand_logo}
+                  alt="Logo organización"
+                  className="h-5 max-w-[90px] object-contain"
+                />
+              </>
+            )}
+          </div>
           <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
             Sistema de Evaluación
           </span>
         </div>
       </Link>
-      {settings.brand_logo && (
-        <div className="mt-4 pt-4 border-t border-[var(--sidebar-border)]">
-          <div className="font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)] mb-2">
-            Organización
-          </div>
-          <img
-            src={settings.brand_logo}
-            alt="Logo de la organización"
-            className="h-8 max-w-full object-contain"
-            style={{ maxWidth: "160px" }}
-          />
-        </div>
-      )}
     </div>
   );
 
@@ -188,40 +187,40 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
           className="flex flex-col w-[300px] max-w-[85vw] bg-[var(--sidebar)] p-0 shadow-2xl"
         >
           {/* Header móvil con logo y botón de cierre */}
-          <div className="shrink-0 border-b border-[var(--sidebar-border)] px-5 py-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-11 w-11 items-center justify-center rounded-[16px] text-white"
-                  style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
-                >
-                  <Brain className="size-[18px]" strokeWidth={1.5} />
-                </div>
-                <div className="flex flex-col leading-none">
+          <div className="shrink-0 flex items-center justify-between border-b border-[var(--sidebar-border)] px-5 py-5">
+            <div className="flex items-center gap-3">
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white"
+                style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+              >
+                <Brain className="size-[18px]" strokeWidth={1.5} />
+              </div>
+              <div className="flex min-w-0 flex-col leading-none">
+                <div className="flex items-center gap-2">
                   <span className="font-display text-[17px] font-semibold tracking-tight text-[var(--foreground)]">
                     EvalPro
                   </span>
-                  <span className="font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
-                    Menú
-                  </span>
+                  {settings.brand_logo && (
+                    <>
+                      <span className="text-[var(--border-strong)]">|</span>
+                      <img
+                        src={settings.brand_logo}
+                        alt="Logo organización"
+                        className="h-5 max-w-[80px] object-contain"
+                      />
+                    </>
+                  )}
                 </div>
+                <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
+                  Menú
+                </span>
               </div>
-              <SheetClose asChild>
-                <button className="grid h-10 w-10 place-items-center rounded-[14px] border border-[var(--border)] text-[var(--muted-foreground)] transition hover:bg-[var(--sidebar-accent)]">
-                  <X className="size-[18px]" strokeWidth={1.5} />
-                </button>
-              </SheetClose>
             </div>
-            {settings.brand_logo && (
-              <div className="mt-3 pt-3 border-t border-[var(--sidebar-border)]">
-                <img
-                  src={settings.brand_logo}
-                  alt="Logo de la organización"
-                  className="h-7 max-w-full object-contain"
-                  style={{ maxWidth: "140px" }}
-                />
-              </div>
-            )}
+            <SheetClose asChild>
+              <button className="grid h-10 w-10 place-items-center rounded-[14px] border border-[var(--border)] text-[var(--muted-foreground)] transition hover:bg-[var(--sidebar-accent)]">
+                <X className="size-[18px]" strokeWidth={1.5} />
+              </button>
+            </SheetClose>
           </div>
           {navSection}
           {footerSection}

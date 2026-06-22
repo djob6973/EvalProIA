@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { Sun, Moon, Menu } from "lucide-react";
+import { Sun, Moon, Menu, Brain } from "lucide-react";
 
 interface AppShellProps {
   breadcrumb: { label: string; href?: string }[];
@@ -93,6 +93,12 @@ export function AppShell({ breadcrumb, actions, children }: AppShellProps) {
             </nav>
           </div>
           <div className="flex items-center gap-[10px]">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] text-white"
+              style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+            >
+              <Brain className="size-[15px]" strokeWidth={1.5} />
+            </div>
             <button
               onClick={toggleTheme}
               className="grid place-items-center rounded-[10px] p-2 transition-colors hover:bg-secondary"
