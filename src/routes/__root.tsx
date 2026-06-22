@@ -8,8 +8,10 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Brain } from "lucide-react";
 import { NavigationProgress } from "@/components/NavigationProgress";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 import appCss from "../styles.css?url";
 
@@ -165,11 +167,31 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function FaviconUpdater() {
+  const { settings } = useSystemSettings();
+
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
+    if (!link) return;
+    if (settings.brand_logo) {
+      link.href = settings.brand_logo;
+      const mime = settings.brand_logo.match(/^data:([^;]+);/)?.[1] ?? "image/png";
+      link.type = mime;
+    } else {
+      link.href = "/favicon.svg";
+      link.type = "image/svg+xml";
+    }
+  }, [settings.brand_logo]);
+
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
+      <FaviconUpdater />
       <NavigationProgress />
       <Outlet />
     </QueryClientProvider>
