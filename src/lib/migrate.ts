@@ -110,6 +110,14 @@ export async function runMigrations(): Promise<void> {
     )
   `;
 
+  await db`
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key        TEXT PRIMARY KEY,
+      value      TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
   // Seed admin user from env vars (set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD on server)
   const seedEmail = process.env.SEED_ADMIN_EMAIL;
   const seedPassword = process.env.SEED_ADMIN_PASSWORD;

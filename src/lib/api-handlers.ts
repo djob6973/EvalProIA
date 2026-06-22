@@ -145,6 +145,13 @@ async function route(
     if (id && sub2 && m === "GET") return getProgress(id, sub2);
   }
 
+  // ── System settings ──────────────────────────────────────────────────────
+  if (res === "settings") {
+    if (!id && m === "GET") return getSettings();
+    if (id === "brand-logo" && m === "POST") return setBrandLogo(request);
+    if (id === "brand-logo" && m === "DELETE") return deleteBrandLogo(request);
+  }
+
   // ── Categories ────────────────────────────────────────────────────────────
   if (res === "categories" && !id && m === "GET") return listCategories();
 
@@ -970,5 +977,45 @@ async function changeOwnPassword(request: Request): Promise<Response> {
     UPDATE profiles SET password_hash = ${password_hash}, updated_at = now()
     WHERE id = ${caller.id}
   `;
+  return json({ success: true });
+}
+
+// ── System settings ───────────────────────────────────────────────────────────
+
+async function getSettings(): Promise<Response> {
+  const rows = await db`SELECT key, value FROM system_settings`;
+  const settings: Record<string, string> = {};
+  for (const row of rows as any[]) settings[row.key] = row.value;
+  return json(settings);
+}
+
+async function setBrandLogo(request: Request): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
+
+  const { dataUrl } = await request.json();
+  if (!dataUrl || typeof dataUrl !== "string")
+    return json({ error: "dataUrl requerido" }, 400);
+
+  const MAX_BYTES = 1_500_000;
+  if (dataUrl.length > MAX_BYTES)
+    return json({ error: "La imagen supera el límite de 1 MB" }, 400);
+
+  if (!/^data:image\/(png|jpeg|jpg|svg\+xml|webp);base64,/.test(dataUrl))
+    return json({ error: "Formato de imagen no válido" }, 400);
+
+  await db`
+    INSERT INTO system_settings (key, value, updated_at)
+    VALUES ('brand_logo', ${dataUrl}, now())
+    ON CONFLICT (key) DO UPDATE SET value = ${dataUrl}, updated_at = now()
+  `;
+  return json({ success: true });
+}
+
+async function deleteBrandLogo(request: Request): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
+
+  await db`DELETE FROM system_settings WHERE key = 'brand_logo'`;
   return json({ success: true });
 }
