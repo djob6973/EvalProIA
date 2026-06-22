@@ -29,7 +29,7 @@ const adminNav = [
   { title: "Banco de Preguntas", url: "/question-bank", icon: Library, group: "Gestión" },
   { title: "Generador IA", url: "/generate", icon: Sparkles, group: "Herramientas" },
   { title: "Resultados Globales", url: "/results", icon: BarChart3, group: "Herramientas" },
-  { title: "Configuración de Prompts", url: "/settings", icon: Settings, group: "Herramientas" },
+  { title: "Prompts IA", url: "/settings", icon: Settings, group: "Herramientas" },
   { title: "Configuración", url: "/config", icon: SlidersHorizontal, group: "Herramientas" },
   { title: "Mi Cuenta", url: "/account", icon: KeyRound, group: "Cuenta" },
 ];
@@ -81,7 +81,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
         to={item.url}
         onClick={() => isMobile && setMobileOpen(false)}
         className={
-          "flex items-center gap-3 rounded-[14px] px-3 py-3 text-[14px] font-medium transition-all duration-150 " +
+          "flex items-center gap-3 rounded-[14px] px-3 py-2 text-[14px] font-medium transition-all duration-150 " +
           (active
             ? "bg-[var(--sidebar-primary)] text-[var(--sidebar-primary-foreground)] shadow-[0_8px_24px_rgba(237,86,80,0.12)]"
             : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]")
@@ -123,10 +123,10 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
   );
 
   const navSection = (
-    <nav className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-6">
+    <nav className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
       {groups.map((group) => (
         <div key={group}>
-          <div className="mb-3 px-3 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[var(--text-faint)]">
+          <div className="mb-1 px-3 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-[var(--text-faint)]">
             {group}
           </div>
           <div className="flex flex-col gap-2">
