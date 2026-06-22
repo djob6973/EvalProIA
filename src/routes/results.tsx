@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useMemo, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, Users, CheckCircle2, Clock, Trophy, TrendingUp } from "lucide-react";
 import { resultsService, areasService, getAllParticipants } from "@/lib/services/evaluations";
 import type { Area } from "@/lib/services/evaluations";
 import {
@@ -42,6 +42,20 @@ function getISOWeekLabel(date: Date): string {
   return `S${weekNo}`;
 }
 
+const SELECT_CLASS =
+  "rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-xs text-foreground " +
+  "transition-colors hover:border-[var(--border-strong)] focus:border-accent focus:outline-none " +
+  "focus:ring-2 focus:ring-accent/20 cursor-pointer";
+
+const KPI_ITEMS = [
+  { label: "Sesiones Totales", icon: Users },
+  { label: "Tasa de Aprobación", icon: CheckCircle2 },
+  { label: "Duración Promedio", icon: Clock },
+  { label: "Mejor Puntaje", icon: Trophy },
+] as const;
+
+const MAX_BAR_H = 140;
+
 function ResultsPage() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === "admin" || profile?.role === "both";
@@ -67,7 +81,6 @@ function ResultsPage() {
     bestScore: 0,
   });
 
-  // Filters
   const currentYear = new Date().getFullYear();
   const [filterYear, setFilterYear] = useState<number>(currentYear);
   const [filterAreaId, setFilterAreaId] = useState<string>("all");
@@ -100,7 +113,6 @@ function ResultsPage() {
           }))
         );
 
-        // Stats based on all results
         const ranges = [
           { range: "0-20", min: 0, max: 20 },
           { range: "21-40", min: 21, max: 40 },
@@ -123,8 +135,7 @@ function ResultsPage() {
           .slice(0, 4);
         setTopPerformers(
           sorted.map((res: any) => ({
-            name:
-              res.profiles?.full_name || res.profiles?.email || "Usuario",
+            name: res.profiles?.full_name || res.profiles?.email || "Usuario",
             score: res.score,
             eval: res.evaluations?.title || "Evaluación",
           }))
@@ -134,15 +145,11 @@ function ResultsPage() {
         const passRate =
           total > 0
             ? Math.round(
-                (rawResults.filter((r: any) => r.score >= 60).length /
-                  total) *
-                  100
+                (rawResults.filter((r: any) => r.score >= 60).length / total) * 100
               )
             : 0;
         const bestScore =
-          total > 0
-            ? Math.max(...rawResults.map((r: any) => r.score))
-            : 0;
+          total > 0 ? Math.max(...rawResults.map((r: any) => r.score)) : 0;
         const durations = rawResults
           .filter((r: any) => r.started_at && r.completed_at)
           .map((r: any) => {
@@ -154,10 +161,7 @@ function ResultsPage() {
         const avgDuration =
           durations.length > 0
             ? Math.round(
-                (durations.reduce(
-                  (sum: number, d: number) => sum + d,
-                  0
-                ) /
+                (durations.reduce((sum: number, d: number) => sum + d, 0) /
                   durations.length) *
                   10
               ) / 10
@@ -174,7 +178,6 @@ function ResultsPage() {
     loadResults();
   }, [isAdmin]);
 
-  // Derive available years from results
   const availableYears = useMemo(() => {
     const years = new Set(
       allResults.map((r) => new Date(r.completed_at).getFullYear())
@@ -183,21 +186,16 @@ function ResultsPage() {
     return Array.from(years).sort((a, b) => b - a);
   }, [allResults, currentYear]);
 
-  // Weekly trend data after filters
   const weeklyData = useMemo<WeekPoint[]>(() => {
     const filtered = allResults.filter((r) => {
       const date = new Date(r.completed_at);
       if (date.getFullYear() !== filterYear) return false;
-      if (
-        filterAreaId !== "all" &&
-        r.evaluations?.area_id !== filterAreaId
-      )
+      if (filterAreaId !== "all" && r.evaluations?.area_id !== filterAreaId)
         return false;
       if (filterUserId !== "all" && r.user_id !== filterUserId) return false;
       return true;
     });
 
-    // Group by ISO week number within the year
     const map = new Map<string, { total: number; count: number }>();
     for (const r of filtered) {
       const label = getISOWeekLabel(new Date(r.completed_at));
@@ -233,7 +231,15 @@ function ResultsPage() {
   }
 
   function exportResultsCsv() {
-    const headers = ["Participante", "Email", "Evaluación", "Área", "Puntaje", "Estado", "Fecha Completado"];
+    const headers = [
+      "Participante",
+      "Email",
+      "Evaluación",
+      "Área",
+      "Puntaje",
+      "Estado",
+      "Fecha Completado",
+    ];
     const rows = allResults.map((r) => {
       const area = areas.find((a) => a.id === r.evaluations?.area_id);
       return [
@@ -250,10 +256,15 @@ function ResultsPage() {
     downloadCsv([headers, ...rows], `resultados-globales-${today}.csv`);
   }
 
-  const max =
-    distribution.length > 0
-      ? Math.max(...distribution.map((d) => d.count))
-      : 0;
+  const maxDist =
+    distribution.length > 0 ? Math.max(...distribution.map((d) => d.count)) : 0;
+
+  const kpiValues = [
+    String(stats.totalSessions),
+    `${stats.passRate}%`,
+    stats.avgDuration > 0 ? `${stats.avgDuration}m` : "—",
+    `${stats.bestScore}/100`,
+  ];
 
   if (loading) {
     return (
@@ -266,9 +277,7 @@ function ResultsPage() {
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">
-              Cargando resultados...
-            </p>
+            <p className="text-sm text-muted-foreground">Cargando resultados...</p>
           </div>
         </div>
       </AppShell>
@@ -310,47 +319,47 @@ function ResultsPage() {
         </Button>
       }
     >
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* KPI cards */}
-        <div className="grid gap-4 sm:grid-cols-4">
-          {[
-            { l: "Sesiones Totales", v: String(stats.totalSessions) },
-            { l: "Tasa de Aprobación", v: `${stats.passRate}%` },
-            {
-              l: "Duración Promedio",
-              v: stats.avgDuration > 0 ? `${stats.avgDuration}m` : "N/A",
-            },
-            { l: "Mejor Puntaje", v: `${stats.bestScore}/100` },
-          ].map((k) => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {KPI_ITEMS.map((k, i) => (
             <div
-              key={k.l}
-              className="rounded-xl border border-border bg-card p-6 shadow-sm"
+              key={k.label}
+              className="relative overflow-hidden rounded-xl border border-border bg-card shadow-sm"
             >
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                {k.l}
+              <div className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
+              <div className="px-5 py-5 pl-6">
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <k.icon className="size-3.5 shrink-0 text-accent" strokeWidth={2.5} />
+                  <span className="text-[11px] font-semibold uppercase tracking-wider">
+                    {k.label}
+                  </span>
+                </div>
+                <div className="mt-2.5 font-mono text-3xl font-bold tracking-tight text-foreground">
+                  {kpiValues[i]}
+                </div>
               </div>
-              <div className="mt-2 font-mono text-3xl font-bold">{k.v}</div>
             </div>
           ))}
         </div>
 
         {/* Weekly trend chart */}
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="rounded-xl border border-border bg-card shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-5 pb-4">
             <div>
-              <h2 className="font-bold">Promedio Semanal</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h2 className="text-sm font-semibold text-foreground">
+                Promedio Semanal
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Promedio de puntaje por semana del año seleccionado.
               </p>
             </div>
 
-            {/* Filters */}
             <div className="flex flex-wrap gap-2">
-              {/* Year */}
               <select
                 value={filterYear}
                 onChange={(e) => setFilterYear(Number(e.target.value))}
-                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                className={SELECT_CLASS}
               >
                 {availableYears.map((y) => (
                   <option key={y} value={y}>
@@ -359,11 +368,10 @@ function ResultsPage() {
                 ))}
               </select>
 
-              {/* Area */}
               <select
                 value={filterAreaId}
                 onChange={(e) => setFilterAreaId(e.target.value)}
-                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                className={SELECT_CLASS}
               >
                 <option value="all">Todas las áreas</option>
                 {areas.map((a) => (
@@ -373,11 +381,10 @@ function ResultsPage() {
                 ))}
               </select>
 
-              {/* Participant */}
               <select
                 value={filterUserId}
                 onChange={(e) => setFilterUserId(e.target.value)}
-                className="rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                className={SELECT_CLASS}
               >
                 <option value="all">Todos los participantes</option>
                 {participants.map((p) => (
@@ -389,51 +396,67 @@ function ResultsPage() {
             </div>
           </div>
 
-          <div className="mt-6 h-64">
+          <div className="h-64 px-2 pb-4">
             {weeklyData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                Sin datos para los filtros seleccionados.
+              <div className="flex h-full flex-col items-center justify-center gap-2.5">
+                <div className="grid size-10 place-items-center rounded-xl bg-[var(--surface-2)]">
+                  <TrendingUp className="size-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Sin datos para los filtros seleccionados.
+                </p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={weeklyData}
-                  margin={{ top: 4, right: 16, left: 0, bottom: 0 }}
+                  margin={{ top: 8, right: 16, left: -8, bottom: 0 }}
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
+                    stroke="var(--border)"
+                    vertical={false}
                   />
                   <XAxis
                     dataKey="semana"
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    axisLine={{ stroke: "var(--border)" }}
+                    tickLine={false}
                   />
                   <YAxis
                     domain={[0, 100]}
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
-                    width={32}
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={36}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
+                      backgroundColor: "var(--card)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "10px",
                       fontSize: "12px",
+                      color: "var(--foreground)",
+                      boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
                     }}
+                    cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
                     formatter={(value: number, _name: string, entry: any) => [
-                      `${value}% (${entry.payload.count} sesiones)`,
+                      `${value} pts · ${entry.payload.count} ${entry.payload.count === 1 ? "sesión" : "sesiones"}`,
                       "Promedio",
                     ]}
                   />
                   <Line
                     type="monotone"
                     dataKey="promedio"
-                    stroke="hsl(var(--accent))"
-                    strokeWidth={2}
-                    dot={{ r: 4, fill: "hsl(var(--accent))" }}
-                    activeDot={{ r: 6 }}
+                    stroke="var(--accent)"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: "var(--accent)", strokeWidth: 0 }}
+                    activeDot={{
+                      r: 6,
+                      fill: "var(--accent)",
+                      stroke: "var(--card)",
+                      strokeWidth: 2,
+                    }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -442,58 +465,104 @@ function ResultsPage() {
         </div>
 
         {/* Distribution + Top performers */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-5 lg:grid-cols-3">
+          {/* Distribution */}
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
-            <h2 className="font-bold">Distribución de Puntajes</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              A lo largo de las últimas {stats.totalSessions} sesiones
-              completadas.
+            <h2 className="text-sm font-semibold text-foreground">
+              Distribución de Puntajes
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              A lo largo de las {stats.totalSessions}{" "}
+              {stats.totalSessions === 1 ? "sesión completada" : "sesiones completadas"}.
             </p>
-            <div className="mt-6 flex h-56 items-end gap-4">
-              {distribution.map((d) => (
-                <div
-                  key={d.range}
-                  className="flex flex-1 flex-col items-center gap-2"
-                >
-                  <div className="flex w-full flex-1 items-end">
+
+            {maxDist === 0 ? (
+              <div className="mt-6 flex h-36 items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  Sin sesiones completadas aún.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-6 flex items-end gap-3">
+                {distribution.map((d) => {
+                  const barH =
+                    maxDist > 0
+                      ? Math.max((d.count / maxDist) * MAX_BAR_H, d.count > 0 ? 6 : 0)
+                      : 0;
+                  return (
                     <div
-                      className="w-full rounded-t bg-accent/20 transition-all hover:bg-accent/40"
-                      style={{
-                        height: `${max > 0 ? (d.count / max) * 100 : 0}%`,
-                      }}
+                      key={d.range}
+                      className="flex flex-1 flex-col items-center gap-1.5"
                     >
-                      <div className="h-full w-full rounded-t border-t-2 border-accent" />
+                      <span
+                        className="font-mono text-xs font-bold text-accent transition-opacity"
+                        style={{ opacity: d.count > 0 ? 1 : 0 }}
+                      >
+                        {d.count}
+                      </span>
+                      <div
+                        className="w-full rounded-t bg-accent/15 border-t-2 border-accent transition-all duration-500 hover:bg-accent/30"
+                        style={{ height: `${barH}px` }}
+                      />
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {d.range}
+                      </span>
                     </div>
-                  </div>
-                  <div className="font-mono text-[10px] text-muted-foreground">
-                    {d.range}
-                  </div>
-                  <div className="font-mono text-xs font-bold">{d.count}</div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
+          {/* Top performers */}
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="font-bold">Mejores Participantes</h2>
-            <ul className="mt-4 space-y-3">
-              {topPerformers.map((p, i) => (
-                <li key={i} className="flex items-center gap-3">
-                  <div className="grid size-7 place-items-center rounded-full bg-secondary font-mono text-xs font-bold">
-                    {i === 0 ? "👑" : i + 1}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{p.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {p.eval}
+            <h2 className="text-sm font-semibold text-foreground">
+              Mejores Participantes
+            </h2>
+
+            {topPerformers.length === 0 ? (
+              <div className="mt-6 flex h-28 items-center justify-center">
+                <p className="text-sm text-muted-foreground">
+                  Sin datos disponibles.
+                </p>
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-border">
+                {topPerformers.map((p, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div
+                      className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold ${
+                        i === 0
+                          ? "bg-[var(--coral-soft)] text-[var(--coral-text)]"
+                          : "bg-[var(--surface-2)] text-muted-foreground"
+                      }`}
+                    >
+                      {i === 0 ? "👑" : i + 1}
                     </div>
-                  </div>
-                  <div className="font-mono text-sm font-bold text-accent">
-                    {p.score}%
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-foreground">
+                        {p.name}
+                      </div>
+                      <div className="truncate text-xs text-muted-foreground">
+                        {p.eval}
+                      </div>
+                    </div>
+                    <div
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
+                        i === 0
+                          ? "bg-[var(--coral-soft)] text-[var(--coral-text)]"
+                          : "bg-[var(--surface-2)] text-foreground"
+                      }`}
+                    >
+                      {p.score}%
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       </div>
