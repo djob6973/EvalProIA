@@ -20,6 +20,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as EvaluationsRouteImport } from './routes/evaluations'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ConfigRouteImport } from './routes/config'
 import { Route as AreasRouteImport } from './routes/areas'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as AccountRouteImport } from './routes/account'
@@ -27,6 +28,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as TakeCodeRouteImport } from './routes/take.$code'
 import { Route as MyResultsIdRouteImport } from './routes/my-results.$id'
 import { Route as EvaluationResultsIdRouteImport } from './routes/evaluation-results.$id'
+import { Route as ResultsParticipantUserIdRouteImport } from './routes/results.participant.$userId'
 import { Route as EvaluationsIdResultsRouteImport } from './routes/evaluations.$id.results'
 
 const UsersRoute = UsersRouteImport.update({
@@ -84,6 +86,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConfigRoute = ConfigRouteImport.update({
+  id: '/config',
+  path: '/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AreasRoute = AreasRouteImport.update({
   id: '/areas',
   path: '/areas',
@@ -119,6 +126,12 @@ const EvaluationResultsIdRoute = EvaluationResultsIdRouteImport.update({
   path: '/evaluation-results/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResultsParticipantUserIdRoute =
+  ResultsParticipantUserIdRouteImport.update({
+    id: '/participant/$userId',
+    path: '/participant/$userId',
+    getParentRoute: () => ResultsRoute,
+  } as any)
 const EvaluationsIdResultsRoute = EvaluationsIdResultsRouteImport.update({
   id: '/$id/results',
   path: '/$id/results',
@@ -130,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/activity': typeof ActivityRoute
   '/areas': typeof AreasRoute
+  '/config': typeof ConfigRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
@@ -137,7 +151,7 @@ export interface FileRoutesByFullPath {
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
   '/question-bank': typeof QuestionBankRoute
-  '/results': typeof ResultsRoute
+  '/results': typeof ResultsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
@@ -145,12 +159,14 @@ export interface FileRoutesByFullPath {
   '/my-results/$id': typeof MyResultsIdRoute
   '/take/$code': typeof TakeCodeRoute
   '/evaluations/$id/results': typeof EvaluationsIdResultsRoute
+  '/results/participant/$userId': typeof ResultsParticipantUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/activity': typeof ActivityRoute
   '/areas': typeof AreasRoute
+  '/config': typeof ConfigRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
@@ -158,7 +174,7 @@ export interface FileRoutesByTo {
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
   '/question-bank': typeof QuestionBankRoute
-  '/results': typeof ResultsRoute
+  '/results': typeof ResultsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
@@ -166,6 +182,7 @@ export interface FileRoutesByTo {
   '/my-results/$id': typeof MyResultsIdRoute
   '/take/$code': typeof TakeCodeRoute
   '/evaluations/$id/results': typeof EvaluationsIdResultsRoute
+  '/results/participant/$userId': typeof ResultsParticipantUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -173,6 +190,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/activity': typeof ActivityRoute
   '/areas': typeof AreasRoute
+  '/config': typeof ConfigRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
@@ -180,7 +198,7 @@ export interface FileRoutesById {
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
   '/question-bank': typeof QuestionBankRoute
-  '/results': typeof ResultsRoute
+  '/results': typeof ResultsRouteWithChildren
   '/settings': typeof SettingsRoute
   '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
@@ -188,6 +206,7 @@ export interface FileRoutesById {
   '/my-results/$id': typeof MyResultsIdRoute
   '/take/$code': typeof TakeCodeRoute
   '/evaluations/$id/results': typeof EvaluationsIdResultsRoute
+  '/results/participant/$userId': typeof ResultsParticipantUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -196,6 +215,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/activity'
     | '/areas'
+    | '/config'
     | '/dashboard'
     | '/evaluations'
     | '/generate'
@@ -211,12 +231,14 @@ export interface FileRouteTypes {
     | '/my-results/$id'
     | '/take/$code'
     | '/evaluations/$id/results'
+    | '/results/participant/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/account'
     | '/activity'
     | '/areas'
+    | '/config'
     | '/dashboard'
     | '/evaluations'
     | '/generate'
@@ -232,12 +254,14 @@ export interface FileRouteTypes {
     | '/my-results/$id'
     | '/take/$code'
     | '/evaluations/$id/results'
+    | '/results/participant/$userId'
   id:
     | '__root__'
     | '/'
     | '/account'
     | '/activity'
     | '/areas'
+    | '/config'
     | '/dashboard'
     | '/evaluations'
     | '/generate'
@@ -253,6 +277,7 @@ export interface FileRouteTypes {
     | '/my-results/$id'
     | '/take/$code'
     | '/evaluations/$id/results'
+    | '/results/participant/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -260,6 +285,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   ActivityRoute: typeof ActivityRoute
   AreasRoute: typeof AreasRoute
+  ConfigRoute: typeof ConfigRoute
   DashboardRoute: typeof DashboardRoute
   EvaluationsRoute: typeof EvaluationsRouteWithChildren
   GenerateRoute: typeof GenerateRoute
@@ -267,7 +293,7 @@ export interface RootRouteChildren {
   MyHistoryRoute: typeof MyHistoryRoute
   ParticipantRoute: typeof ParticipantRoute
   QuestionBankRoute: typeof QuestionBankRoute
-  ResultsRoute: typeof ResultsRoute
+  ResultsRoute: typeof ResultsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
   SetupRoute: typeof SetupRoute
   UsersRoute: typeof UsersRoute
@@ -355,6 +381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/config': {
+      id: '/config'
+      path: '/config'
+      fullPath: '/config'
+      preLoaderRoute: typeof ConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/areas': {
       id: '/areas'
       path: '/areas'
@@ -404,6 +437,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EvaluationResultsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/results/participant/$userId': {
+      id: '/results/participant/$userId'
+      path: '/participant/$userId'
+      fullPath: '/results/participant/$userId'
+      preLoaderRoute: typeof ResultsParticipantUserIdRouteImport
+      parentRoute: typeof ResultsRoute
+    }
     '/evaluations/$id/results': {
       id: '/evaluations/$id/results'
       path: '/$id/results'
@@ -426,11 +466,23 @@ const EvaluationsRouteWithChildren = EvaluationsRoute._addFileChildren(
   EvaluationsRouteChildren,
 )
 
+interface ResultsRouteChildren {
+  ResultsParticipantUserIdRoute: typeof ResultsParticipantUserIdRoute
+}
+
+const ResultsRouteChildren: ResultsRouteChildren = {
+  ResultsParticipantUserIdRoute: ResultsParticipantUserIdRoute,
+}
+
+const ResultsRouteWithChildren =
+  ResultsRoute._addFileChildren(ResultsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   ActivityRoute: ActivityRoute,
   AreasRoute: AreasRoute,
+  ConfigRoute: ConfigRoute,
   DashboardRoute: DashboardRoute,
   EvaluationsRoute: EvaluationsRouteWithChildren,
   GenerateRoute: GenerateRoute,
@@ -438,7 +490,7 @@ const rootRouteChildren: RootRouteChildren = {
   MyHistoryRoute: MyHistoryRoute,
   ParticipantRoute: ParticipantRoute,
   QuestionBankRoute: QuestionBankRoute,
-  ResultsRoute: ResultsRoute,
+  ResultsRoute: ResultsRouteWithChildren,
   SettingsRoute: SettingsRoute,
   SetupRoute: SetupRoute,
   UsersRoute: UsersRoute,
