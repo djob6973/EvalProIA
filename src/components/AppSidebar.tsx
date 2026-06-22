@@ -96,28 +96,24 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
   const logoSection = (
     <div className="shrink-0 border-b border-[var(--sidebar-border)] px-6 py-6 pb-5">
       <Link to="/dashboard" className="flex items-center gap-3">
-        <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white"
-          style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
-        >
-          <Brain className="size-[18px]" strokeWidth={1.5} />
-        </div>
-        <div className="flex min-w-0 flex-col leading-none">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
-              EvalPro
-            </span>
-            {settings.brand_logo && (
-              <>
-                <span className="text-[var(--border-strong)]">|</span>
-                <img
-                  src={settings.brand_logo}
-                  alt="Logo organización"
-                  className="h-5 max-w-[90px] object-contain"
-                />
-              </>
-            )}
+        {settings.brand_logo ? (
+          <img
+            src={settings.brand_logo}
+            alt="Logo organización"
+            className="h-11 max-w-[88px] shrink-0 object-contain"
+          />
+        ) : (
+          <div
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white"
+            style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+          >
+            <Brain className="size-[18px]" strokeWidth={1.5} />
           </div>
+        )}
+        <div className="flex min-w-0 flex-col leading-none">
+          <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
+            EvalPro
+          </span>
           <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
             Sistema de Evaluación
           </span>
@@ -189,28 +185,24 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
           {/* Header móvil con logo y botón de cierre */}
           <div className="shrink-0 flex items-center justify-between border-b border-[var(--sidebar-border)] px-5 py-5">
             <div className="flex items-center gap-3">
-              <div
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white"
-                style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
-              >
-                <Brain className="size-[18px]" strokeWidth={1.5} />
-              </div>
-              <div className="flex min-w-0 flex-col leading-none">
-                <div className="flex items-center gap-2">
-                  <span className="font-display text-[17px] font-semibold tracking-tight text-[var(--foreground)]">
-                    EvalPro
-                  </span>
-                  {settings.brand_logo && (
-                    <>
-                      <span className="text-[var(--border-strong)]">|</span>
-                      <img
-                        src={settings.brand_logo}
-                        alt="Logo organización"
-                        className="h-5 max-w-[80px] object-contain"
-                      />
-                    </>
-                  )}
+              {settings.brand_logo ? (
+                <img
+                  src={settings.brand_logo}
+                  alt="Logo organización"
+                  className="h-11 max-w-[88px] shrink-0 object-contain"
+                />
+              ) : (
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white"
+                  style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+                >
+                  <Brain className="size-[18px]" strokeWidth={1.5} />
                 </div>
+              )}
+              <div className="flex min-w-0 flex-col leading-none">
+                <span className="font-display text-[17px] font-semibold tracking-tight text-[var(--foreground)]">
+                  EvalPro
+                </span>
                 <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
                   Menú
                 </span>
