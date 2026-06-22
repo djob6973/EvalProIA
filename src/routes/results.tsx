@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +66,12 @@ function formatRelativeDate(dateStr: string): string {
 }
 
 function ResultsPage() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/results/participant/")) return <Outlet />;
+  return <ResultsPageContent />;
+}
+
+function ResultsPageContent() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === "admin" || profile?.role === "both";
   const navigate = useNavigate();
