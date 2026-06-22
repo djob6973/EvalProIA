@@ -308,13 +308,12 @@ function ResultsPageContent() {
   function exportParticipantsCsv() {
     const headers = [
       "Participante", "Email", "Área", "Evaluaciones", "Sesiones",
-      "Promedio", "Mejor Puntaje", "% Aprobado", "Última Actividad",
+      "Promedio", "Mejor Puntaje", "Última Actividad",
     ];
     const rows = filteredParticipants.map((p) => [
       p.name, p.email, p.areaName ?? "",
       String(p.evalCount), String(p.sessionCount),
       `${p.avgScore}%`, `${p.bestScore}%`,
-      `${p.passRate}%`,
       new Date(p.lastActivity).toLocaleDateString("es-ES"),
     ]);
     const today = new Date().toISOString().slice(0, 10);
@@ -715,9 +714,7 @@ function ResultsPageContent() {
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden lg:table-cell">
                           Mejor
                         </th>
-                        <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden lg:table-cell">
-                          % Aprobado
-                        </th>
+
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden xl:table-cell">
                           Última act.
                         </th>
@@ -769,17 +766,7 @@ function ResultsPageContent() {
                             <td className="px-4 py-3.5 text-center font-mono text-sm text-foreground hidden lg:table-cell">
                               {p.bestScore}%
                             </td>
-                            <td className="px-4 py-3.5 text-center hidden lg:table-cell">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <div className="h-1.5 w-16 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${p.passRate >= 60 ? "bg-accent" : "bg-[var(--border-strong)]"}`}
-                                    style={{ width: `${p.passRate}%` }}
-                                  />
-                                </div>
-                                <span className="font-mono text-xs text-muted-foreground">{p.passRate}%</span>
-                              </div>
-                            </td>
+
                             <td className="px-4 py-3.5 text-center text-xs text-muted-foreground hidden xl:table-cell">
                               {formatRelativeDate(p.lastActivity)}
                             </td>
