@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, memo, useRef, useCallback } from "react";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ function getISOWeek(date: Date): number {
 }
 
 // ── EvalPro logo SVG (inline para canvas) ───────────────────────────────────
-const EVALPRO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#1e293b"/><g transform="translate(12,12) scale(1.667)" fill="none" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></g></svg>`;
+const EVALPRO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ED5650" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>`;
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -123,7 +124,7 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   return lines.slice(0, maxLines);
 }
 
-async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null) {
+async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null, brandLogo?: string | null) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -163,30 +164,42 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   ctx.fillRect(0, 5, W, 15);
 
   // ── Header (y: 5–70) ──────────────────────────────────
+  const LOGO_H = 38;
+  let textX = PAD; // where "EvalPro" text starts
+
+  if (brandLogo) {
+    // Org logo on the left, scale to fit LOGO_H tall, max 90px wide
+    try {
+      const img = await loadImage(brandLogo);
+      const maxW = 90;
+      const scale = Math.min(maxW / img.width, LOGO_H / img.height);
+      const dW = img.width * scale;
+      const dH = img.height * scale;
+      ctx.drawImage(img, PAD, 14 + (LOGO_H - dH) / 2, dW, dH);
+      textX = PAD + dW + 12;
+    } catch {
+      textX = PAD;
+    }
+  }
+
+  // Brain icon (always shown, right of org logo or at PAD if no org logo)
   try {
     const blob = new Blob([EVALPRO_LOGO_SVG], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const logo = await loadImage(url);
-    ctx.drawImage(logo, PAD, 14, 38, 38);
+    ctx.drawImage(logo, textX, 14, LOGO_H, LOGO_H);
     URL.revokeObjectURL(url);
-  } catch {
-    ctx.fillStyle = "#1e293b";
-    ctx.beginPath();
-    ctx.roundRect(PAD, 14, 38, 38, 8);
-    ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 13px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText("EP", PAD + 19, 37);
-    ctx.textAlign = "left";
-  }
+  } catch { /* skip */ }
 
+  const brainRight = textX + LOGO_H + 10;
+
+  // "EvalPro" text to the right of Brain
   ctx.font = "bold 19px 'Space Grotesk', system-ui, sans-serif";
   ctx.fillStyle = "#0f172a";
-  ctx.fillText("Eval", PAD + 48, 38);
+  ctx.fillText("Eval", brainRight, 38);
   const evalW = ctx.measureText("Eval").width;
   ctx.fillStyle = ACCENT;
-  ctx.fillText("Pro", PAD + 48 + evalW, 38);
+  ctx.fillText("Pro", brainRight + evalW, 38);
 
   // Status badge
   ctx.font = "bold 10px system-ui";
@@ -594,12 +607,13 @@ type ShareModalProps = {
 function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
+  const { settings } = useSystemSettings();
 
   useEffect(() => {
     setReady(false);
     if (!canvasRef.current) return;
-    drawShareCard(canvasRef.current, ev, areaName).then(() => setReady(true));
-  }, [ev, areaName]);
+    drawShareCard(canvasRef.current, ev, areaName, settings.brand_logo).then(() => setReady(true));
+  }, [ev, areaName, settings.brand_logo]);
 
   function handleDownload() {
     const canvas = canvasRef.current;
