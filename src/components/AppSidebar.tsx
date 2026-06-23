@@ -171,7 +171,10 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 hidden h-screen w-[260px] flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar)] md:flex">
+      <aside
+        className="fixed left-4 top-4 hidden w-[260px] flex-col bg-[var(--sidebar)] md:flex"
+        style={{ height: 'calc(100vh - 32px)', borderRadius: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' }}
+      >
         {logoSection}
         {navSection}
         {footerSection}

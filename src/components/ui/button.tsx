@@ -5,23 +5,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-bold cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default: "rounded-full bg-accent text-accent-foreground hover:bg-accent/90",
-        destructive: "rounded-md bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        destructive: "rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
         outline:
           "rounded-full border border-[var(--border-strong)] bg-[var(--surface)] text-foreground hover:bg-[var(--surface-2)]",
-        secondary: "rounded-md bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
-        ghost: "rounded-md hover:bg-[var(--surface-2)] hover:text-foreground",
-        link: "rounded-md text-primary underline-offset-4 hover:underline",
+        secondary: "rounded-full bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+        ghost: "rounded-full hover:bg-[var(--surface-2)] hover:text-foreground",
+        link: "rounded-full text-primary underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-[18px] py-[10px]",
-        sm: "h-8 rounded-md px-3 text-xs",
+        sm: "h-8 rounded-full px-3 text-xs",
         lg: "h-10 px-8",
-        icon: "h-9 w-9 rounded-md",
+        icon: "h-9 w-9 rounded-full",
       },
     },
     defaultVariants: {
