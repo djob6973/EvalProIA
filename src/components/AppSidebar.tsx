@@ -111,7 +111,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
           </div>
         )}
         <div className="flex min-w-0 flex-col leading-none">
-          <span className="font-display text-[18px] font-semibold tracking-tight text-[var(--foreground)]">
+          <span className="font-display text-[18px] font-medium tracking-tight text-[var(--foreground)]">
             EvalPro
           </span>
           <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
@@ -203,7 +203,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen }: AppSidebarProps) {
                 </div>
               )}
               <div className="flex min-w-0 flex-col leading-none">
-                <span className="font-display text-[17px] font-semibold tracking-tight text-[var(--foreground)]">
+                <span className="font-display text-[17px] font-medium tracking-tight text-[var(--foreground)]">
                   EvalPro
                 </span>
                 <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">

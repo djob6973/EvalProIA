@@ -292,6 +292,11 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
   }
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
   .font-mono { font-family: var(--font-mono); }
   .font-display { font-family: var(--font-display); }
 }
