@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { AppShell } from "@/components/AppShell";
+import { AppShell, useLayout } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Bell, Menu, Search, Sparkles, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { statsService } from "@/lib/services/stats";
@@ -28,6 +28,95 @@ function StatusPill({ children }: { children: React.ReactNode }) {
   );
 }
 
+function DashboardHeader() {
+  const { setMobileOpen } = useLayout();
+  const { profile } = useAuth();
+
+  const userInitials = profile?.full_name
+    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';
+
+  return (
+    <div className="mb-8 flex items-center justify-between gap-4">
+      {/* Left: mobile menu button + title + subtitle */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] border border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] transition hover:bg-[var(--sidebar-accent)] md:hidden"
+          aria-label="Abrir menú"
+        >
+          <Menu className="size-[18px]" strokeWidth={1.5} />
+        </button>
+        <div>
+          <h1
+            className="font-display text-[30px] font-medium leading-none tracking-tight"
+            style={{ color: "var(--foreground)" }}
+          >
+            Panel
+          </h1>
+          <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
+            Lo que necesitas atender hoy.
+          </p>
+        </div>
+      </div>
+
+      {/* Right: search + bell + avatar + button */}
+      <div className="flex items-center gap-2.5 shrink-0">
+        {/* Search */}
+        <div className="relative hidden md:flex items-center">
+          <Search
+            className="pointer-events-none absolute left-3 size-[15px]"
+            strokeWidth={1.5}
+            style={{ color: "var(--muted-foreground)" }}
+          />
+          <input
+            type="search"
+            placeholder="Buscar…"
+            className="h-9 rounded-[10px] border pl-9 pr-4 text-[13px] outline-none transition-colors"
+            style={{
+              width: "180px",
+              background: "var(--surface)",
+              borderColor: "var(--border)",
+              color: "var(--foreground)",
+            }}
+          />
+        </div>
+
+        {/* Bell with badge */}
+        <button
+          className="relative grid h-9 w-9 place-items-center rounded-[12px] border transition-colors hover:bg-[var(--sidebar-accent)]"
+          style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted-foreground)" }}
+          title="Notificaciones"
+        >
+          <Bell className="size-[18px]" strokeWidth={1.5} />
+          <span
+            className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full font-mono text-[9px] font-bold text-white"
+            style={{ background: "var(--accent)" }}
+          >
+            3
+          </span>
+        </button>
+
+        {/* User avatar */}
+        <div
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold"
+          style={{ background: "var(--sidebar-primary)", color: "var(--sidebar-primary-foreground)" }}
+          title={profile?.full_name || profile?.email || ""}
+        >
+          {userInitials}
+        </div>
+
+        {/* Nueva Evaluación */}
+        <Button asChild className="hidden sm:flex">
+          <Link to="/generate">
+            <Sparkles className="size-[15px]" /> Nueva Evaluación
+          </Link>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
@@ -36,14 +125,12 @@ function Dashboard() {
   const [stats, setStats] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirigir a participantes a /participant
   useEffect(() => {
     if (profile && !isAdmin) {
       navigate({ to: "/participant" });
     }
   }, [profile, isAdmin, navigate]);
 
-  // Cargar datos del dashboard
   useEffect(() => {
     async function loadStats() {
       if (!isAdmin) return;
@@ -84,7 +171,7 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <AppShell breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}>
+      <AppShell breadcrumb={[{ label: "Panel" }]} showHeader={false}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
@@ -102,7 +189,7 @@ function Dashboard() {
 
   if (error) {
     return (
-      <AppShell breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}>
+      <AppShell breadcrumb={[{ label: "Panel" }]} showHeader={false}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
@@ -114,17 +201,11 @@ function Dashboard() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Sistema" }, { label: "Resumen del Panel" }]}
-      actions={
-        <Button asChild>
-          <Link to="/generate">
-            <Sparkles className="size-4" /> Nueva Evaluación
-          </Link>
-        </Button>
-      }
-    >
+    <AppShell breadcrumb={[{ label: "Panel" }]} showHeader={false}>
       <div className="flex flex-col gap-[28px]">
+        {/* Page header */}
+        <DashboardHeader />
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 gap-[16px] lg:grid-cols-4">
           {kpis.map((k) => (
