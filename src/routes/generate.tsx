@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
@@ -307,14 +308,16 @@ function GeneratePage() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Herramientas" }, { label: "Generador IA" }]}
-      actions={
-        <Button asChild variant="ghost">
-          <Link to="/question-bank">Ver Banco de Preguntas</Link>
-        </Button>
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title="Generador IA"
+        subtitle="Extrae preguntas de tus documentos con inteligencia artificial"
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/question-bank">Ver Banco de Preguntas</Link>
+          </Button>
+        }
+      />
       <div className="space-y-8">
         <div className="grid gap-6 lg:grid-cols-3">
           {/* LEFT: Upload + Extraction + Config */}

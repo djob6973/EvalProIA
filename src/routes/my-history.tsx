@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useMemo } from "react";
@@ -251,7 +252,8 @@ function HistoryPage() {
 
   if (loading) {
     return (
-      <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mi Historial" }]}>
+      <AppShell>
+        <PageHeader title="Mi Historial" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
@@ -267,7 +269,8 @@ function HistoryPage() {
 
   if (error) {
     return (
-      <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mi Historial" }]}>
+      <AppShell>
+        <PageHeader title="Mi Historial" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
@@ -279,7 +282,8 @@ function HistoryPage() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mi Historial" }]}>
+    <AppShell>
+      <PageHeader title="Mi Historial" subtitle="Tu rendimiento y evaluaciones completadas" />
       <div className="flex flex-col gap-[28px]">
         {/* KPIs */}
         <div className="grid gap-[16px] sm:grid-cols-3">

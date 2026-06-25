@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
@@ -402,9 +403,8 @@ function QuestionBankPage() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Gestión" }, { label: "Banco de Preguntas" }]}
-      >
+      <AppShell>
+        <PageHeader title="Banco de Preguntas" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -417,9 +417,8 @@ function QuestionBankPage() {
 
   if (error) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Gestión" }, { label: "Banco de Preguntas" }]}
-      >
+      <AppShell>
+        <PageHeader title="Banco de Preguntas" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -431,14 +430,11 @@ function QuestionBankPage() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Gestión" }, { label: "Banco de Preguntas" }]}
-      actions={
-        <Button onClick={openCreate}>
-          <Plus className="size-4" /> Nueva Pregunta
-        </Button>
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title="Banco de Preguntas"
+        actions={<Button onClick={openCreate}><Plus className="size-4" /> Nueva Pregunta</Button>}
+      />
       {toast && (
         <div
           className={`fixed right-6 top-20 z-50 flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium shadow-lg ${

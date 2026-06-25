@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +60,8 @@ function AccountPage() {
   const roleLabel = profile?.role === 'both' ? 'Admin + Participante' : profile?.role === 'admin' ? 'Administrador' : 'Participante';
 
   return (
-    <AppShell breadcrumb={[{ label: "Cuenta" }, { label: "Mi Cuenta" }]}>
+    <AppShell>
+      <PageHeader title="Mi Cuenta" />
       <div className="mx-auto max-w-[480px] flex flex-col gap-[20px]">
         {/* Profile card */}
         <div

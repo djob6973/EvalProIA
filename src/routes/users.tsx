@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -269,16 +270,11 @@ function UsersPage() {
     }
   };
   return (
-    <AppShell
-      breadcrumb={[{ label: "Gestión" }, { label: "Directorio de Usuarios" }]}
-      actions={
-        isAdmin && (
-          <Button onClick={() => setShowInviteModal(true)}>
-            <Plus className="size-4" /> Invitar Usuario
-          </Button>
-        )
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title="Usuarios"
+        actions={isAdmin ? <Button onClick={() => setShowInviteModal(true)}><Plus className="size-4" /> Invitar Usuario</Button> : undefined}
+      />
       <div className="space-y-6">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

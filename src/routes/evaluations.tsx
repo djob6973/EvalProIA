@@ -3,6 +3,7 @@ import { useMemo, useState, useEffect, memo, useRef, useCallback } from "react";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
@@ -1331,9 +1332,8 @@ function EvaluationsPage() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }]}
-      >
+      <AppShell>
+        <PageHeader title="Evaluaciones" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -1346,9 +1346,8 @@ function EvaluationsPage() {
 
   if (error) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }]}
-      >
+      <AppShell>
+        <PageHeader title="Evaluaciones" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -1360,14 +1359,11 @@ function EvaluationsPage() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }]}
-      actions={
-        <Button onClick={openCreate}>
-          <Plus className="size-4" /> Nueva Evaluación
-        </Button>
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title="Evaluaciones"
+        actions={<Button onClick={openCreate}><Plus className="size-4" /> Nueva Evaluación</Button>}
+      />
       {toast && (
         <div
           className="fixed right-6 top-20 z-50 flex items-center gap-2 px-4 py-3 text-[13px] font-medium shadow-lg"

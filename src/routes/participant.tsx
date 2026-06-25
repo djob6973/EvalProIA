@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Clock, FileQuestion, Lock, Calendar, CalendarX, CheckCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -107,7 +108,8 @@ function ParticipantHome() {
 
   if (loading || loadingData) {
     return (
-      <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mis Evaluaciones" }]}>
+      <AppShell>
+        <PageHeader title="Mis Evaluaciones" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
@@ -123,7 +125,8 @@ function ParticipantHome() {
 
   if (error) {
     return (
-      <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mis Evaluaciones" }]}>
+      <AppShell>
+        <PageHeader title="Mis Evaluaciones" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
@@ -135,7 +138,8 @@ function ParticipantHome() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "Participante" }, { label: "Mis Evaluaciones" }]}>
+    <AppShell>
+      <PageHeader title="Mis Evaluaciones" />
       <div className="flex flex-col gap-[28px]">
         {/* Welcome banner */}
         <div

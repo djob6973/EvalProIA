@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
@@ -74,9 +75,8 @@ function MyResultPage() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Participante" }, { label: "Mis Resultados" }]}
-      >
+      <AppShell>
+        <PageHeader title="Mis Resultados" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -89,9 +89,8 @@ function MyResultPage() {
 
   if (error) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Participante" }, { label: "Mis Resultados" }]}
-      >
+      <AppShell>
+        <PageHeader title="Mis Resultados" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -150,25 +149,26 @@ function MyResultPage() {
   const puedeReintentar = intentosPermitidos > 1 && attemptCount < intentosPermitidos && evaluation?.activa !== false && !evaluacionVencida;
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Participante" }, { label: "Mis Resultados" }]}
-      actions={
-        <div className="flex items-center gap-2">
-          {puedeReintentar && (
-            <Button asChild>
-              <Link to="/take/$code" params={{ code: evaluation!.id }}>
-                <RefreshCw className="size-4" /> Reintentar ({attemptCount}/{intentosPermitidos})
+    <AppShell>
+      <PageHeader
+        title="Mis Resultados"
+        actions={
+          <div className="flex items-center gap-2">
+            {puedeReintentar && (
+              <Button asChild>
+                <Link to="/take/$code" params={{ code: evaluation!.id }}>
+                  <RefreshCw className="size-4" /> Reintentar ({attemptCount}/{intentosPermitidos})
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="outline">
+              <Link to="/participant">
+                <ArrowLeft className="size-4" /> Volver
               </Link>
             </Button>
-          )}
-          <Button asChild variant="outline">
-            <Link to="/participant">
-              <ArrowLeft className="size-4" /> Volver a Mis Evaluaciones
-            </Link>
-          </Button>
-        </div>
-      }
-    >
+          </div>
+        }
+      />
       <div className="space-y-6">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h1 className="text-2xl font-bold">{evaluation?.title || 'Evaluación'}</h1>

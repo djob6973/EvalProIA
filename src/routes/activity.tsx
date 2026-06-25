@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { statsService } from "@/lib/services/stats";
@@ -51,9 +52,8 @@ function Activity() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Sistema" }, { label: "Registro de Actividad" }]}
-      >
+      <AppShell>
+        <PageHeader title="Actividad" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -66,9 +66,8 @@ function Activity() {
 
   if (error) {
     return (
-      <AppShell
-        breadcrumb={[{ label: "Sistema" }, { label: "Registro de Actividad" }]}
-      >
+      <AppShell>
+        <PageHeader title="Actividad" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -82,9 +81,8 @@ function Activity() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Sistema" }, { label: "Registro de Actividad" }]}
-    >
+    <AppShell>
+      <PageHeader title="Actividad" subtitle="Historial de todas las acciones del sistema" />
       <div className="space-y-6">
         <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border p-6">

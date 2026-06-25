@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettings, invalidateSystemSettings } from "@/hooks/useSystemSettings";
@@ -103,7 +104,8 @@ function ConfigPage() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "Herramientas" }, { label: "Configuración" }]}>
+    <AppShell>
+      <PageHeader title="Configuración" subtitle="Identidad visual y ajustes de la plataforma" />
       <div className="max-w-2xl space-y-6">
         {/* ── Identidad visual ─────────────────────────────────────────────── */}
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]">

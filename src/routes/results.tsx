@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useMemo, useState } from "react";
@@ -333,7 +334,8 @@ function ResultsPageContent() {
 
   if (loading) {
     return (
-      <AppShell breadcrumb={[{ label: "Herramientas" }, { label: "Resultados Globales" }]}>
+      <AppShell>
+        <PageHeader title="Resultados Globales" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -346,7 +348,8 @@ function ResultsPageContent() {
 
   if (error) {
     return (
-      <AppShell breadcrumb={[{ label: "Herramientas" }, { label: "Resultados Globales" }]}>
+      <AppShell>
+        <PageHeader title="Resultados Globales" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -360,30 +363,21 @@ function ResultsPageContent() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Herramientas" }, { label: "Resultados Globales" }]}
-      actions={
-        activeTab === "metrics" ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportResultsCsv}
-            disabled={allResults.length === 0}
-          >
-            <Download className="size-4" /> Exportar CSV
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportParticipantsCsv}
-            disabled={filteredParticipants.length === 0}
-          >
-            <Download className="size-4" /> Exportar CSV
-          </Button>
-        )
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title="Resultados Globales"
+        actions={
+          activeTab === "metrics" ? (
+            <Button variant="outline" size="sm" onClick={exportResultsCsv} disabled={allResults.length === 0}>
+              <Download className="size-4" /> Exportar CSV
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" onClick={exportParticipantsCsv} disabled={filteredParticipants.length === 0}>
+              <Download className="size-4" /> Exportar CSV
+            </Button>
+          )
+        }
+      />
       <div className="space-y-5">
         {/* Tab bar */}
         <div className="flex gap-1 rounded-xl border border-border bg-card p-1 shadow-sm w-fit">

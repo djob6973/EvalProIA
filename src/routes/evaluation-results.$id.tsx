@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useMemo } from "react";
@@ -238,7 +239,8 @@ function EvaluationResultsPage() {
 
   if (loading) {
     return (
-      <AppShell breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }, { label: "Resultados" }]}>
+      <AppShell>
+        <PageHeader title="Resultados" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -251,7 +253,8 @@ function EvaluationResultsPage() {
 
   if (error) {
     return (
-      <AppShell breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }, { label: "Resultados" }]}>
+      <AppShell>
+        <PageHeader title="Resultados" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -263,21 +266,22 @@ function EvaluationResultsPage() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Gestión" }, { label: "Evaluaciones" }, { label: "Resultados" }]}
-      actions={
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportResultsCsv} disabled={results.length === 0}>
-            <Download className="size-4" /> Exportar CSV
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/evaluations">
-              <ArrowLeft className="size-4" /> Volver a Evaluaciones
-            </Link>
-          </Button>
-        </div>
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title={evaluation?.title || "Resultados"}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={exportResultsCsv} disabled={results.length === 0}>
+              <Download className="size-4" /> Exportar CSV
+            </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link to="/evaluations">
+                <ArrowLeft className="size-4" /> Volver
+              </Link>
+            </Button>
+          </div>
+        }
+      />
       <div className="space-y-6">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h1 className="text-2xl font-bold">{evaluation?.title || "Evaluación"}</h1>

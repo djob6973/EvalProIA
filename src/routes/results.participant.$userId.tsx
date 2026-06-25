@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useMemo, useState } from "react";
@@ -318,13 +319,8 @@ function ParticipantDetailPage() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[
-          { label: "Herramientas" },
-          { label: "Resultados Globales", href: "/results" },
-          { label: "Detalle Participante" },
-        ]}
-      >
+      <AppShell>
+        <PageHeader title="Detalle Participante" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
@@ -337,13 +333,8 @@ function ParticipantDetailPage() {
 
   if (error) {
     return (
-      <AppShell
-        breadcrumb={[
-          { label: "Herramientas" },
-          { label: "Resultados Globales", href: "/results" },
-          { label: "Detalle Participante" },
-        ]}
-      >
+      <AppShell>
+        <PageHeader title="Detalle Participante" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
@@ -359,20 +350,17 @@ function ParticipantDetailPage() {
   }
 
   return (
-    <AppShell
-      breadcrumb={[
-        { label: "Herramientas" },
-        { label: "Resultados Globales", href: "/results" },
-        { label: participantName },
-      ]}
-      actions={
-        <Button asChild variant="outline" size="sm">
-          <Link to="/results">
-            <ArrowLeft className="size-4" /> Volver
-          </Link>
-        </Button>
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title={participantName}
+        actions={
+          <Button asChild variant="outline" size="sm">
+            <Link to="/results">
+              <ArrowLeft className="size-4" /> Volver
+            </Link>
+          </Button>
+        }
+      />
       <div className="space-y-5">
         {/* Participant header */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">

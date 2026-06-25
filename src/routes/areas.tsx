@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -137,16 +138,11 @@ function AreasPage() {
   };
 
   return (
-    <AppShell
-      breadcrumb={[{ label: "Gestión" }, { label: "Áreas" }]}
-      actions={
-        isAdmin && (
-          <Button onClick={openCreate}>
-            <Plus className="size-4" /> Nueva Área
-          </Button>
-        )
-      }
-    >
+    <AppShell>
+      <PageHeader
+        title="Áreas"
+        actions={isAdmin ? <Button onClick={openCreate}><Plus className="size-4" /> Nueva Área</Button> : undefined}
+      />
       {toast && (
         <div
           className={`fixed right-6 top-20 z-50 flex items-center gap-2 rounded-md px-4 py-3 text-sm font-medium shadow-lg ${

@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useParams, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef } from "react";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ArrowLeft, ArrowRight, Clock, FileText, Play, Tag, CheckCircle, RefreshCw } from "lucide-react";
@@ -263,12 +264,8 @@ function TakeEvaluationRoute() {
 
   if (loading) {
     return (
-      <AppShell
-        breadcrumb={[
-          { label: "Participante" },
-          { label: "Tomar Evaluación" },
-        ]}
-      >
+      <AppShell>
+        <PageHeader title="Tomar Evaluación" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
@@ -284,12 +281,8 @@ function TakeEvaluationRoute() {
 
   if (error || !evaluation) {
     return (
-      <AppShell
-        breadcrumb={[
-          { label: "Participante" },
-          { label: "Tomar Evaluación" },
-        ]}
-      >
+      <AppShell>
+        <PageHeader title="Tomar Evaluación" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error || 'Evaluación no encontrada'}</p>
@@ -310,20 +303,17 @@ function TakeEvaluationRoute() {
     const pesoPorPregunta = numPreguntas > 0 ? (100 / numPreguntas).toFixed(2) : "0.00";
 
     return (
-      <AppShell
-        breadcrumb={[
-          { label: "Participante" },
-          { label: "Tomar Evaluación" },
-          { label: evaluation.title },
-        ]}
-        actions={
-          <Button variant="outline" asChild>
-            <Link to="/participant">
-              <ArrowLeft className="size-4" /> Volver
-            </Link>
-          </Button>
-        }
-      >
+      <AppShell>
+        <PageHeader
+          title={evaluation.title}
+          actions={
+            <Button variant="outline" asChild>
+              <Link to="/participant">
+                <ArrowLeft className="size-4" /> Volver
+              </Link>
+            </Button>
+          }
+        />
         <div className="mx-auto max-w-[640px]">
           <div
             className="overflow-hidden rounded-[20px]"
@@ -601,37 +591,34 @@ function QuizRunner({
   };
 
   return (
-    <AppShell
-      breadcrumb={[
-        { label: "Participante" },
-        { label: code },
-        { label: `Pregunta ${i + 1}` },
-      ]}
-      actions={
-        <div className="flex items-center gap-[10px]">
-          {tiempoLimite && tiempoLimite > 0 && (
+    <AppShell>
+      <PageHeader
+        title={`Pregunta ${i + 1} de ${questions.length}`}
+        actions={
+          <div className="flex items-center gap-[10px]">
+            {tiempoLimite && tiempoLimite > 0 && (
+              <div
+                className="flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] font-mono text-[12px] font-bold"
+                style={
+                  isTimeWarning
+                    ? { borderColor: "var(--destructive)", background: "var(--coral-soft)", color: "var(--coral-text)" }
+                    : { borderColor: "var(--border)", background: "var(--surface)", color: "var(--foreground)" }
+                }
+              >
+                <Clock className="size-3.5" />
+                {formatTime(timeRemaining)}
+              </div>
+            )}
             <div
-              className="flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] font-mono text-[12px] font-bold"
-              style={
-                isTimeWarning
-                  ? { borderColor: "var(--destructive)", background: "var(--coral-soft)", color: "var(--coral-text)" }
-                  : { borderColor: "var(--border)", background: "var(--surface)", color: "var(--foreground)" }
-              }
+              className="flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] font-mono text-[12px]"
+              style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted-foreground)" }}
             >
-              <Clock className="size-3.5" />
-              {formatTime(timeRemaining)}
+              <FileText className="size-3.5" />
+              {nombre}
             </div>
-          )}
-          <div
-            className="flex items-center gap-[6px] rounded-full border px-[12px] py-[6px] font-mono text-[12px]"
-            style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted-foreground)" }}
-          >
-            <FileText className="size-3.5" />
-            {nombre}
           </div>
-        </div>
-      }
-    >
+        }
+      />
       <div className="mx-auto max-w-[640px] flex flex-col gap-[20px]">
         {/* Progress bar */}
         <div>

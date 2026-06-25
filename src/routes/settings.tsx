@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -274,7 +275,8 @@ function SettingsPage() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "Herramientas" }, { label: "Configuración de Prompts" }]}>
+    <AppShell>
+      <PageHeader title="Prompts IA" subtitle="Configura el comportamiento del generador de preguntas" />
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Prompt editor ─────────────────────────────────────────────── */}
         <div className="space-y-6 lg:col-span-2">
