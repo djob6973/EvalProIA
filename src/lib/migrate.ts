@@ -154,14 +154,27 @@ export async function runMigrations(): Promise<void> {
     )
   `;
 
-  // Seed default permissions once
-  const [{ count: permCount }] = await db`SELECT COUNT(*) AS count FROM role_permissions` as any[];
+  // Always ensure super_admin has full access to every module (idempotent upsert)
+  {
+    const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','participant','my_history'];
+    const caps    = ['create_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
+    for (const m of allMods) {
+      await db`INSERT INTO role_permissions (role, module, level) VALUES ('super_admin', ${m}, 'full')
+               ON CONFLICT (role, module) DO UPDATE SET level = 'full'`;
+    }
+    for (const c of caps) {
+      await db`INSERT INTO role_capabilities (role, capability, enabled) VALUES ('super_admin', ${c}, true)
+               ON CONFLICT (role, capability) DO UPDATE SET enabled = true`;
+    }
+  }
+
+  // Seed default permissions for remaining roles once
+  const [{ count: permCount }] = await db`SELECT COUNT(*) AS count FROM role_permissions WHERE role != 'super_admin'` as any[];
   if (parseInt(permCount) === 0) {
     const adminMods   = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config'];
     const partMods    = ['participant','my_history'];
     const allMods     = [...adminMods, ...partMods];
     const permSeeds: Array<{ role: string; module: string; level: string }> = [
-      ...allMods.map(m => ({ role: 'super_admin',  module: m, level: 'full'   })),
       ...adminMods.map(m => ({ role: 'admin',       module: m, level: 'editar' })),
       ...partMods.map(m  => ({ role: 'admin',       module: m, level: 'ver'    })),
       ...['dashboard','evaluations','results'].map(m => ({ role: 'supervisor', module: m, level: 'editar' })),
@@ -178,7 +191,6 @@ export async function runMigrations(): Promise<void> {
 
     const caps = ['create_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
     const capSeeds: Array<{ role: string; capability: string; enabled: boolean }> = [
-      ...caps.map(c => ({ role: 'super_admin', capability: c, enabled: true  })),
       ...caps.map(c => ({ role: 'admin',       capability: c, enabled: true  })),
       ...caps.map(c => ({ role: 'supervisor',  capability: c, enabled: c === 'export_results' })),
       ...caps.map(c => ({ role: 'leader',      capability: c, enabled: false })),
