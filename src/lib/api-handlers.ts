@@ -24,7 +24,7 @@ async function requireAuth(request: Request): Promise<AuthUser | Response> {
 async function requireAdmin(request: Request): Promise<AuthUser | Response> {
   const user = await requireAuth(request);
   if (user instanceof Response) return user;
-  if (user.role !== "admin" && user.role !== "both")
+  if (user.role === "participant")
     return json({ error: "Se requieren permisos de administrador" }, 403);
   return user;
 }

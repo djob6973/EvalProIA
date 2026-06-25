@@ -21,13 +21,31 @@ export async function runMigrations(): Promise<void> {
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email         TEXT UNIQUE NOT NULL,
       full_name     TEXT,
-      role          TEXT NOT NULL DEFAULT 'participant'
-                    CHECK (role IN ('admin', 'participant', 'both')),
+      role          TEXT NOT NULL DEFAULT 'participant',
       area_id       UUID REFERENCES areas(id) ON DELETE SET NULL,
       password_hash TEXT,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     )
+  `;
+
+  // Ensure role column accepts all current roles (idempotent)
+  await db`
+    DO $$
+    DECLARE r RECORD;
+    BEGIN
+      FOR r IN (
+        SELECT DISTINCT con.conname
+        FROM pg_constraint con
+        JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ANY(con.conkey)
+        WHERE con.conrelid = 'profiles'::regclass AND con.contype = 'c' AND att.attname = 'role'
+      ) LOOP
+        EXECUTE 'ALTER TABLE profiles DROP CONSTRAINT ' || quote_ident(r.conname);
+      END LOOP;
+      ALTER TABLE profiles ADD CONSTRAINT profiles_role_check
+        CHECK (role IN ('super_admin','admin','supervisor','leader','participant','both'));
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$
   `;
 
   await db`

@@ -66,8 +66,15 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   const userInitials = profile?.full_name
     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';
-  const roleLabel =
-    profile?.role === 'both' ? "Admin + Participante" : isParticipantRole ? "Participante" : "Administrador";
+  const ROLE_LABELS: Record<string, string> = {
+    super_admin: "Super Admin",
+    admin:       "Administrador",
+    supervisor:  "Supervisor",
+    leader:      "Líder",
+    participant: "Participante",
+    both:        "Admin + Participante",
+  };
+  const roleLabel = ROLE_LABELS[profile?.role ?? ''] ?? 'Usuario';
 
   const handleLogout = async () => {
     const { error } = await signOut();

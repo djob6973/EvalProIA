@@ -11,7 +11,7 @@ interface UserProfile {
   id: string;
   email: string;
   full_name: string | null;
-  role: "admin" | "participant" | "both";
+  role: "super_admin" | "admin" | "supervisor" | "leader" | "participant" | "both";
   created_at: string;
   evaluation_count?: number;
   is_active?: boolean;
@@ -30,10 +30,21 @@ function formatDate(iso: string) {
 }
 
 const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super Admin",
   admin:       "Administrador",
+  supervisor:  "Supervisor",
+  leader:      "Líder",
   participant: "Participante",
   both:        "Admin + Part.",
 };
+
+const ROLE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "super_admin", label: "Super Admin"   },
+  { value: "admin",       label: "Administrador" },
+  { value: "supervisor",  label: "Supervisor"    },
+  { value: "leader",      label: "Líder"         },
+  { value: "participant", label: "Participante"  },
+];
 
 export function UsersTab() {
   const { profile } = useAuth();
@@ -49,7 +60,7 @@ export function UsersTab() {
   const [inviteEmail,   setInviteEmail]   = useState("");
   const [inviteFullName,setInviteFullName]= useState("");
   const [invitePassword,setInvitePassword]= useState("");
-  const [inviteRole,    setInviteRole]    = useState<"admin"|"participant"|"both">("participant");
+  const [inviteRole,    setInviteRole]    = useState("participant");
   const [inviteAreaId,  setInviteAreaId]  = useState("");
   const [inviting,      setInviting]      = useState(false);
   const [inviteError,   setInviteError]   = useState<string | null>(null);
@@ -60,7 +71,7 @@ export function UsersTab() {
   const [showEdit,      setShowEdit]      = useState(false);
   const [editUser,      setEditUser]      = useState<UserProfile | null>(null);
   const [editFullName,  setEditFullName]  = useState("");
-  const [editRole,      setEditRole]      = useState<"admin"|"participant"|"both">("participant");
+  const [editRole,      setEditRole]      = useState("participant");
   const [editAreaId,    setEditAreaId]    = useState("");
   const [editIsActive,  setEditIsActive]  = useState(true);
   const [updating,      setUpdating]      = useState(false);
@@ -339,10 +350,8 @@ export function UsersTab() {
                   <Input type="password" placeholder="••••••••" value={invitePassword} onChange={(e) => setInvitePassword(e.target.value)} disabled={inviting} />
                 </Field>
                 <Field label="Rol">
-                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as any)} disabled={inviting} className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">
-                    <option value="participant">Participante</option>
-                    <option value="admin">Administrador</option>
-                    <option value="both">Admin + Participante</option>
+                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={inviting} className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">
+                    {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </Field>
                 {areas.length > 0 && (
@@ -385,10 +394,8 @@ export function UsersTab() {
                     <span className="text-sm">{ROLE_LABELS[editRole]}</span>
                     <ChevronDown className="size-4 text-[var(--muted-foreground)]" strokeWidth={1.5} />
                   </div>
-                  <select value={editRole} onChange={(e) => setEditRole(e.target.value as any)} disabled={updating} className="absolute inset-0 w-full cursor-pointer opacity-0">
-                    <option value="participant">Participante</option>
-                    <option value="admin">Administrador</option>
-                    <option value="both">Admin + Participante</option>
+                  <select value={editRole} onChange={(e) => setEditRole(e.target.value)} disabled={updating} className="absolute inset-0 w-full cursor-pointer opacity-0">
+                    {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
               </Field>

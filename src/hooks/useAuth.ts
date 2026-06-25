@@ -4,7 +4,7 @@ export interface Profile {
   id: string
   email: string
   full_name: string | null
-  role: 'admin' | 'participant' | 'both'
+  role: 'super_admin' | 'admin' | 'supervisor' | 'leader' | 'participant' | 'both'
   created_at: string
   updated_at: string
   area_id: string | null
@@ -67,6 +67,6 @@ export function useAuth() {
     signUp,
     signOut,
     resetPassword,
-    isAdmin: profile?.role === 'admin' || profile?.role === 'both',
+    isAdmin: profile ? profile.role !== 'participant' : false,
   }
 }
