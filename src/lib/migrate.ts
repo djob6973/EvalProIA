@@ -118,6 +118,59 @@ export async function runMigrations(): Promise<void> {
     )
   `;
 
+  await db`
+    CREATE TABLE IF NOT EXISTS role_permissions (
+      role   TEXT NOT NULL,
+      module TEXT NOT NULL,
+      level  TEXT NOT NULL DEFAULT 'none',
+      PRIMARY KEY (role, module)
+    )
+  `;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS role_capabilities (
+      role       TEXT NOT NULL,
+      capability TEXT NOT NULL,
+      enabled    BOOLEAN NOT NULL DEFAULT false,
+      PRIMARY KEY (role, capability)
+    )
+  `;
+
+  // Seed default permissions once
+  const [{ count: permCount }] = await db`SELECT COUNT(*) AS count FROM role_permissions` as any[];
+  if (parseInt(permCount) === 0) {
+    const adminMods   = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config'];
+    const partMods    = ['participant','my_history'];
+    const allMods     = [...adminMods, ...partMods];
+    const permSeeds: Array<{ role: string; module: string; level: string }> = [
+      ...allMods.map(m => ({ role: 'super_admin',  module: m, level: 'full'   })),
+      ...adminMods.map(m => ({ role: 'admin',       module: m, level: 'editar' })),
+      ...partMods.map(m  => ({ role: 'admin',       module: m, level: 'ver'    })),
+      ...['dashboard','evaluations','results'].map(m => ({ role: 'supervisor', module: m, level: 'editar' })),
+      ...['users','areas','question_bank','participant','my_history'].map(m => ({ role: 'supervisor', module: m, level: 'ver' })),
+      ...['generate','settings','config'].map(m => ({ role: 'supervisor', module: m, level: 'none' })),
+      ...['dashboard','evaluations','results','participant','my_history'].map(m => ({ role: 'leader', module: m, level: 'ver' })),
+      ...['users','areas','question_bank','generate','settings','config'].map(m => ({ role: 'leader', module: m, level: 'none' })),
+      ...adminMods.map(m => ({ role: 'participant', module: m, level: 'none' })),
+      ...partMods.map(m  => ({ role: 'participant', module: m, level: 'ver'  })),
+    ];
+    for (const s of permSeeds) {
+      await db`INSERT INTO role_permissions (role, module, level) VALUES (${s.role}, ${s.module}, ${s.level}) ON CONFLICT DO NOTHING`;
+    }
+
+    const caps = ['create_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
+    const capSeeds: Array<{ role: string; capability: string; enabled: boolean }> = [
+      ...caps.map(c => ({ role: 'super_admin', capability: c, enabled: true  })),
+      ...caps.map(c => ({ role: 'admin',       capability: c, enabled: true  })),
+      ...caps.map(c => ({ role: 'supervisor',  capability: c, enabled: c === 'export_results' })),
+      ...caps.map(c => ({ role: 'leader',      capability: c, enabled: false })),
+      ...caps.map(c => ({ role: 'participant', capability: c, enabled: false })),
+    ];
+    for (const s of capSeeds) {
+      await db`INSERT INTO role_capabilities (role, capability, enabled) VALUES (${s.role}, ${s.capability}, ${s.enabled}) ON CONFLICT DO NOTHING`;
+    }
+  }
+
   // Seed admin user from env vars (set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD on server)
   const seedEmail = process.env.SEED_ADMIN_EMAIL;
   const seedPassword = process.env.SEED_ADMIN_PASSWORD;

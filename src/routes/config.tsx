@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { RolePermissionsSection } from "@/components/RolePermissionsSection";
 import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettings, invalidateSystemSettings } from "@/hooks/useSystemSettings";
 import { useEffect, useRef, useState } from "react";
@@ -106,8 +107,9 @@ function ConfigPage() {
   return (
     <AppShell>
       <PageHeader title="Configuración" subtitle="Identidad visual y ajustes de la plataforma" />
-      <div className="max-w-2xl space-y-6">
+      <div className="space-y-8">
         {/* ── Identidad visual ─────────────────────────────────────────────── */}
+        <div className="max-w-2xl">
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]">
           {/* Header */}
           <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-5">
@@ -227,6 +229,10 @@ function ConfigPage() {
             </div>
           </div>
         </div>
+        </div>{/* end max-w-2xl */}
+
+        {/* ── Gestión de Permisos ───────────────────────────────────────────── */}
+        <RolePermissionsSection />
       </div>
 
       <ConfirmDialog

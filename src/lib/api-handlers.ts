@@ -167,6 +167,12 @@ async function route(
     if (id && m === "PUT") return updateProfileById(request, id);
   }
 
+  // ── Role permissions ───────────────────────────────────────────────────────
+  if (res === "role-permissions") {
+    if (!id && m === "GET") return getRolePermissions(request);
+    if (!id && m === "PUT") return setRolePermissions(request);
+  }
+
   return null;
 }
 
@@ -1017,5 +1023,58 @@ async function deleteBrandLogo(request: Request): Promise<Response> {
   if (adminOrErr instanceof Response) return adminOrErr;
 
   await db`DELETE FROM system_settings WHERE key = 'brand_logo'`;
+  return json({ success: true });
+}
+
+// ── Role permissions ───────────────────────────────────────────────────────────
+
+async function getRolePermissions(request: Request): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
+
+  const permRows  = await db`SELECT role, module, level FROM role_permissions` as any[];
+  const capRows   = await db`SELECT role, capability, enabled FROM role_capabilities` as any[];
+
+  const matrix: Record<string, Record<string, string>> = {};
+  for (const r of permRows) {
+    if (!matrix[r.role]) matrix[r.role] = {};
+    matrix[r.role][r.module] = r.level;
+  }
+
+  const capabilities: Record<string, Record<string, boolean>> = {};
+  for (const r of capRows) {
+    if (!capabilities[r.role]) capabilities[r.role] = {};
+    capabilities[r.role][r.capability] = r.enabled;
+  }
+
+  return json({ matrix, capabilities });
+}
+
+async function setRolePermissions(request: Request): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
+
+  const { matrix, capabilities } = await request.json();
+
+  for (const [role, modules] of Object.entries(matrix as Record<string, Record<string, string>>)) {
+    for (const [module, level] of Object.entries(modules)) {
+      await db`
+        INSERT INTO role_permissions (role, module, level)
+        VALUES (${role}, ${module}, ${level})
+        ON CONFLICT (role, module) DO UPDATE SET level = ${level}
+      `;
+    }
+  }
+
+  for (const [role, caps] of Object.entries(capabilities as Record<string, Record<string, boolean>>)) {
+    for (const [capability, enabled] of Object.entries(caps)) {
+      await db`
+        INSERT INTO role_capabilities (role, capability, enabled)
+        VALUES (${role}, ${capability}, ${enabled})
+        ON CONFLICT (role, capability) DO UPDATE SET enabled = ${enabled}
+      `;
+    }
+  }
+
   return json({ success: true });
 }
