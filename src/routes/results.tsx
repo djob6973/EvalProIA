@@ -402,19 +402,13 @@ function ResultsPageContent() {
             {/* KPI cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {KPI_ITEMS.map((k, i) => (
-                <div
-                  key={k.label}
-                  className="relative overflow-hidden rounded-xl border border-border bg-card shadow-sm"
-                >
-                  <div className="absolute inset-y-0 left-0 w-[3px] bg-accent" />
-                  <div className="px-5 py-5 pl-6">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <k.icon className="size-3.5 shrink-0 text-accent" strokeWidth={2.5} />
-                      <span className="text-[11px] font-semibold uppercase tracking-wider">{k.label}</span>
-                    </div>
-                    <div className="mt-2.5 font-mono text-3xl font-bold tracking-tight text-foreground">
-                      {kpiValues[i]}
-                    </div>
+                <div key={k.label} className="dash-card p-[22px]">
+                  <div className="flex items-center gap-1.5">
+                    <k.icon className="size-3.5 shrink-0" style={{ color: "var(--accent)" }} strokeWidth={2.5} />
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--muted-foreground)" }}>{k.label}</span>
+                  </div>
+                  <div className="mt-[10px] font-display text-[34px] font-medium leading-none tracking-tight tabular-nums" style={{ color: "var(--foreground)" }}>
+                    {kpiValues[i]}
                   </div>
                 </div>
               ))}
