@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell, useLayout } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, Bell, Menu, Search, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowUpRight, Menu, Sparkles, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { statsService } from "@/lib/services/stats";
@@ -60,43 +60,8 @@ function DashboardHeader() {
         </div>
       </div>
 
-      {/* Right: search + bell + avatar + button */}
+      {/* Right: avatar + button */}
       <div className="flex items-center gap-2.5 shrink-0">
-        {/* Search */}
-        <div className="relative hidden md:flex items-center">
-          <Search
-            className="pointer-events-none absolute left-3 size-[15px]"
-            strokeWidth={1.5}
-            style={{ color: "var(--muted-foreground)" }}
-          />
-          <input
-            type="search"
-            placeholder="Buscar…"
-            className="h-9 rounded-[10px] border pl-9 pr-4 text-[13px] outline-none transition-colors"
-            style={{
-              width: "180px",
-              background: "var(--surface)",
-              borderColor: "var(--border)",
-              color: "var(--foreground)",
-            }}
-          />
-        </div>
-
-        {/* Bell with badge */}
-        <button
-          className="relative grid h-9 w-9 place-items-center rounded-[12px] border transition-colors hover:bg-[var(--sidebar-accent)]"
-          style={{ borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted-foreground)" }}
-          title="Notificaciones"
-        >
-          <Bell className="size-[18px]" strokeWidth={1.5} />
-          <span
-            className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full font-mono text-[9px] font-bold text-white"
-            style={{ background: "var(--accent)" }}
-          >
-            3
-          </span>
-        </button>
-
         {/* User avatar */}
         <div
           className="grid h-9 w-9 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold"

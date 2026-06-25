@@ -99,7 +99,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   };
 
   const logoSection = (
-    <div className="shrink-0 border-b border-[var(--sidebar-border)] px-5 py-5">
+    <div className="shrink-0 px-5 py-5">
       <Link to="/dashboard" className="flex items-center gap-3">
         {settings.brand_logo ? (
           <img
@@ -143,7 +143,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   );
 
   const footerSection = (
-    <div className="shrink-0 border-t border-[var(--sidebar-border)] px-4 py-4">
+    <div className="shrink-0 px-4 py-4">
       {/* Role toggle — only for admins with both roles */}
       {!isParticipantRole && (
         <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-3 block">
@@ -154,11 +154,11 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
       )}
 
       {/* Action row: theme toggle · change password · logout */}
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex items-center justify-center gap-3">
         <button
           onClick={toggleTheme}
           title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-          className="grid h-9 w-9 place-items-center rounded-[12px] border border-[var(--border)] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
+          className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
         >
           {isDark
             ? <Sun className="size-[16px]" strokeWidth={1.5} />
@@ -167,7 +167,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         <Link
           to="/account"
           title="Cambiar contraseña"
-          className="grid h-9 w-9 place-items-center rounded-[12px] border border-[var(--border)] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
+          className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
           onClick={() => isMobile && setMobileOpen(false)}
         >
           <KeyRound className="size-[16px]" strokeWidth={1.5} />
@@ -175,7 +175,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         <button
           onClick={handleLogout}
           title="Cerrar sesión"
-          className="grid h-9 w-9 place-items-center rounded-[12px] border border-[var(--border)] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
+          className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
         >
           <LogOut className="size-[16px]" strokeWidth={1.5} />
         </button>
