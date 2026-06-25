@@ -58,12 +58,12 @@ function DashboardHeader({ notifications }: { notifications: NotifItem[] }) {
         </button>
         <div>
           <h1
-            className="font-display text-[30px] font-medium leading-none tracking-tight"
+            className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]"
             style={{ color: "var(--foreground)" }}
           >
             Dashboard
           </h1>
-          <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
+          <p className="mt-[6px] text-[16px] font-normal" style={{ color: "var(--muted-foreground)" }}>
             Lo que necesitas atender hoy.
           </p>
         </div>

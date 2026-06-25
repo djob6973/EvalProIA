@@ -95,7 +95,7 @@ export function AppShell({ breadcrumb, actions, children, showHeader = true }: A
                       <span
                         style={
                           i === breadcrumb.length - 1
-                            ? { fontWeight: 700, color: "var(--foreground)" }
+                            ? { fontFamily: "var(--font-display)", fontWeight: 500, color: "var(--foreground)" }
                             : { color: "var(--muted-foreground)" }
                         }
                       >

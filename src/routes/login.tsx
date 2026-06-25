@@ -79,8 +79,8 @@ function LoginPage() {
         </Link>
 
         <div className="mx-auto w-full max-w-sm flex-1 flex flex-col justify-center">
-          <h1 className="text-3xl font-bold tracking-tight">Bienvenido de vuelta</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h1 className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>Bienvenido de vuelta</h1>
+          <p className="mt-2 text-[16px] font-normal" style={{ color: "var(--muted-foreground)" }}>
             Inicia sesión para gestionar evaluaciones, generar preguntas y revisar resultados.
           </p>
 

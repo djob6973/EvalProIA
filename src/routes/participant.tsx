@@ -149,10 +149,10 @@ function ParticipantHome() {
           <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
             Bienvenido de vuelta
           </div>
-          <h1 className="font-display mt-2 text-[28px] font-medium leading-tight tracking-tight" style={{ color: "var(--foreground)" }}>
+          <h1 className="font-display mt-2 text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>
             Hola, {userName}.
           </h1>
-          <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
+          <p className="mt-[6px] text-[16px] font-normal" style={{ color: "var(--muted-foreground)" }}>
             Tienes{" "}
             <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
               {availableEvaluations.length} evaluación{availableEvaluations.length !== 1 ? 'es' : ''} disponible{availableEvaluations.length !== 1 ? 's' : ''}

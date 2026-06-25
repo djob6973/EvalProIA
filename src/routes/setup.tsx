@@ -159,10 +159,10 @@ function SetupPage() {
                   <ShieldCheck className="size-3" />
                   Configuración inicial
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+                <h1 className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>
                   Crear administrador
                 </h1>
-                <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                <p className="mt-1.5 text-[16px] font-normal leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
                   Esta página solo está disponible cuando no hay usuarios registrados. Crea la cuenta administradora del sistema.
                 </p>
               </div>
