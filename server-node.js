@@ -3,7 +3,6 @@ import { readFile } from 'fs/promises';
 import { Readable } from 'stream';
 import { extname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { createClient } from '@supabase/supabase-js';
 
 // Load .env for local dev — Node.js 20.6+ built-in, no package needed.
 // No-op when .env is absent (Dokku injects vars via the environment).
@@ -31,38 +30,6 @@ const mimeTypes = {
   '.ttf': 'font/ttf',
   '.eot': 'application/vnd.ms-fontobject',
 };
-
-function getAdminClient() {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  if (!serviceRoleKey || !supabaseUrl) {
-    throw new Error('Configuración del servidor incompleta: faltan SUPABASE_SERVICE_ROLE_KEY o SUPABASE_URL');
-  }
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-async function verifyAdminCaller(adminClient, token) {
-  const { data: { user }, error } = await adminClient.auth.getUser(token);
-  if (error || !user) throw new Error('No autorizado');
-  const { data: profile } = await adminClient
-    .from('profiles').select('role').eq('id', user.id).single();
-  if (!profile || !['admin', 'both'].includes(profile.role)) {
-    throw new Error('No autorizado: se requiere rol de administrador');
-  }
-  return user;
-}
-
-function jsonOk(res, data) {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify(data));
-}
-
-function jsonError(res, message, status = 400) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ error: message }));
-}
 
 const server = createServer(async (req, res) => {
   try {
@@ -105,94 +72,6 @@ const server = createServer(async (req, res) => {
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       }
       if (chunks.length > 0) bodyBuffer = Buffer.concat(chunks);
-    }
-
-    // ── Direct API: create user ──────────────────────────────────────────────
-    if (url.pathname === '/api/create-user' && req.method === 'POST') {
-      try {
-        const body = JSON.parse(bodyBuffer?.toString() || '{}');
-        const adminClient = getAdminClient();
-        await verifyAdminCaller(adminClient, body._token);
-
-        const { data: result, error } = await adminClient.auth.admin.createUser({
-          email: body.email,
-          password: body.password,
-          user_metadata: { full_name: body.fullName, role: body.role, area_id: body.areaId },
-          email_confirm: true,
-        });
-        if (error) throw new Error(error.message);
-
-        const { error: profileError } = await adminClient.from('profiles').upsert({
-          id: result.user.id,
-          email: body.email,
-          full_name: body.fullName,
-          role: body.role,
-          area_id: body.areaId ?? null,
-        });
-        if (profileError) throw new Error(profileError.message);
-
-        jsonOk(res, { id: result.user.id, email: result.user.email });
-      } catch (err) {
-        jsonError(res, err.message);
-      }
-      return;
-    }
-
-    // ── Direct API: change password ─────────────────────────────────────────
-    if (url.pathname === '/api/change-password' && req.method === 'POST') {
-      try {
-        const body = JSON.parse(bodyBuffer?.toString() || '{}');
-        const adminClient = getAdminClient();
-
-        // Verify caller identity via JWT
-        const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(body._token);
-        if (authError || !caller) throw new Error('No autorizado');
-
-        if (!body.newPassword || body.newPassword.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres');
-
-        const isOwnPassword = body.userId === caller.id;
-
-        if (isOwnPassword) {
-          // Self-service: verify current password before updating
-          if (!body.currentPassword) throw new Error('Se requiere la contraseña actual');
-          const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-          const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-          const regularClient = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
-          const { error: signInError } = await regularClient.auth.signInWithPassword({ email: caller.email, password: body.currentPassword });
-          if (signInError) throw new Error('La contraseña actual es incorrecta');
-        } else {
-          // Admin changing another user's password
-          const { data: callerProfile } = await adminClient.from('profiles').select('role').eq('id', caller.id).single();
-          if (!callerProfile || !['admin', 'both'].includes(callerProfile.role)) throw new Error('No autorizado: se requiere rol de administrador');
-        }
-
-        const { error } = await adminClient.auth.admin.updateUserById(body.userId, { password: body.newPassword });
-        if (error) throw new Error(error.message);
-
-        jsonOk(res, { success: true });
-      } catch (err) {
-        jsonError(res, err.message);
-      }
-      return;
-    }
-
-    // ── Direct API: delete user ──────────────────────────────────────────────
-    if (url.pathname === '/api/delete-user' && req.method === 'POST') {
-      try {
-        const body = JSON.parse(bodyBuffer?.toString() || '{}');
-        const adminClient = getAdminClient();
-        const caller = await verifyAdminCaller(adminClient, body._token);
-
-        if (body.userId === caller.id) throw new Error('No puedes eliminar tu propia cuenta');
-
-        const { error } = await adminClient.auth.admin.deleteUser(body.userId);
-        if (error) throw new Error(error.message);
-
-        jsonOk(res, { success: true });
-      } catch (err) {
-        jsonError(res, err.message);
-      }
-      return;
     }
 
     // ── TanStack Start SSR handler ───────────────────────────────────────────
