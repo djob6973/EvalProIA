@@ -17,7 +17,7 @@ export const Route = createFileRoute("/activity")({
 
 function Activity() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
+  const isAdmin = profile ? profile.role !== 'participant' : false;
   const [loading, setLoading] = useState(true);
   const [activity, setActivity] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/areas")({
 
 function AreasPage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === "admin" || profile?.role === "both";
+  const isAdmin = profile ? profile.role !== 'participant' : false;
   const navigate = useNavigate();
 
   useEffect(() => {

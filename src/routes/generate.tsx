@@ -50,7 +50,7 @@ const TYPE_LABELS: Record<QuestionType, string> = {
 
 function GeneratePage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'both';
+  const isAdmin = profile ? profile.role !== 'participant' : false;
   const navigate = useNavigate();
 
   // Redirigir a participantes a /participant

@@ -74,7 +74,7 @@ function ResultsPage() {
 
 function ResultsPageContent() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === "admin" || profile?.role === "both";
+  const isAdmin = profile ? profile.role !== 'participant' : false;
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);

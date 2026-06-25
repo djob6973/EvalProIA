@@ -183,7 +183,7 @@ const TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384];
 
 function SettingsPage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === "admin" || profile?.role === "both";
+  const isAdmin = profile ? profile.role !== 'participant' : false;
   const navigate = useNavigate();
 
   // ── Prompt state ──────────────────────────────────────────────────────────

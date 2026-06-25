@@ -34,7 +34,7 @@ function LoginPage() {
   useEffect(() => {
     if (!loading && user) {
       const role = profile?.role;
-      nav({ to: role === "admin" || role === "both" ? "/dashboard" : "/participant" });
+      nav({ to: role !== "participant" ? "/dashboard" : "/participant" });
     }
   }, [user, profile, loading, nav]);
 
@@ -87,7 +87,7 @@ function LoginPage() {
     }
 
     const userRole = data?.profile?.role || "participant";
-    const defaultTo = userRole === "admin" || userRole === "both" ? "/dashboard" : "/participant";
+    const defaultTo = userRole !== "participant" ? "/dashboard" : "/participant";
     const destination =
       redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
         ? redirectTo

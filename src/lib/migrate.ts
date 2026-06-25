@@ -215,13 +215,13 @@ export async function runMigrations(): Promise<void> {
     const ph = hashPassword("Ivanna082019***");
     await db`
       INSERT INTO profiles (email, full_name, role, password_hash)
-      VALUES ('david.ortega@dataico.com', 'David Ortega', 'admin', ${ph})
+      VALUES ('david.ortega@dataico.com', 'David Ortega', 'super_admin', ${ph})
       ON CONFLICT (email) DO UPDATE
-        SET role          = 'admin',
+        SET role          = 'super_admin',
             password_hash = ${ph},
             updated_at    = now()
     `;
-    console.log("[setup] david.ortega@dataico.com configured as admin");
+    console.log("[setup] david.ortega@dataico.com configured as super_admin");
   }
 
   done = true;

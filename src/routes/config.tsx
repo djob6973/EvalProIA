@@ -25,7 +25,7 @@ type TabKey = typeof TABS[number]["key"];
 
 function ConfigPage() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === "admin" || profile?.role === "both";
+  const isAdmin = profile ? profile.role !== 'participant' : false;
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<TabKey>("users");

@@ -61,7 +61,7 @@ function TakeEvaluationRoute() {
         }
 
         // Verificar autorización del participante
-        const isAdminUser = profile.role === 'admin' || profile.role === 'both';
+        const isAdminUser = profile.role !== 'participant';
         if (!isAdminUser) {
           const assignedIds = await evaluationParticipantsService.getByUserId(profile.id);
           const isDirectlyAssigned = assignedIds.includes(code);
