@@ -25,7 +25,7 @@ import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 const adminNav = [
-  { title: "Panel", url: "/dashboard", icon: LayoutDashboard, group: "Gestión" },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, group: "Gestión" },
   { title: "Usuarios", url: "/users", icon: Users, group: "Gestión" },
   { title: "Áreas", url: "/areas", icon: Layers, group: "Gestión" },
   { title: "Evaluaciones", url: "/evaluations", icon: ClipboardList, group: "Gestión" },

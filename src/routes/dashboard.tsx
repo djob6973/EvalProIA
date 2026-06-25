@@ -9,7 +9,7 @@ import { statsService } from "@/lib/services/stats";
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Panel — EvalPro" },
+      { title: "Dashboard — EvalPro" },
       { name: "description", content: "Resumen de evaluaciones, participantes y preguntas generadas por IA." },
     ],
   }),
@@ -52,7 +52,7 @@ function DashboardHeader() {
             className="font-display text-[30px] font-medium leading-none tracking-tight"
             style={{ color: "var(--foreground)" }}
           >
-            Panel
+            Dashboard
           </h1>
           <p className="mt-[6px] text-[14px]" style={{ color: "var(--muted-foreground)" }}>
             Lo que necesitas atender hoy.
@@ -171,7 +171,7 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <AppShell breadcrumb={[{ label: "Panel" }]} showHeader={false}>
+      <AppShell breadcrumb={[{ label: "Dashboard" }]} showHeader={false}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
@@ -189,7 +189,7 @@ function Dashboard() {
 
   if (error) {
     return (
-      <AppShell breadcrumb={[{ label: "Panel" }]} showHeader={false}>
+      <AppShell breadcrumb={[{ label: "Dashboard" }]} showHeader={false}>
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
@@ -201,7 +201,7 @@ function Dashboard() {
   }
 
   return (
-    <AppShell breadcrumb={[{ label: "Panel" }]} showHeader={false}>
+    <AppShell breadcrumb={[{ label: "Dashboard" }]} showHeader={false}>
       <div className="flex flex-col gap-[28px]">
         {/* Page header */}
         <DashboardHeader />
