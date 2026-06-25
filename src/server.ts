@@ -3,7 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { runMigrations } from "./lib/migrate";
-import { handleLogin, handleSignout, handleMe } from "./lib/auth-handlers";
+import { handleLogin, handleSignout, handleMe, handleRegister } from "./lib/auth-handlers";
 import { handleSetupCheck, handleSetupCreate } from "./lib/setup-handler";
 import { handleApiRequest } from "./lib/api-handlers";
 
@@ -89,6 +89,8 @@ export default {
       // ── Auth routes (intercepted before TanStack Start) ────────────────
       if (pathname === "/api/auth/login" && request.method === "POST")
         return handleLogin(request);
+      if (pathname === "/api/auth/register" && request.method === "POST")
+        return handleRegister(request);
       if (pathname === "/api/auth/signout")
         return handleSignout(request);
       if (pathname === "/api/me")

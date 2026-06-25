@@ -23,8 +23,11 @@ function LoginPage() {
   const nav = useNavigate();
   const { redirect: redirectTo } = Route.useSearch();
   const { signIn, loading, user, profile } = useAuth();
+
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -35,6 +38,14 @@ function LoginPage() {
     }
   }, [user, profile, loading, nav]);
 
+  function switchMode(next: "login" | "register") {
+    setMode(next);
+    setError(null);
+    setEmail("");
+    setPassword("");
+    setFullName("");
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -43,6 +54,27 @@ function LoginPage() {
     if (!email || !password) {
       setError("Por favor, ingresa email y contraseña");
       setIsSubmitting(false);
+      return;
+    }
+
+    if (mode === "register") {
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, fullName: fullName || undefined }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data.error || "Error al crear la cuenta");
+          setIsSubmitting(false);
+          return;
+        }
+        nav({ to: "/participant" });
+      } catch {
+        setError("Error de conexión. Inténtalo de nuevo.");
+        setIsSubmitting(false);
+      }
       return;
     }
 
@@ -63,6 +95,8 @@ function LoginPage() {
     nav({ to: destination as any });
   }
 
+  const isLogin = mode === "login";
+
   return (
     <div className="grid min-h-screen w-full animate-in fade-in duration-300 lg:grid-cols-2">
       <div className="flex flex-col p-8 md:p-12">
@@ -79,9 +113,13 @@ function LoginPage() {
         </Link>
 
         <div className="mx-auto w-full max-w-sm flex-1 flex flex-col justify-center">
-          <h1 className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>Bienvenido de vuelta</h1>
+          <h1 className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>
+            {isLogin ? "Bienvenido de vuelta" : "Crear cuenta"}
+          </h1>
           <p className="mt-2 text-[16px] font-normal" style={{ color: "var(--muted-foreground)" }}>
-            Inicia sesión para gestionar evaluaciones, generar preguntas y revisar resultados.
+            {isLogin
+              ? "Inicia sesión para gestionar evaluaciones, generar preguntas y revisar resultados."
+              : "Regístrate para acceder a las evaluaciones asignadas a ti."}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
@@ -90,6 +128,23 @@ function LoginPage() {
                 {error}
               </div>
             )}
+
+            {!isLogin && (
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Nombre completo
+                </Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Correo
@@ -117,9 +172,23 @@ function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
+              {isSubmitting
+                ? isLogin ? "Iniciando sesión..." : "Creando cuenta..."
+                : isLogin ? "Iniciar sesión" : "Crear cuenta"}
             </Button>
           </form>
+
+          <p className="mt-6 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
+            {isLogin ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+            <button
+              type="button"
+              onClick={() => switchMode(isLogin ? "register" : "login")}
+              className="font-medium underline underline-offset-4"
+              style={{ color: "var(--foreground)" }}
+            >
+              {isLogin ? "Regístrate" : "Inicia sesión"}
+            </button>
+          </p>
 
           <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             EvalPro · Infraestructura segura de evaluación

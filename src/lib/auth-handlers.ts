@@ -65,3 +65,38 @@ export async function handleMe(request: Request): Promise<Response> {
   if (!user) return Response.json({ error: "No autenticado" }, { status: 401 });
   return Response.json(user);
 }
+
+export async function handleRegister(request: Request): Promise<Response> {
+  try {
+    const { email, password, fullName } = await request.json();
+    if (!email || !password)
+      return Response.json({ error: "Email y contraseña requeridos" }, { status: 400 });
+    if (password.length < 6)
+      return Response.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 });
+
+    const [existing] = await db`SELECT id FROM profiles WHERE email = ${email}`;
+    if (existing)
+      return Response.json({ error: "Ya existe una cuenta con ese email" }, { status: 409 });
+
+    const password_hash = hashPassword(password);
+    const [user] = await db`
+      INSERT INTO profiles (email, full_name, role, password_hash)
+      VALUES (${email}, ${fullName || null}, 'participant', ${password_hash})
+      RETURNING *
+    `;
+
+    const token = randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + SESSION_MS).toISOString();
+    await db`INSERT INTO sessions (user_id, token, expires_at) VALUES (${user.id}, ${token}, ${expiresAt})`;
+
+    const { password_hash: _ph, ...profile } = user;
+    return new Response(JSON.stringify({ ok: true, profile }), {
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": setCookieHeader(token),
+      },
+    });
+  } catch (err: any) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
