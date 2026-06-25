@@ -16,6 +16,7 @@ import {
   Check,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { questionsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/question-bank")({
@@ -137,16 +138,16 @@ function emptyQuestion(): Question {
 function QuestionBankPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Redirigir a participantes a /participant
   useEffect(() => {
-    if (profile && !isAdmin) {
-      navigate({ to: "/participant" });
-    }
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/participant" }); return; }
+    if (!permLoading && !canAccess('question_bank')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   const [items, setItems] = useState<Question[]>([]);
   const [categories, setCategories] = useState<string[]>([]);

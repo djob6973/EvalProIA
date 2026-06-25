@@ -33,6 +33,7 @@ import {
   Download,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/evaluations")({
@@ -986,6 +987,7 @@ function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPr
 function EvaluationsPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -995,12 +997,11 @@ function EvaluationsPage() {
   const [shareEval, setShareEval] = useState<Evaluation | null>(null);
   const [groupBy, setGroupBy] = useState<"none" | "area" | "semana">("none");
 
-  // Redirigir a participantes a /participant
   useEffect(() => {
-    if (profile && !isAdmin) {
-      navigate({ to: "/participant" });
-    }
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/participant" }); return; }
+    if (!permLoading && !canAccess('evaluations')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   const [items, setItems] = useState<Evaluation[]>([]);
 

@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, Sparkles, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState } from "react";
 import { statsService } from "@/lib/services/stats";
 
@@ -34,16 +35,17 @@ function StatusPill({ children }: { children: React.ReactNode }) {
 function Dashboard() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile && !isAdmin) {
-      navigate({ to: "/participant" });
-    }
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/participant" }); return; }
+    if (!permLoading && !canAccess('dashboard')) navigate({ to: "/participant" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   useEffect(() => {
     async function loadStats() {

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useMemo, useState } from "react";
 import React from "react";
 import {
@@ -207,6 +208,7 @@ function QuestionCard({
 function ParticipantDetailPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
   const { userId } = Route.useParams();
 
@@ -235,8 +237,10 @@ function ParticipantDetailPage() {
   const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile && !isAdmin) navigate({ to: "/participant" });
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/participant" }); return; }
+    if (!permLoading && !canAccess('results')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   useEffect(() => {
     async function load() {

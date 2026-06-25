@@ -19,19 +19,20 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 const adminNav = [
-  { title: "Dashboard",         url: "/dashboard",     icon: LayoutDashboard, group: "Gestión"      },
-  { title: "Áreas",             url: "/areas",         icon: Layers,          group: "Gestión"      },
-  { title: "Evaluaciones",      url: "/evaluations",   icon: ClipboardList,   group: "Gestión"      },
-  { title: "Banco de Preguntas",url: "/question-bank", icon: Library,         group: "Gestión"      },
-  { title: "Generador IA",      url: "/generate",      icon: Sparkles,        group: "Herramientas" },
-  { title: "Resultados Globales",url: "/results",      icon: BarChart3,       group: "Herramientas" },
-  { title: "Prompts IA",        url: "/settings",      icon: Settings,        group: "Herramientas" },
-  { title: "Configuración",     url: "/config",        icon: SlidersHorizontal, group: "Herramientas" },
+  { title: "Dashboard",          url: "/dashboard",     icon: LayoutDashboard,   group: "Gestión",       module: "dashboard"     },
+  { title: "Áreas",              url: "/areas",         icon: Layers,            group: "Gestión",       module: "areas"         },
+  { title: "Evaluaciones",       url: "/evaluations",   icon: ClipboardList,     group: "Gestión",       module: "evaluations"   },
+  { title: "Banco de Preguntas", url: "/question-bank", icon: Library,           group: "Gestión",       module: "question_bank" },
+  { title: "Generador IA",       url: "/generate",      icon: Sparkles,          group: "Herramientas",  module: "generate"      },
+  { title: "Resultados Globales",url: "/results",       icon: BarChart3,         group: "Herramientas",  module: "results"       },
+  { title: "Prompts IA",         url: "/settings",      icon: Settings,          group: "Herramientas",  module: "settings"      },
+  { title: "Configuración",      url: "/config",        icon: SlidersHorizontal, group: "Herramientas",  module: "config"        },
 ];
 
 const participantNav = [
@@ -53,12 +54,14 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   const isMobile = useIsMobile();
   const { settings } = useSystemSettings();
 
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const isParticipantRole = profile?.role === 'participant';
   const isOnParticipantPath = ["/participant", "/my-history", "/my-results", "/take"].some(
     (p) => path.startsWith(p)
   );
   const showParticipantNav = isParticipantRole || isOnParticipantPath;
-  const nav = showParticipantNav ? participantNav : adminNav;
+  const filteredAdminNav = permLoading ? adminNav : adminNav.filter((item) => canAccess(item.module));
+  const nav = showParticipantNav ? participantNav : filteredAdminNav;
   const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 

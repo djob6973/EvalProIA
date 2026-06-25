@@ -5,6 +5,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { UsersTab } from "@/components/UsersTab";
 import { RolePermissionsSection } from "@/components/RolePermissionsSection";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useSystemSettings, invalidateSystemSettings } from "@/hooks/useSystemSettings";
 import { useEffect, useRef, useState } from "react";
 import { Users, Shield, Building2, Paintbrush, ImageIcon, Upload } from "lucide-react";
@@ -26,13 +27,16 @@ type TabKey = typeof TABS[number]["key"];
 function ConfigPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<TabKey>("users");
 
   useEffect(() => {
-    if (profile && !isAdmin) navigate({ to: "/account" });
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/account" }); return; }
+    if (!permLoading && !canAccess('config')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   return (
     <AppShell>

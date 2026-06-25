@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState } from "react";
 
 export const PROMPT_STORAGE_KEY = "evalpro_system_prompt";
@@ -184,6 +185,7 @@ const TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384];
 function SettingsPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
 
   // ── Prompt state ──────────────────────────────────────────────────────────
@@ -203,8 +205,10 @@ function SettingsPage() {
     config.retries !== persistedConfig.retries;
 
   useEffect(() => {
-    if (profile && !isAdmin) navigate({ to: "/account" });
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/account" }); return; }
+    if (!permLoading && !canAccess('settings')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   // ── Change own password state ─────────────────────────────────────────────
   const [currentPassword, setCurrentPassword] = useState("");

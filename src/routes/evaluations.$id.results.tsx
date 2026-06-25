@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState } from "react";
 import { resultsService, evaluationsService } from "@/lib/services/evaluations";
 import { ArrowLeft, TrendingUp, Users, Award } from "lucide-react";
@@ -15,8 +16,14 @@ export const Route = createFileRoute("/evaluations/$id/results")({
 function EvaluationResultsPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
   const { id } = Route.useParams();
+
+  useEffect(() => {
+    if (!profile || !isAdmin) return;
+    if (!permLoading && !canAccess('results')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<any>(null);

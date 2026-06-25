@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState, useMemo } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService } from "@/lib/services/evaluations";
@@ -38,8 +39,14 @@ function getDificultadClass(dificultad: string): string {
 function EvaluationResultsPage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
   const { id } = Route.useParams();
+
+  useEffect(() => {
+    if (!profile || !isAdmin) return;
+    if (!permLoading && !canAccess('results')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<any>(null);

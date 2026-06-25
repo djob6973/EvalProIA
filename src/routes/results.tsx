@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useMemo, useState } from "react";
 import {
   Download, Users, CheckCircle2, Clock, Trophy, TrendingUp,
@@ -75,6 +76,7 @@ function ResultsPage() {
 function ResultsPageContent() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
@@ -107,8 +109,10 @@ function ResultsPageContent() {
   useEffect(() => { setPtPage(1); }, [ptFilterAreaId, ptFilterUserId, ptFilterDateFrom, ptFilterDateTo]);
 
   useEffect(() => {
-    if (profile && !isAdmin) navigate({ to: "/participant" });
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/participant" }); return; }
+    if (!permLoading && !canAccess('results')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   useEffect(() => {
     async function loadResults() {

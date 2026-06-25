@@ -22,6 +22,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { extractTextWithOCR, type GeneratedQuestion } from "@/lib/services/openai";
 import { questionsService, getUniqueCategories } from "@/lib/services/evaluations";
 import { generateQuestionsFn } from "@/lib/services/openai-server";
@@ -51,14 +52,14 @@ const TYPE_LABELS: Record<QuestionType, string> = {
 function GeneratePage() {
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
+  const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
 
-  // Redirigir a participantes a /participant
   useEffect(() => {
-    if (profile && !isAdmin) {
-      navigate({ to: "/participant" });
-    }
-  }, [profile, isAdmin, navigate]);
+    if (!profile) return;
+    if (!isAdmin) { navigate({ to: "/participant" }); return; }
+    if (!permLoading && !canAccess('generate')) navigate({ to: "/dashboard" });
+  }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
   // Step state
   const [file, setFile] = useState<File | null>(null);
