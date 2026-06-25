@@ -9,14 +9,19 @@ let _cache: PermissionsMatrix | null = null;
 let _promise: Promise<void> | null = null;
 
 export function useRolePermissions() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const [matrix, setMatrix] = useState<PermissionsMatrix>(_cache ?? {});
-  const [loading, setLoading] = useState(!_cache);
+  const [permLoading, setPermLoading] = useState(!_cache);
+
+  // loading is true until BOTH auth AND permissions are resolved.
+  // If permLoading is false (cache hit) but profile is still null,
+  // canAccess would incorrectly return false — combining prevents that.
+  const loading = permLoading || authLoading;
 
   useEffect(() => {
     if (_cache) {
       setMatrix(_cache);
-      setLoading(false);
+      setPermLoading(false);
       return;
     }
     if (!_promise) {
@@ -27,7 +32,7 @@ export function useRolePermissions() {
     }
     _promise.then(() => {
       setMatrix(_cache!);
-      setLoading(false);
+      setPermLoading(false);
     });
   }, []);
 
@@ -52,5 +57,5 @@ export function useRolePermissions() {
     [profile?.role, matrix],
   );
 
-  return { canAccess, getLevel, loading };
+  return { canAccess, getLevel, loading, permLoading };
 }
