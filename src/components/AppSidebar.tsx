@@ -60,8 +60,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
     (p) => path.startsWith(p)
   );
   const showParticipantNav = isParticipantRole || isOnParticipantPath;
-  // While auth OR permissions are loading, show the full admin nav to prevent flicker.
-  const filteredAdminNav = permLoading ? adminNav : adminNav.filter((item) => canAccess(item.module));
+  const filteredAdminNav = permLoading ? [] : adminNav.filter((item) => canAccess(item.module));
   const nav = showParticipantNav ? participantNav : filteredAdminNav;
   const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
