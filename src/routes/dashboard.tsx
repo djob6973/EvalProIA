@@ -46,7 +46,7 @@ function DashboardHeader({ notifications }: { notifications: NotifItem[] }) {
   }, [notifOpen]);
 
   return (
-    <div className="mb-8 flex items-center justify-between gap-4">
+    <div className="flex items-center justify-between gap-4">
       {/* Left: mobile menu button + title + subtitle */}
       <div className="flex items-center gap-3">
         <button
@@ -255,7 +255,7 @@ function Dashboard() {
 
   return (
     <AppShell breadcrumb={[{ label: "Dashboard" }]} showHeader={false}>
-      <div className="flex flex-col gap-[28px]">
+      <div className="flex flex-col gap-[24px]">
         {/* Page header */}
         <DashboardHeader notifications={activity} />
 
@@ -264,12 +264,7 @@ function Dashboard() {
           {kpis.map((k) => (
             <div
               key={k.label}
-              className="rounded-[20px] p-[22px]"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
-              }}
+              className="dash-card p-[22px]"
             >
               <div className="font-mono text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--muted-foreground)" }}>
                 {k.label}
@@ -297,17 +292,10 @@ function Dashboard() {
           {/* Left column */}
           <div className="flex flex-col gap-[24px]">
             {/* AI Generator card */}
-            <div
-              className="overflow-hidden rounded-[20px]"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
-              }}
-            >
+            <div className="dash-card overflow-hidden">
               <div
                 className="flex items-center justify-between px-[22px] py-[18px] border-b"
-                style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}
+                style={{ borderColor: "var(--border-soft)", background: "var(--surface-2)" }}
               >
                 <div className="flex items-center gap-[10px]">
                   <Sparkles className="size-4" style={{ color: "var(--accent)" }} />
@@ -344,17 +332,10 @@ function Dashboard() {
             </div>
 
             {/* Recent evaluations */}
-            <div
-              className="overflow-hidden rounded-[20px]"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
-              }}
-            >
+            <div className="dash-card overflow-hidden">
               <div
                 className="flex items-center justify-between px-[22px] py-[18px] border-b"
-                style={{ borderColor: "var(--border)" }}
+                style={{ borderColor: "var(--border-soft)" }}
               >
                 <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
                   Evaluaciones Recientes
@@ -369,7 +350,7 @@ function Dashboard() {
               </div>
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  <tr style={{ borderBottom: "1px solid var(--border-soft)" }}>
                     {["Nombre", "Participantes", "Estado", "Promedio"].map((h, i) => (
                       <th
                         key={h}
@@ -385,7 +366,7 @@ function Dashboard() {
                   {evaluations.map((e: any, i: number) => (
                     <tr
                       key={e.name + i}
-                      style={{ borderBottom: i < evaluations.length - 1 ? "1px solid var(--border)" : "none" }}
+                      style={{ borderBottom: i < evaluations.length - 1 ? "1px solid var(--border-soft)" : "none" }}
                     >
                       <td className="px-[22px] py-[14px] font-medium" style={{ color: "var(--foreground)" }}>
                         {e.name}
@@ -409,7 +390,10 @@ function Dashboard() {
           {/* Right column */}
           <div className="flex flex-col gap-[24px]">
             {/* Activity panel */}
-            <div className="rounded-[20px] p-[22px]" style={{ background: "#333333", color: "#F1F1F1" }}>
+            <div
+              className="dash-card p-[22px]"
+              style={{ background: "#333333", color: "#F1F1F1", border: "1px solid rgba(255,255,255,0.10)" }}
+            >
               <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "rgba(241,241,241,0.5)" }}>
                 Actividad en Tiempo Real
               </div>
@@ -440,14 +424,7 @@ function Dashboard() {
             </div>
 
             {/* Prompt strategy */}
-            <div
-              className="rounded-[20px] p-[22px]"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
-              }}
-            >
+            <div className="dash-card p-[22px]">
               <div className="mb-4 flex items-center gap-2">
                 <TrendingUp className="size-4" style={{ color: "var(--accent)" }} />
                 <h3 className="font-display text-[16px] font-medium m-0" style={{ color: "var(--foreground)" }}>

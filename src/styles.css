@@ -98,8 +98,10 @@
   --warning: oklch(0.74 0.17 70);
 
   --border: #E6E6E6;
+  --border-soft: #E6E6E6;
   --border-strong: #D5D6D7;
   --input: #E6E6E6;
+  --r-card: 20px;
   --ring: #ED5650;
 
   /* Faint text (40% opacity) */
@@ -150,6 +152,7 @@
   --accent-foreground: #ffffff;
 
   --border: #383838;
+  --border-soft: rgba(255, 255, 255, 0.10);
   --border-strong: #474747;
   --input: rgba(255, 255, 255, 0.15);
   --ring: #ED5650;
@@ -176,7 +179,7 @@
 .field-base {
   width: 100%;
   border-radius: 0.5rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-soft);
   background-color: var(--surface-2);
   color: var(--foreground);
   padding: 0.5rem 0.75rem;
@@ -352,4 +355,19 @@
 
 .transition-smooth-slow {
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========== DASHBOARD CARD BASE ========== */
+.dash-card {
+  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(0);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  cursor: pointer;
+}
+.dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }

@@ -115,11 +115,11 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
             <Brain className="size-[18px]" strokeWidth={1.5} />
           </div>
         )}
-        <div className="flex min-w-0 flex-col leading-none">
-          <span className="font-display text-[17px] font-medium tracking-tight text-[var(--foreground)]">
+        <div className="flex min-w-0 flex-col">
+          <span className="font-sans text-[17px] font-bold leading-[1.2] text-[var(--foreground)]">
             EvalPro
           </span>
-          <span className="mt-1 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
+          <span className="mt-[2px] text-[12px] text-[var(--muted-foreground)]">
             Sistema de Evaluación
           </span>
         </div>
@@ -154,7 +154,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
       )}
 
       {/* Action row: theme toggle · change password · logout */}
-      <div className="mb-3 flex items-center justify-center gap-3">
+      <div className="mb-3 flex items-center justify-evenly px-4">
         <button
           onClick={toggleTheme}
           title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
@@ -236,12 +236,12 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
                   <Brain className="size-[18px]" strokeWidth={1.5} />
                 </div>
               )}
-              <div className="flex min-w-0 flex-col leading-none">
-                <span className="font-display text-[17px] font-medium tracking-tight text-[var(--foreground)]">
+              <div className="flex min-w-0 flex-col">
+                <span className="font-sans text-[17px] font-bold leading-[1.2] text-[var(--foreground)]">
                   EvalPro
                 </span>
-                <span className="mt-0.5 font-mono text-[9px] uppercase tracking-[.2em] text-[var(--text-faint)]">
-                  Menú
+                <span className="mt-[2px] text-[12px] text-[var(--muted-foreground)]">
+                  Sistema de Evaluación
                 </span>
               </div>
             </div>
