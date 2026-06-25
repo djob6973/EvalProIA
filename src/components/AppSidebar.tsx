@@ -1,7 +1,6 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
-  Users,
   ClipboardList,
   Library,
   Sparkles,
@@ -25,15 +24,14 @@ import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 const adminNav = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, group: "Gestión" },
-  { title: "Usuarios", url: "/users", icon: Users, group: "Gestión" },
-  { title: "Áreas", url: "/areas", icon: Layers, group: "Gestión" },
-  { title: "Evaluaciones", url: "/evaluations", icon: ClipboardList, group: "Gestión" },
-  { title: "Banco de Preguntas", url: "/question-bank", icon: Library, group: "Gestión" },
-  { title: "Generador IA", url: "/generate", icon: Sparkles, group: "Herramientas" },
-  { title: "Resultados Globales", url: "/results", icon: BarChart3, group: "Herramientas" },
-  { title: "Prompts IA", url: "/settings", icon: Settings, group: "Herramientas" },
-  { title: "Configuración", url: "/config", icon: SlidersHorizontal, group: "Herramientas" },
+  { title: "Dashboard",         url: "/dashboard",     icon: LayoutDashboard, group: "Gestión"      },
+  { title: "Áreas",             url: "/areas",         icon: Layers,          group: "Gestión"      },
+  { title: "Evaluaciones",      url: "/evaluations",   icon: ClipboardList,   group: "Gestión"      },
+  { title: "Banco de Preguntas",url: "/question-bank", icon: Library,         group: "Gestión"      },
+  { title: "Generador IA",      url: "/generate",      icon: Sparkles,        group: "Herramientas" },
+  { title: "Resultados Globales",url: "/results",      icon: BarChart3,       group: "Herramientas" },
+  { title: "Prompts IA",        url: "/settings",      icon: Settings,        group: "Herramientas" },
+  { title: "Configuración",     url: "/config",        icon: SlidersHorizontal, group: "Herramientas" },
 ];
 
 const participantNav = [
