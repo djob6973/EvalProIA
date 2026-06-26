@@ -78,7 +78,7 @@ function EvaluationResultsPage() {
         setLoading(true);
 
         const [evalData, areasData, resultsData] = await Promise.all([
-          evaluationsService.getWithQuestions(id),
+          evaluationsService.getById(id),
           areasService.getAll(),
           resultsService.getByEvaluationId(id),
         ]);
@@ -315,8 +315,8 @@ function EvaluationResultsPage() {
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <CalendarDays className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <CalendarDays className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Semana</p>
@@ -328,8 +328,8 @@ function EvaluationResultsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <Building2 className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <Building2 className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Área</p>
@@ -337,19 +337,19 @@ function EvaluationResultsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <Hash className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <Hash className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Número de preguntas</p>
                 <p className="text-sm font-semibold">
-                  {evaluation?.questions?.length != null ? evaluation.questions.length : "No definido"}
+                  {evaluation?.config?.num_preguntas != null ? evaluation.config.num_preguntas : "No definido"}
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <Percent className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <Percent className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">% Aprobación</p>
@@ -361,8 +361,8 @@ function EvaluationResultsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <Clock className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <Clock className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Tiempo límite</p>
@@ -372,8 +372,8 @@ function EvaluationResultsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <RefreshCw className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <RefreshCw className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Intentos permitidos</p>
@@ -383,8 +383,8 @@ function EvaluationResultsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <CalendarCheck className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <CalendarCheck className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Fecha de creación</p>
@@ -400,8 +400,8 @@ function EvaluationResultsPage() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                <CalendarOff className="size-4 text-muted-foreground" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: "var(--coral-soft)" }}>
+                <CalendarOff className="size-4 text-accent" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Fecha de vencimiento</p>
