@@ -6,8 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState, useMemo } from "react";
 import React from "react";
-import { resultsService, evaluationsService, questionsService } from "@/lib/services/evaluations";
-import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { resultsService, evaluationsService, questionsService, areasService } from "@/lib/services/evaluations";
+import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff } from "lucide-react";
 
 export const Route = createFileRoute("/evaluation-results/$id")({
   head: () => ({ meta: [{ title: "Resultados de Evaluación — EvalPro" }] }),
@@ -23,6 +23,14 @@ function formatDuration(startedAt: string, completedAt: string): string {
   const secs = totalSecs % 60;
   if (mins === 0) return `${secs}s`;
   return `${mins}m ${secs}s`;
+}
+
+function getISOWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
 function getDificultadClass(dificultad: string): string {
@@ -50,6 +58,7 @@ function EvaluationResultsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [evaluation, setEvaluation] = useState<any>(null);
+  const [area, setArea] = useState<any>(null);
   const [results, setResults] = useState<any[]>([]);
   const [questionsMap, setQuestionsMap] = useState<Record<string, any>>({});
   const [stats, setStats] = useState({ totalParticipants: 0, averageScore: 0, passRate: 0, bestScore: 0 });
@@ -68,10 +77,13 @@ function EvaluationResultsPage() {
       try {
         setLoading(true);
 
-        const evalData = await evaluationsService.getById(id);
+        const [evalData, areasData, resultsData] = await Promise.all([
+          evaluationsService.getWithQuestions(id),
+          areasService.getAll(),
+          resultsService.getByEvaluationId(id),
+        ]);
         setEvaluation(evalData);
-
-        const resultsData = await resultsService.getByEvaluationId(id);
+        setArea(areasData.find((a: any) => a.id === evalData.area_id) ?? null);
         setResults(resultsData);
 
         const allQuestionIds = new Set<string>();
@@ -295,6 +307,116 @@ function EvaluationResultsPage() {
           {evaluation?.description && (
             <p className="mt-2 text-sm text-muted-foreground">{evaluation.description}</p>
           )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Información General
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <CalendarDays className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Semana</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.created_at
+                    ? `Semana ${getISOWeek(new Date(evaluation.created_at))}`
+                    : "No definido"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <Building2 className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Área</p>
+                <p className="text-sm font-semibold">{area?.name ?? "No definido"}</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <Hash className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Número de preguntas</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.questions?.length != null ? evaluation.questions.length : "No definido"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <Percent className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">% Aprobación</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.config?.porcentaje_aprobacion != null
+                    ? `${evaluation.config.porcentaje_aprobacion}%`
+                    : "No definido"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <Clock className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tiempo límite</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.tiempo_limite != null ? `${evaluation.tiempo_limite} min` : "No definido"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <RefreshCw className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Intentos permitidos</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.intentos_permitidos != null ? evaluation.intentos_permitidos : "No definido"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <CalendarCheck className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Fecha de creación</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.created_at
+                    ? new Date(evaluation.created_at).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "No definido"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                <CalendarOff className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Fecha de vencimiento</p>
+                <p className="text-sm font-semibold">
+                  {evaluation?.fecha_vencimiento
+                    ? new Date(evaluation.fecha_vencimiento).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "No definido"}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-4">
