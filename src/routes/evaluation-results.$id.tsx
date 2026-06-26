@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService, areasService } from "@/lib/services/evaluations";
 import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff, ImageDown } from "lucide-react";
@@ -31,6 +31,480 @@ function getISOWeek(date: Date): number {
   d.setUTCDate(d.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
   return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+const EVALPRO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ED5650" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>`;
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function drawResultsCard(
+  canvas: HTMLCanvasElement,
+  ev: any,
+  areaObj: any | null,
+  resultsData: any[],
+  stats: { totalParticipants: number; averageScore: number; passRate: number; bestScore: number },
+  analytics: { text: string; errorRate: number; attempts: number }[],
+  passingThreshold: number
+) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const W = 800;
+  const PAD = 32;
+  const ACCENT = "#ED5650";
+  const SW = W - PAD * 2;
+
+  const hasDesc = !!ev?.description;
+  const hasArea = !!areaObj?.name;
+  const hasDates = !!(ev?.created_at || ev?.fecha_vencimiento);
+  const rows = resultsData.slice(0, 8);
+  const qRows = analytics.slice(0, 6);
+
+  let H = 68;
+  H += 28;
+  if (hasDesc) H += 22;
+  if (hasArea) H += 22;
+  H += 16 + 96 + 8;
+  if (hasDates) H += 64 + 8;
+  H += 16 + 12 + 96 + 8;
+  if (rows.length > 0) H += 16 + 12 + 28 + rows.length * 40 + 8;
+  if (qRows.length > 0) H += 16 + 12 + qRows.length * 44 + 8;
+  H += 60;
+
+  canvas.width = W * 2;
+  canvas.height = H * 2;
+  canvas.style.width = `${W}px`;
+  canvas.style.height = `${H}px`;
+  ctx.scale(2, 2);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = ACCENT;
+  ctx.fillRect(0, 0, 5, H);
+  const barGrad = ctx.createLinearGradient(5, 0, 24, 0);
+  barGrad.addColorStop(0, "rgba(237,86,80,0.09)");
+  barGrad.addColorStop(1, "transparent");
+  ctx.fillStyle = barGrad;
+  ctx.fillRect(5, 0, 19, H);
+
+  function trunc(text: string, maxW: number): string {
+    if (ctx.measureText(text).width <= maxW) return text;
+    let t = text;
+    while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+    return t + "…";
+  }
+
+  function secLabel(label: string, y: number) {
+    ctx.font = "bold 9px system-ui, sans-serif";
+    ctx.fillStyle = "#94a3b8";
+    ctx.textAlign = "left";
+    ctx.fillText(label, PAD, y);
+    const lw = ctx.measureText(label).width + 10;
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD + lw, y - 4);
+    ctx.lineTo(W - PAD, y - 4);
+    ctx.stroke();
+  }
+
+  function statsBox(y: number, items: { label: string; value: string; color: string }[]) {
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath();
+    ctx.roundRect(PAD, y, SW, 96, 14);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(PAD, y, SW, 96, 14);
+    ctx.stroke();
+    const col = SW / items.length;
+    items.forEach((item, i) => {
+      const cx = PAD + i * col + col / 2;
+      if (i > 0) {
+        ctx.strokeStyle = "#e2e8f0";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(PAD + i * col, y + 14);
+        ctx.lineTo(PAD + i * col, y + 82);
+        ctx.stroke();
+      }
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "center";
+      ctx.fillText(item.label, cx, y + 26);
+      ctx.font = "bold 22px 'Space Grotesk', system-ui, sans-serif";
+      ctx.fillStyle = item.color;
+      ctx.fillText(item.value, cx, y + 70);
+    });
+    ctx.textAlign = "left";
+  }
+
+  // Header (0–68)
+  const LOGO_H = 38;
+  const bLabel = "INFORME";
+  ctx.font = "bold 10px system-ui";
+  const bW = ctx.measureText(bLabel).width + 20;
+  const bX = W - bW - PAD;
+  ctx.font = "bold 19px 'Space Grotesk', system-ui, sans-serif";
+  const evalW = ctx.measureText("Eval").width;
+  const blockW = LOGO_H + 10 + evalW + ctx.measureText("Pro").width;
+  const blockX = bX - 20 - blockW;
+
+  try {
+    const blob = new Blob([EVALPRO_LOGO_SVG], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const logo = await loadImage(url);
+    ctx.drawImage(logo, blockX, 14, LOGO_H, LOGO_H);
+    URL.revokeObjectURL(url);
+  } catch { /* skip */ }
+
+  const txtX = blockX + LOGO_H + 10;
+  ctx.font = "bold 19px 'Space Grotesk', system-ui, sans-serif";
+  ctx.fillStyle = "#0f172a";
+  ctx.textAlign = "left";
+  ctx.fillText("Eval", txtX, 38);
+  ctx.fillStyle = ACCENT;
+  ctx.fillText("Pro", txtX + evalW, 38);
+
+  ctx.fillStyle = "#f1f5f9";
+  ctx.beginPath();
+  ctx.roundRect(bX, 20, bW, 21, 10);
+  ctx.fill();
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(bX, 20, bW, 21, 10);
+  ctx.stroke();
+  ctx.font = "bold 10px system-ui";
+  ctx.fillStyle = "#64748b";
+  ctx.textAlign = "center";
+  ctx.fillText(bLabel, bX + bW / 2, 33);
+
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, 68);
+  ctx.lineTo(W - PAD, 68);
+  ctx.stroke();
+
+  // Title + description + area
+  let y = 68;
+  const createdDate = ev?.created_at ? new Date(ev.created_at) : null;
+  const weekNum = createdDate ? getISOWeek(createdDate) : null;
+
+  y += 28;
+  ctx.textAlign = "left";
+  let pillW = 0;
+  if (weekNum) {
+    ctx.font = "bold 11px system-ui, sans-serif";
+    pillW = ctx.measureText(`Semana ${weekNum}`).width + 20 + 10;
+  }
+  ctx.font = "bold 21px 'Space Grotesk', system-ui, sans-serif";
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText(trunc(ev?.title || "Evaluación", W - PAD * 2 - pillW), PAD, y);
+
+  if (weekNum) {
+    const wLabel = `Semana ${weekNum}`;
+    ctx.font = "bold 11px system-ui, sans-serif";
+    const wW = ctx.measureText(wLabel).width + 20;
+    const px = W - PAD - wW;
+    ctx.fillStyle = "#FFE7E6";
+    ctx.beginPath();
+    ctx.roundRect(px, y - 16, wW, 22, 11);
+    ctx.fill();
+    ctx.strokeStyle = "#FBBDB9";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(px, y - 16, wW, 22, 11);
+    ctx.stroke();
+    ctx.fillStyle = "#B13833";
+    ctx.textAlign = "center";
+    ctx.fillText(wLabel, px + wW / 2, y);
+    ctx.textAlign = "left";
+  }
+
+  if (hasDesc) {
+    y += 22;
+    ctx.font = "13px system-ui, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(trunc(ev.description, W - PAD * 2), PAD, y);
+  }
+
+  if (hasArea) {
+    y += 22;
+    ctx.font = "11px system-ui, sans-serif";
+    const aw = ctx.measureText(areaObj.name).width + 16;
+    ctx.fillStyle = "rgba(109,40,217,0.1)";
+    ctx.beginPath();
+    ctx.roundRect(PAD, y - 14, aw, 20, 10);
+    ctx.fill();
+    ctx.fillStyle = "#7c3aed";
+    ctx.fillText(areaObj.name, PAD + 8, y);
+  }
+
+  // Config stats
+  y += 16;
+  statsBox(y, [
+    { label: "APROBACIÓN", value: ev?.config?.porcentaje_aprobacion != null ? `${ev.config.porcentaje_aprobacion}%` : "—", color: "#059669" },
+    { label: "PREGUNTAS",  value: ev?.config?.num_preguntas != null ? String(ev.config.num_preguntas) : "—", color: "#2563eb" },
+    { label: "TIEMPO",     value: ev?.tiempo_limite > 0 ? `${ev.tiempo_limite} min` : "Sin límite", color: "#d97706" },
+    { label: "INTENTOS",   value: ev?.intentos_permitidos != null ? String(ev.intentos_permitidos) : "—", color: "#7c3aed" },
+  ]);
+  y += 96 + 8;
+
+  // Dates
+  if (hasDates) {
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath();
+    ctx.roundRect(PAD, y, SW, 64, 12);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(PAD, y, SW, 64, 12);
+    ctx.stroke();
+
+    const LY = y + 22;
+    const VY = y + 50;
+
+    if (createdDate && ev?.fecha_vencimiento) {
+      ctx.beginPath();
+      ctx.moveTo(W / 2, y + 12);
+      ctx.lineTo(W / 2, y + 52);
+      ctx.stroke();
+    }
+
+    if (createdDate) {
+      const dStr = createdDate.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      const cxd = ev?.fecha_vencimiento ? PAD + SW / 4 : W / 2;
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "center";
+      ctx.fillText("CREADA", cxd, LY);
+      ctx.font = "bold 14px system-ui, sans-serif";
+      ctx.fillStyle = "#334155";
+      ctx.fillText(dStr, cxd, VY);
+    }
+
+    if (ev?.fecha_vencimiento) {
+      const vStr = new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      const vx = createdDate ? W - PAD - SW / 4 : W / 2;
+      ctx.font = "bold 9px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "center";
+      ctx.fillText("VENCE", vx, LY);
+      ctx.font = "bold 14px system-ui, sans-serif";
+      ctx.fillStyle = "#334155";
+      ctx.fillText(vStr, vx, VY);
+    }
+    ctx.textAlign = "left";
+    y += 64 + 8;
+  }
+
+  // Results metrics
+  y += 16;
+  secLabel("RESULTADOS GENERALES", y);
+  y += 12;
+  statsBox(y, [
+    { label: "PARTICIPANTES",   value: String(stats.totalParticipants), color: "#2563eb" },
+    { label: "PROMEDIO",        value: `${stats.averageScore}%`,        color: "#d97706" },
+    { label: "TASA APROBACIÓN", value: `${stats.passRate}%`,            color: "#059669" },
+    { label: "MEJOR PUNTAJE",   value: `${stats.bestScore}%`,           color: "#7c3aed" },
+  ]);
+  y += 96 + 8;
+
+  // Participants table
+  if (rows.length > 0) {
+    y += 16;
+    secLabel("DETALLE POR PARTICIPANTE", y);
+    y += 12;
+
+    const COLS = [220, 76, 76, 110, 76, 178];
+    const HDRS = ["PARTICIPANTE", "INTENTO", "PUNTAJE", "ESTADO", "TIEMPO", "FECHA"];
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(PAD, y, SW, 28);
+    ctx.font = "bold 8px system-ui, sans-serif";
+    ctx.fillStyle = "#94a3b8";
+    let hx = PAD + 8;
+    HDRS.forEach((h, i) => {
+      ctx.textAlign = i === 0 ? "left" : "center";
+      ctx.fillText(h, i === 0 ? hx : hx + COLS[i] / 2, y + 18);
+      hx += COLS[i];
+    });
+
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(PAD, y + 28);
+    ctx.lineTo(W - PAD, y + 28);
+    ctx.stroke();
+    y += 28;
+
+    rows.forEach((r: any, idx: number) => {
+      const ry = y;
+      if (idx % 2 === 0) {
+        ctx.fillStyle = "#fafafa";
+        ctx.fillRect(PAD, ry, SW, 40);
+      }
+      const approved = r.score >= passingThreshold;
+      let rx = PAD + 8;
+      const ty = ry + 25;
+
+      ctx.font = "13px system-ui, sans-serif";
+      ctx.fillStyle = "#334155";
+      ctx.textAlign = "left";
+      ctx.fillText(trunc(r.profiles?.full_name || "Sin nombre", COLS[0] - 16), rx, ty);
+      rx += COLS[0];
+
+      const iLabel = `Intento ${r.attemptNumber}`;
+      ctx.font = "bold 9px system-ui, sans-serif";
+      const iW = ctx.measureText(iLabel).width + 12;
+      ctx.fillStyle = "rgba(37,99,235,0.1)";
+      ctx.beginPath();
+      ctx.roundRect(rx + COLS[1] / 2 - iW / 2, ry + 12, iW, 16, 8);
+      ctx.fill();
+      ctx.fillStyle = "#2563eb";
+      ctx.textAlign = "center";
+      ctx.fillText(iLabel, rx + COLS[1] / 2, ry + 23);
+      rx += COLS[1];
+
+      ctx.font = "bold 14px 'Space Grotesk', system-ui, sans-serif";
+      ctx.fillStyle = approved ? "#059669" : "#ef4444";
+      ctx.textAlign = "center";
+      ctx.fillText(`${r.score}%`, rx + COLS[2] / 2, ty);
+      rx += COLS[2];
+
+      const eLabel = approved ? "APROBADO" : "REPROBADO";
+      ctx.font = "bold 8px system-ui, sans-serif";
+      const eW = ctx.measureText(eLabel).width + 14;
+      ctx.fillStyle = approved ? "rgba(5,150,105,0.1)" : "rgba(239,68,68,0.1)";
+      ctx.beginPath();
+      ctx.roundRect(rx + COLS[3] / 2 - eW / 2, ry + 10, eW, 18, 4);
+      ctx.fill();
+      ctx.fillStyle = approved ? "#059669" : "#ef4444";
+      ctx.textAlign = "center";
+      ctx.fillText(eLabel, rx + COLS[3] / 2, ry + 23);
+      rx += COLS[3];
+
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillStyle = "#64748b";
+      ctx.textAlign = "center";
+      ctx.fillText(formatDuration(r.started_at, r.completed_at), rx + COLS[4] / 2, ty);
+      rx += COLS[4];
+
+      const ds = r.completed_at
+        ? new Date(r.completed_at).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })
+        : "—";
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "center";
+      ctx.fillText(ds, rx + COLS[5] / 2, ty);
+
+      ctx.strokeStyle = "#f1f5f9";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD, ry + 40);
+      ctx.lineTo(W - PAD, ry + 40);
+      ctx.stroke();
+
+      y += 40;
+    });
+    y += 8;
+  }
+
+  // Analytics
+  if (qRows.length > 0) {
+    y += 16;
+    secLabel("ANALYTICS POR PREGUNTA", y);
+    y += 12;
+
+    qRows.forEach((q: any, idx: number) => {
+      const ry = y;
+      if (idx % 2 === 0) {
+        ctx.fillStyle = "#fafafa";
+        ctx.fillRect(PAD, ry, SW, 44);
+      }
+      const errColor = q.errorRate >= 70 ? "#ef4444" : q.errorRate >= 40 ? "#d97706" : "#059669";
+
+      ctx.font = "bold 10px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "left";
+      ctx.fillText(String(idx + 1), PAD + 8, ry + 18);
+
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillStyle = "#334155";
+      ctx.fillText(trunc(q.text, SW - 120), PAD + 24, ry + 18);
+
+      ctx.font = "bold 11px system-ui, sans-serif";
+      ctx.fillStyle = errColor;
+      ctx.textAlign = "right";
+      ctx.fillText(`${q.errorRate}% errores`, W - PAD - 8, ry + 18);
+
+      const BX = PAD + 24;
+      const BW = SW - 100;
+      ctx.fillStyle = "#f1f5f9";
+      ctx.beginPath();
+      ctx.roundRect(BX, ry + 26, BW, 6, 3);
+      ctx.fill();
+      const fw = BW * (q.errorRate / 100);
+      if (fw > 0) {
+        ctx.fillStyle = errColor;
+        ctx.beginPath();
+        ctx.roundRect(BX, ry + 26, fw, 6, 3);
+        ctx.fill();
+      }
+
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#94a3b8";
+      ctx.textAlign = "right";
+      ctx.fillText(`${q.attempts} part.`, W - PAD - 8, ry + 38);
+
+      ctx.strokeStyle = "#f1f5f9";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(PAD, ry + 44);
+      ctx.lineTo(W - PAD, ry + 44);
+      ctx.stroke();
+
+      y += 44;
+    });
+    y += 8;
+  }
+
+  // Footer
+  const fY = H - 60;
+  ctx.fillStyle = "#f8fafc";
+  ctx.fillRect(0, fY, W, 60);
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, fY);
+  ctx.lineTo(W, fY);
+  ctx.stroke();
+
+  ctx.fillStyle = ACCENT;
+  ctx.beginPath();
+  ctx.arc(PAD, fY + 31, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = "11px system-ui, sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.textAlign = "left";
+  ctx.fillText("evalpro.apps.dataico.world", PAD + 12, fY + 35);
+  ctx.fillStyle = "#cbd5e1";
+  ctx.textAlign = "right";
+  ctx.fillText("Informe desde EvalPro", W - PAD, fY + 35);
+  ctx.textAlign = "left";
 }
 
 function getDificultadClass(dificultad: string): string {
@@ -65,7 +539,6 @@ function EvaluationResultsPage() {
   const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
   const [attemptFilter, setAttemptFilter] = useState<number | null>(null);
   const [capturing, setCapturing] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -259,40 +732,29 @@ function EvaluationResultsPage() {
   }
 
   async function exportImage() {
-    if (!contentRef.current || capturing) return;
+    if (capturing) return;
     setCapturing(true);
-
-    const el = contentRef.current;
-
-    // Remove overflow clipping and scrollbars so the full table renders cleanly
-    const overflowEls = Array.from(el.querySelectorAll<HTMLElement>(".overflow-x-auto"));
-    overflowEls.forEach((s) => {
-      s.style.overflowX = "visible";
-      s.style.scrollbarWidth = "none";
-    });
-
     try {
-      const { toPng } = await import("html-to-image");
-      const isDark = document.documentElement.classList.contains("dark");
-      const dataUrl = await toPng(el, {
-        pixelRatio: 2,
-        backgroundColor: isDark ? "#1a1a1a" : "#F1F1F1",
-        skipFonts: true,
-        height: el.scrollHeight,
-      });
+      const canvas = document.createElement("canvas");
+      await drawResultsCard(
+        canvas,
+        evaluation,
+        area,
+        resultsWithAttempt,
+        stats,
+        questionAnalytics,
+        evaluation?.config?.porcentaje_aprobacion ?? 60
+      );
+      const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
-      a.href = dataUrl;
+      a.href = url;
       const safe = (evaluation?.title || id).replace(/[^a-z0-9]/gi, "-").toLowerCase();
       const today = new Date().toISOString().slice(0, 10);
       a.download = `resultados-${safe}-${today}.png`;
       a.click();
     } catch (err) {
-      console.error("Error al capturar imagen:", err);
+      console.error("Error al generar imagen:", err);
     } finally {
-      overflowEls.forEach((s) => {
-        s.style.overflowX = "";
-        s.style.scrollbarWidth = "";
-      });
       setCapturing(false);
     }
   }
@@ -346,7 +808,7 @@ function EvaluationResultsPage() {
           </div>
         }
       />
-      <div className="space-y-6" ref={contentRef}>
+      <div className="space-y-6">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h1 className="text-2xl font-bold">{evaluation?.title || "Evaluación"}</h1>
           {evaluation?.description && (
