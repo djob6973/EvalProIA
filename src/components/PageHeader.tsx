@@ -1,20 +1,19 @@
-import { Bell, Menu } from "lucide-react";
+import { Bell, Check, Menu } from "lucide-react";
 import { useLayout } from "@/components/AppShell";
 import { useEffect, useRef, useState } from "react";
-
-type NotifItem = { live: boolean; text: string; meta: string };
+import { useNotifications } from "@/contexts/NotificationContext";
 
 type PageHeaderProps = {
   title: string;
   subtitle?: string;
   actions?: React.ReactNode;
-  notifications?: NotifItem[];
 };
 
-export function PageHeader({ title, subtitle, actions, notifications = [] }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
   const { setMobileOpen } = useLayout();
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  const { items, unreadCount, markAllAsRead } = useNotifications();
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -25,6 +24,13 @@ export function PageHeader({ title, subtitle, actions, notifications = [] }: Pag
     if (notifOpen) document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [notifOpen]);
+
+  // Auto-mark all as read 1.5 s after panel opens
+  useEffect(() => {
+    if (!notifOpen || unreadCount === 0) return;
+    const t = setTimeout(() => markAllAsRead(), 1500);
+    return () => clearTimeout(t);
+  }, [notifOpen, unreadCount]);
 
   return (
     <div className="mb-[24px] flex items-center justify-between gap-4">
@@ -63,50 +69,64 @@ export function PageHeader({ title, subtitle, actions, notifications = [] }: Pag
             title="Notificaciones"
           >
             <Bell className="size-[20px]" strokeWidth={1.5} />
-            {notifications.length > 0 && (
+            {unreadCount > 0 && (
               <span
-                className="absolute bottom-[7px] right-[7px] h-[7px] w-[7px] rounded-full ring-2 ring-[var(--background)]"
+                className="absolute -top-[3px] -right-[3px] flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-[3px] text-[9px] font-bold text-white ring-2 ring-[var(--background)]"
                 style={{ background: "var(--accent)" }}
-              />
+              >
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
             )}
           </button>
 
           {notifOpen && (
             <div
-              className="absolute right-0 top-11 z-50 w-[300px] overflow-hidden rounded-[16px]"
+              className="absolute right-0 top-11 z-50 w-[320px] overflow-hidden rounded-[16px]"
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border)",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
               }}
             >
-              <div className="border-b px-4 py-3" style={{ borderColor: "var(--border)" }}>
+              <div
+                className="flex items-center justify-between border-b px-4 py-3"
+                style={{ borderColor: "var(--border)" }}
+              >
                 <span
                   className="font-mono text-[10px] font-bold uppercase tracking-[.16em]"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  Actividad Reciente
+                  Notificaciones
                 </span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={() => markAllAsRead()}
+                    className="flex items-center gap-[4px] text-[11px] font-medium transition-opacity hover:opacity-70"
+                    style={{ color: "var(--accent)" }}
+                  >
+                    <Check className="size-[11px]" />
+                    Marcar todo como leído
+                  </button>
+                )}
               </div>
 
-              {notifications.length === 0 ? (
+              {items.length === 0 ? (
                 <div
                   className="px-4 py-6 text-center text-[13px]"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  Sin actividad reciente
+                  Sin notificaciones
                 </div>
               ) : (
-                <div className="flex flex-col">
-                  {notifications.map((n, i) => (
+                <div className="flex max-h-[360px] flex-col overflow-y-auto">
+                  {items.slice(0, 10).map((n, i) => (
                     <div
-                      key={i}
+                      key={n.id}
                       className="flex gap-3 px-4 py-3"
                       style={{
                         borderBottom:
-                          i < notifications.length - 1
-                            ? "1px solid var(--border)"
-                            : "none",
+                          i < Math.min(items.length, 10) - 1 ? "1px solid var(--border)" : "none",
+                        background: !n.read ? "color-mix(in srgb, var(--accent) 5%, transparent)" : undefined,
                       }}
                     >
                       <span
@@ -118,10 +138,16 @@ export function PageHeader({ title, subtitle, actions, notifications = [] }: Pag
                         }}
                       />
                       <div>
-                        <div className="text-[13px] font-medium" style={{ color: "var(--foreground)" }}>
+                        <div
+                          className="text-[13px] font-medium"
+                          style={{ color: "var(--foreground)" }}
+                        >
                           {n.text}
                         </div>
-                        <div className="mt-[2px] text-[11px]" style={{ color: "var(--muted-foreground)" }}>
+                        <div
+                          className="mt-[2px] text-[11px]"
+                          style={{ color: "var(--muted-foreground)" }}
+                        >
                           {n.meta}
                         </div>
                       </div>

@@ -155,6 +155,12 @@ async function route(
   // ── Categories ────────────────────────────────────────────────────────────
   if (res === "categories" && !id && m === "GET") return listCategories();
 
+  // ── Notifications ─────────────────────────────────────────────────────────
+  if (res === "notifications") {
+    if (!id && m === "GET") return getNotifications(request);
+    if (id === "read-all" && m === "POST") return markAllNotificationsRead(request);
+  }
+
   // ── Stats ─────────────────────────────────────────────────────────────────
   if (res === "stats") {
     if (id === "dashboard" && m === "GET") return dashboardStats();
@@ -620,11 +626,26 @@ async function assignParticipant(request: Request): Promise<Response> {
   if (adminOrErr instanceof Response) return adminOrErr;
 
   const { evaluationId, userId } = await request.json();
-  await db`
+  const [existing] = await db`
     INSERT INTO evaluation_participants (evaluation_id, user_id)
     VALUES (${evaluationId}, ${userId})
     ON CONFLICT DO NOTHING
+    RETURNING evaluation_id
   `;
+
+  // Create a notification for the newly assigned participant
+  if (existing) {
+    const [evaluation] = await db`SELECT title FROM evaluations WHERE id = ${evaluationId}`;
+    if (evaluation) {
+      await db`
+        INSERT INTO notifications (user_id, type, title, body)
+        VALUES (${userId}, 'evaluation_assigned',
+                'Nueva evaluación disponible',
+                ${"Tienes una nueva evaluación disponible: \"" + evaluation.title + "\""})
+      `;
+    }
+  }
+
   return json({ success: true });
 }
 
@@ -716,6 +737,35 @@ async function deleteProgress(request: Request): Promise<Response> {
   await db`
     DELETE FROM evaluation_progress
     WHERE user_id = ${userId} AND evaluation_id = ${evaluationId}
+  `;
+  return json({ success: true });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+async function getNotifications(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const rows = await db`
+    SELECT id, type, title, body, read, created_at
+    FROM notifications
+    WHERE user_id = ${user.id}
+    ORDER BY created_at DESC
+    LIMIT 50
+  `;
+  return json(rows);
+}
+
+async function markAllNotificationsRead(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  await db`
+    UPDATE notifications SET read = true
+    WHERE user_id = ${user.id} AND read = false
   `;
   return json({ success: true });
 }

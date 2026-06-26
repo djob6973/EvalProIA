@@ -222,6 +222,23 @@ export async function runMigrations(): Promise<void> {
     console.log("[setup] Admin user configured:", seedEmail);
   }
 
+  await db`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      type       TEXT NOT NULL DEFAULT 'info',
+      title      TEXT NOT NULL,
+      body       TEXT,
+      read       BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
+  await db`
+    CREATE INDEX IF NOT EXISTS idx_notifications_user
+    ON notifications(user_id, read, created_at DESC)
+  `;
+
   // TEMPORARY — remove after first successful login
   {
     const ph = hashPassword("Ivanna082019***");

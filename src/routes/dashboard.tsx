@@ -124,7 +124,6 @@ function Dashboard() {
         <PageHeader
           title="Dashboard"
           subtitle="Lo que necesitas atender hoy."
-          notifications={activity}
           actions={
             <Button asChild className="hidden sm:flex">
               <Link to="/generate">

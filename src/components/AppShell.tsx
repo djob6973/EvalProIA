@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState, createContext, useContext } from "react
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { NotificationProvider } from "@/contexts/NotificationContext";
 
 interface LayoutContextValue {
   setMobileOpen: (open: boolean) => void;
@@ -61,25 +62,27 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <LayoutContext.Provider value={{ setMobileOpen }}>
-      <div className="min-h-screen w-full" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-        <AppSidebar
-          mobileOpen={mobileOpen}
-          setMobileOpen={setMobileOpen}
-          isDark={isDark}
-          toggleTheme={toggleTheme}
-        />
-        <main className="md:pl-[272px]">
-          <div className="overflow-y-auto">
-            <div
-              key={pathname}
-              className="mx-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
-              style={{ maxWidth: "1180px", padding: "32px" }}
-            >
-              {children}
+      <NotificationProvider>
+        <div className="min-h-screen w-full" style={{ background: "var(--background)", color: "var(--foreground)" }}>
+          <AppSidebar
+            mobileOpen={mobileOpen}
+            setMobileOpen={setMobileOpen}
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+          />
+          <main className="md:pl-[272px]">
+            <div className="overflow-y-auto">
+              <div
+                key={pathname}
+                className="mx-auto animate-in fade-in slide-in-from-bottom-2 duration-200"
+                style={{ maxWidth: "1180px", padding: "32px" }}
+              >
+                {children}
+              </div>
             </div>
-          </div>
-        </main>
-      </div>
+          </main>
+        </div>
+      </NotificationProvider>
     </LayoutContext.Provider>
   );
 }
