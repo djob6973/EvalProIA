@@ -73,8 +73,7 @@ function AccountPage() {
           }}
         >
           <div
-            className="grid size-[52px] shrink-0 place-items-center rounded-full font-mono text-[16px] font-bold text-white"
-            style={{ background: "#333333" }}
+            className="grid size-[52px] shrink-0 place-items-center rounded-full bg-foreground font-mono text-[16px] font-bold text-background"
           >
             {userInitials}
           </div>

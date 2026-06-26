@@ -195,7 +195,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         onClick={() => isMobile && setMobileOpen(false)}
         className="flex items-center gap-3 rounded-[14px] px-3 py-2.5 transition-all duration-150 hover:bg-[var(--sidebar-accent)]"
       >
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--sidebar-primary)] font-mono text-[11px] font-bold text-[var(--sidebar-primary-foreground)]">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary font-mono text-[11px] font-bold text-primary-foreground">
           {userInitials}
         </div>
         <div className="min-w-0 flex-1">
