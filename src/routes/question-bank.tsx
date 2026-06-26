@@ -496,7 +496,7 @@ function QuestionBankPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar preguntas…"
-                className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                className="w-full rounded-lg border pl-9 pr-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                 style={{ borderColor: "var(--border)", background: "var(--card)" }}
               />
             </div>
