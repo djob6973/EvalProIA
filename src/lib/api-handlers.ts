@@ -231,7 +231,7 @@ async function createEvaluation(request: Request): Promise<Response> {
   if (area_id) {
     const areaUsers = await db`
       SELECT id FROM profiles
-      WHERE area_id = ${area_id} AND role IN ('participant', 'both')
+      WHERE area_id = ${area_id}
     `;
     if (areaUsers.length > 0) {
       await db`
@@ -244,7 +244,7 @@ async function createEvaluation(request: Request): Promise<Response> {
         SELECT id, 'evaluation_assigned', 'Nueva evaluación disponible',
                ${"Tienes una nueva evaluación disponible: \"" + title + "\""}
         FROM profiles
-        WHERE area_id = ${area_id} AND role IN ('participant', 'both')
+        WHERE area_id = ${area_id}
       `;
     }
   }
@@ -622,7 +622,6 @@ async function listParticipants(): Promise<Response> {
   const rows = await db`
     SELECT id, email, full_name, area_id, role
     FROM profiles
-    WHERE role IN ('participant', 'both')
     ORDER BY full_name ASC
   `;
   return json(rows);
