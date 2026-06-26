@@ -262,19 +262,15 @@ function EvaluationResultsPage() {
     if (!contentRef.current || capturing) return;
     setCapturing(true);
     try {
-      const { default: html2canvas } = await import("html2canvas");
+      const { toPng } = await import("html-to-image");
       const isDark = document.documentElement.classList.contains("dark");
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const dataUrl = await toPng(contentRef.current, {
+        pixelRatio: 2,
         backgroundColor: isDark ? "#1a1a1a" : "#F1F1F1",
-        windowWidth: contentRef.current.scrollWidth,
-        windowHeight: contentRef.current.scrollHeight,
+        skipFonts: true,
       });
-      const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
-      a.href = url;
+      a.href = dataUrl;
       const safe = (evaluation?.title || id).replace(/[^a-z0-9]/gi, "-").toLowerCase();
       const today = new Date().toISOString().slice(0, 10);
       a.download = `resultados-${safe}-${today}.png`;
