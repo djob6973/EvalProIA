@@ -4,10 +4,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService, areasService } from "@/lib/services/evaluations";
-import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff } from "lucide-react";
+import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff, ImageDown } from "lucide-react";
 
 export const Route = createFileRoute("/evaluation-results/$id")({
   head: () => ({ meta: [{ title: "Resultados de Evaluación — EvalPro" }] }),
@@ -64,6 +64,8 @@ function EvaluationResultsPage() {
   const [stats, setStats] = useState({ totalParticipants: 0, averageScore: 0, passRate: 0, bestScore: 0 });
   const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
   const [attemptFilter, setAttemptFilter] = useState<number | null>(null);
+  const [capturing, setCapturing] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -256,6 +258,34 @@ function EvaluationResultsPage() {
     downloadCsv([headers, ...rows], `resultados-${safe}-${today}.csv`);
   }
 
+  async function exportImage() {
+    if (!contentRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      const { default: html2canvas } = await import("html2canvas");
+      const isDark = document.documentElement.classList.contains("dark");
+      const canvas = await html2canvas(contentRef.current, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: isDark ? "#1a1a1a" : "#F1F1F1",
+        windowWidth: contentRef.current.scrollWidth,
+        windowHeight: contentRef.current.scrollHeight,
+      });
+      const url = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = url;
+      const safe = (evaluation?.title || id).replace(/[^a-z0-9]/gi, "-").toLowerCase();
+      const today = new Date().toISOString().slice(0, 10);
+      a.download = `resultados-${safe}-${today}.png`;
+      a.click();
+    } catch (err) {
+      console.error("Error al capturar imagen:", err);
+    } finally {
+      setCapturing(false);
+    }
+  }
+
   if (loading) {
     return (
       <AppShell>
@@ -293,6 +323,10 @@ function EvaluationResultsPage() {
             <Button variant="outline" size="sm" onClick={exportResultsCsv} disabled={results.length === 0}>
               <Download className="size-4" /> Exportar CSV
             </Button>
+            <Button variant="outline" size="sm" onClick={exportImage} disabled={capturing || loading}>
+              <ImageDown className="size-4" />
+              {capturing ? "Generando…" : "Exportar PNG"}
+            </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/evaluations">
                 <ArrowLeft className="size-4" /> Volver
@@ -301,7 +335,7 @@ function EvaluationResultsPage() {
           </div>
         }
       />
-      <div className="space-y-6">
+      <div className="space-y-6" ref={contentRef}>
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h1 className="text-2xl font-bold">{evaluation?.title || "Evaluación"}</h1>
           {evaluation?.description && (
