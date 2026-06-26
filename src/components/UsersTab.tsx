@@ -270,8 +270,8 @@ export function UsersTab() {
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div
-                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white"
-                          style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[11px] font-bold"
+                          style={{ background: "#FBE6E6", color: "#B43C35" }}
                         >
                           {avatarInitials(u)}
                         </div>
