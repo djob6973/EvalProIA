@@ -756,7 +756,7 @@ function QuizRunner({
             <ArrowLeft className="size-4" /> Anterior
           </Button>
           {i < questions.length - 1 ? (
-            <Button onClick={() => setShowNextConfirm(true)} disabled={!hasAnswer || submitting}>
+            <Button onClick={() => isLocked ? setI(i + 1) : setShowNextConfirm(true)} disabled={!hasAnswer || submitting}>
               Siguiente <ArrowRight className="size-4" />
             </Button>
           ) : (
