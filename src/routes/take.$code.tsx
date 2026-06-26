@@ -496,6 +496,11 @@ function QuizRunner({
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialState?.answers || {});
   const [timeRemaining, setTimeRemaining] = useState<number>(initialState?.timeRemaining || (tiempoLimite ? tiempoLimite * 60 : 0));
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showNextConfirm, setShowNextConfirm] = useState(false);
+  const [lockedQuestions, setLockedQuestions] = useState<Set<string>>(
+    () => new Set(Object.keys(initialState?.answers || {}))
+  );
+  const [showLockedMessage, setShowLockedMessage] = useState(false);
   const q = questions[i];
   const progress = ((i + 1) / questions.length) * 100;
 
@@ -565,10 +570,26 @@ function QuizRunner({
   const isMultipleChoice = q.correct_answer?.includes(',');
   const correctAnswers = q.correct_answer?.split(',').map((a: string) => a.trim()) || [];
 
+  const isLocked = lockedQuestions.has(q.id);
+
+  const lockCurrentIfAnswered = () => {
+    const currentAnswers = answers[q.id];
+    const hasCurrentAnswer = isMultipleChoice
+      ? ((currentAnswers as string[]) || []).length > 0
+      : currentAnswers !== undefined;
+    if (hasCurrentAnswer && !lockedQuestions.has(q.id)) {
+      setLockedQuestions(prev => new Set([...prev, q.id]));
+    }
+  };
+
   // Manejar selección de respuesta
   const handleSelectOption = (optionIndex: number) => {
+    if (isLocked) {
+      setShowLockedMessage(true);
+      setTimeout(() => setShowLockedMessage(false), 3000);
+      return;
+    }
     if (isMultipleChoice) {
-      // Selección múltiple
       const currentAnswers = (answers[q.id] as string[]) || [];
       const optionStr = optionIndex.toString();
       const newAnswers = currentAnswers.includes(optionStr)
@@ -576,7 +597,6 @@ function QuizRunner({
         : [...currentAnswers, optionStr];
       setAnswers({ ...answers, [q.id]: newAnswers });
     } else {
-      // Selección única
       setAnswers({ ...answers, [q.id]: optionIndex.toString() });
     }
   };
@@ -684,9 +704,13 @@ function QuizRunner({
                   disabled={submitting}
                   className="flex w-full items-center gap-[14px] rounded-[12px] border px-[16px] py-[12px] text-left text-[14px] transition-all"
                   style={
-                    isSelected
-                      ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)" }
-                      : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--foreground)", opacity: submitting ? 0.5 : 1 }
+                    isLocked
+                      ? isSelected
+                        ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)", cursor: "not-allowed", opacity: 0.85 }
+                        : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--muted-foreground)", cursor: "not-allowed", opacity: 0.45 }
+                      : isSelected
+                        ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)" }
+                        : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--foreground)", opacity: submitting ? 0.5 : 1 }
                   }
                 >
                   <div
@@ -712,19 +736,27 @@ function QuizRunner({
               );
             })}
           </div>
+          {showLockedMessage && (
+            <div
+              className="mt-[10px] rounded-[10px] px-[14px] py-[10px] text-[13px] font-medium"
+              style={{ background: "var(--coral-soft)", color: "var(--coral-text)", border: "1px solid var(--accent)" }}
+            >
+              Las respuestas marcadas no pueden ser modificadas.
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => setI(Math.max(0, i - 1))}
+            onClick={() => { lockCurrentIfAnswered(); setI(Math.max(0, i - 1)); }}
             disabled={i === 0 || submitting}
           >
             <ArrowLeft className="size-4" /> Anterior
           </Button>
           {i < questions.length - 1 ? (
-            <Button onClick={() => setI(i + 1)} disabled={!hasAnswer || submitting}>
+            <Button onClick={() => setShowNextConfirm(true)} disabled={!hasAnswer || submitting}>
               Siguiente <ArrowRight className="size-4" />
             </Button>
           ) : (
@@ -747,6 +779,14 @@ function QuizRunner({
         </div>
       </div>
 
+      <ConfirmDialog
+        open={showNextConfirm}
+        title="¿Confirmar respuesta?"
+        description="Una vez que avances, tu respuesta quedará bloqueada y no podrás modificarla. ¿Deseas continuar?"
+        confirmLabel="Sí, continuar"
+        onConfirm={() => { setShowNextConfirm(false); lockCurrentIfAnswered(); setI(i + 1); }}
+        onCancel={() => setShowNextConfirm(false)}
+      />
       <ConfirmDialog
         open={showSubmitConfirm}
         title="¿Enviar evaluación?"
