@@ -64,8 +64,8 @@ async function drawResultsCard(
   const hasDesc = !!ev?.description;
   const hasArea = !!areaObj?.name;
   const hasDates = !!(ev?.created_at || ev?.fecha_vencimiento);
-  const rows = resultsData.slice(0, 8);
-  const qRows = analytics.slice(0, 6);
+  const rows = resultsData;
+  const qRows = analytics;
 
   let H = 68;
   H += 28;
