@@ -226,6 +226,29 @@ async function createEvaluation(request: Request): Promise<Response> {
        ${fecha_vencimiento ?? null})
     RETURNING *
   `;
+
+  // Auto-assign and notify all users in the area when evaluation has an area_id
+  if (area_id) {
+    const areaUsers = await db`
+      SELECT id FROM profiles
+      WHERE area_id = ${area_id} AND role IN ('participant', 'both')
+    `;
+    if (areaUsers.length > 0) {
+      await db`
+        INSERT INTO evaluation_participants (evaluation_id, user_id)
+        SELECT ${row.id}, unnest(${areaUsers.map((u: any) => u.id)}::uuid[])
+        ON CONFLICT DO NOTHING
+      `;
+      await db`
+        INSERT INTO notifications (user_id, type, title, body)
+        SELECT id, 'evaluation_assigned', 'Nueva evaluación disponible',
+               ${"Tienes una nueva evaluación disponible: \"" + title + "\""}
+        FROM profiles
+        WHERE area_id = ${area_id} AND role IN ('participant', 'both')
+      `;
+    }
+  }
+
   return json(parseEvaluation(row), 201);
 }
 
