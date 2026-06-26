@@ -750,7 +750,7 @@ function QuizRunner({
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => { lockCurrentIfAnswered(); setI(Math.max(0, i - 1)); }}
+            onClick={() => setI(Math.max(0, i - 1))}
             disabled={i === 0 || submitting}
           >
             <ArrowLeft className="size-4" /> Anterior
