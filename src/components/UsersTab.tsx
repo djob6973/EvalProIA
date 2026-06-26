@@ -236,14 +236,10 @@ export function UsersTab() {
             <RefreshCw className="size-[14px]" strokeWidth={1.5} />
           </button>
           {isAdmin && (
-            <button
-              onClick={openInvite}
-              className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
-              style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
-            >
+            <Button onClick={openInvite}>
               <UserPlus className="size-4" strokeWidth={1.5} />
               Nuevo usuario
-            </button>
+            </Button>
           )}
         </div>
       </div>
