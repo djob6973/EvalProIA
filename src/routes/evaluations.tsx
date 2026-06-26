@@ -464,6 +464,7 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
   const [loadingModal, setLoadingModal] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [togglingAll, setTogglingAll] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -497,6 +498,35 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
   const filtered = participants.filter((p) =>
     `${p.full_name ?? ""} ${p.email}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const allFilteredAssigned = filtered.length > 0 && filtered.every((p) => assignedIds.has(p.id));
+
+  const toggleAll = async () => {
+    setTogglingAll(true);
+    try {
+      if (allFilteredAssigned) {
+        await Promise.all(
+          filtered
+            .filter((p) => assignedIds.has(p.id))
+            .map((p) => evaluationParticipantsService.unassign(evaluation.id, p.id))
+        );
+        setAssignedIds((prev) => {
+          const s = new Set(prev);
+          filtered.forEach((p) => s.delete(p.id));
+          return s;
+        });
+      } else {
+        await Promise.all(
+          filtered
+            .filter((p) => !assignedIds.has(p.id))
+            .map((p) => evaluationParticipantsService.assign(evaluation.id, p.id))
+        );
+        setAssignedIds((prev) => new Set([...prev, ...filtered.map((p) => p.id)]));
+      }
+    } finally {
+      setTogglingAll(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-fade-in">
@@ -532,9 +562,21 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}
             />
           </div>
-          <p className="mt-2 text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-            {assignedIds.size} participante{assignedIds.size !== 1 ? "s" : ""} asignado{assignedIds.size !== 1 ? "s" : ""}
-          </p>
+          <div className="mt-2 flex items-center justify-between">
+            <p className="text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
+              {assignedIds.size} participante{assignedIds.size !== 1 ? "s" : ""} asignado{assignedIds.size !== 1 ? "s" : ""}
+            </p>
+            {filtered.length > 0 && (
+              <button
+                onClick={toggleAll}
+                disabled={togglingAll || togglingId !== null}
+                className="text-xs font-medium transition-all duration-300 hover:underline disabled:opacity-50"
+                style={{ color: "var(--accent)" }}
+              >
+                {togglingAll ? "Procesando…" : allFilteredAssigned ? "Deseleccionar todos" : "Seleccionar todos"}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -555,8 +597,8 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
                 return (
                   <button
                     key={p.id}
-                    onClick={() => !isToggling && toggle(p.id)}
-                    disabled={isToggling}
+                    onClick={() => !isToggling && !togglingAll && toggle(p.id)}
+                    disabled={isToggling || togglingAll}
                     className={`flex w-full items-center gap-3 px-6 py-3 text-left transition-all duration-300 disabled:opacity-50 ${
                       isAssigned ? "hover:bg-accent/10" : "hover:bg-secondary"
                     }`}
