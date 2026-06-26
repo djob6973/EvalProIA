@@ -48,7 +48,7 @@ const ROLE_OPTIONS: Array<{ value: string; label: string }> = [
 
 export function UsersTab() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === "admin" || profile?.role === "both";
+  const isAdmin = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "both";
 
   const [users,   setUsers]   = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
