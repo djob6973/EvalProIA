@@ -261,13 +261,24 @@ function EvaluationResultsPage() {
   async function exportImage() {
     if (!contentRef.current || capturing) return;
     setCapturing(true);
+
+    const el = contentRef.current;
+
+    // Remove overflow clipping and scrollbars so the full table renders cleanly
+    const overflowEls = Array.from(el.querySelectorAll<HTMLElement>(".overflow-x-auto"));
+    overflowEls.forEach((s) => {
+      s.style.overflowX = "visible";
+      s.style.scrollbarWidth = "none";
+    });
+
     try {
       const { toPng } = await import("html-to-image");
       const isDark = document.documentElement.classList.contains("dark");
-      const dataUrl = await toPng(contentRef.current, {
+      const dataUrl = await toPng(el, {
         pixelRatio: 2,
         backgroundColor: isDark ? "#1a1a1a" : "#F1F1F1",
         skipFonts: true,
+        height: el.scrollHeight,
       });
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -278,6 +289,10 @@ function EvaluationResultsPage() {
     } catch (err) {
       console.error("Error al capturar imagen:", err);
     } finally {
+      overflowEls.forEach((s) => {
+        s.style.overflowX = "";
+        s.style.scrollbarWidth = "";
+      });
       setCapturing(false);
     }
   }
