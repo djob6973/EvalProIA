@@ -17,27 +17,30 @@ import {
   Sun,
   Moon,
   ChevronRight,
+  Languages,
 } from "lucide-react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
-const adminNav = [
-  { title: "Dashboard",          url: "/dashboard",     icon: LayoutDashboard,   group: "Gestión",       module: "dashboard"     },
-  { title: "Áreas",              url: "/areas",         icon: Layers,            group: "Gestión",       module: "areas"         },
-  { title: "Evaluaciones",       url: "/evaluations",   icon: ClipboardList,     group: "Gestión",       module: "evaluations"   },
-  { title: "Banco de Preguntas", url: "/question-bank", icon: Library,           group: "Gestión",       module: "question_bank" },
-  { title: "Generador IA",       url: "/generate",      icon: Sparkles,          group: "Herramientas",  module: "generate"      },
-  { title: "Resultados Globales",url: "/results",       icon: BarChart3,         group: "Herramientas",  module: "results"       },
-  { title: "Prompts IA",         url: "/settings",      icon: Settings,          group: "Herramientas",  module: "settings"      },
-  { title: "Configuración",      url: "/config",        icon: SlidersHorizontal, group: "Herramientas",  module: "config"        },
+const adminNavDef = [
+  { titleKey: "nav.dashboard",      url: "/dashboard",     icon: LayoutDashboard,   groupKey: "nav.management", module: "dashboard"     },
+  { titleKey: "nav.areas",          url: "/areas",         icon: Layers,            groupKey: "nav.management", module: "areas"         },
+  { titleKey: "nav.evaluations",    url: "/evaluations",   icon: ClipboardList,     groupKey: "nav.management", module: "evaluations"   },
+  { titleKey: "nav.questionBank",   url: "/question-bank", icon: Library,           groupKey: "nav.management", module: "question_bank" },
+  { titleKey: "nav.generateAI",     url: "/generate",      icon: Sparkles,          groupKey: "nav.tools",      module: "generate"      },
+  { titleKey: "nav.globalResults",  url: "/results",       icon: BarChart3,         groupKey: "nav.tools",      module: "results"       },
+  { titleKey: "nav.promptsAI",      url: "/settings",      icon: Settings,          groupKey: "nav.tools",      module: "settings"      },
+  { titleKey: "nav.config",         url: "/config",        icon: SlidersHorizontal, groupKey: "nav.tools",      module: "config"        },
 ];
 
-const participantNav = [
-  { title: "Inicio", url: "/participant", icon: Home, group: "Participante" },
-  { title: "Mi Historial", url: "/my-history", icon: History, group: "Participante" },
+const participantNavDef = [
+  { titleKey: "nav.home",      url: "/participant", icon: Home,    groupKey: "nav.participant", module: "participant" },
+  { titleKey: "nav.myHistory", url: "/my-history",  icon: History, groupKey: "nav.participant", module: "my-history"  },
 ];
 
 type AppSidebarProps = {
@@ -53,6 +56,14 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   const { signOut, profile } = useAuth();
   const isMobile = useIsMobile();
   const { settings } = useSystemSettings();
+  const { t, i18n } = useTranslation();
+  const [langOpen, setLangOpen] = useState(false);
+
+  const LANGUAGES = [
+    { code: "es", label: "Español" },
+    { code: "en", label: "English" },
+    { code: "pt", label: "Português" },
+  ];
 
   const { canAccess, loading: permLoading } = useRolePermissions();
   const isParticipantRole = profile?.role === 'participant';
@@ -60,24 +71,18 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
     (p) => path.startsWith(p)
   );
   const showParticipantNav = isParticipantRole || isOnParticipantPath;
+  const adminNav = adminNavDef.map(item => ({ ...item, title: t(item.titleKey), group: t(item.groupKey) }));
+  const participantNav = participantNavDef.map(item => ({ ...item, title: t(item.titleKey), group: t(item.groupKey) }));
   const filteredAdminNav = permLoading ? [] : adminNav.filter((item) => canAccess(item.module));
   const nav = showParticipantNav ? participantNav : filteredAdminNav;
   const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
-  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Usuario';
+  const displayName = profile?.full_name || profile?.email?.split('@')[0] || t('roles.user');
   const userInitials = profile?.full_name
     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';
-  const ROLE_LABELS: Record<string, string> = {
-    super_admin: "Super Admin",
-    admin:       "Administrador",
-    supervisor:  "Supervisor",
-    leader:      "Líder",
-    participant: "Participante",
-    both:        "Admin + Participante",
-  };
-  const roleLabel = ROLE_LABELS[profile?.role ?? ''] ?? 'Usuario';
+  const roleLabel = profile?.role ? t(`roles.${profile.role}`) : t('roles.user');
 
   const handleLogout = async () => {
     const { error } = await signOut();
@@ -125,10 +130,10 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         )}
         <div className="flex min-w-0 flex-col">
           <span className="font-sans text-[17px] font-bold leading-[1.2] text-[var(--foreground)]">
-            EvalPro
+            {t('common.appName')}
           </span>
           <span className="mt-[2px] text-[12px] text-[var(--muted-foreground)]">
-            Sistema de Evaluación
+            {t('common.appSubtitle')}
           </span>
         </div>
       </Link>
@@ -156,16 +161,42 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
       {!isParticipantRole && (
         <Link to={isParticipantPath ? "/dashboard" : "/participant"} className="mb-3 block">
           <div className="rounded-full border border-[var(--border-strong)] bg-[var(--sidebar-accent)] px-4 py-2.5 text-center font-mono text-[10px] uppercase tracking-[.2em] text-[var(--sidebar-foreground)] transition hover:border-[var(--sidebar-primary)] hover:text-[var(--sidebar-primary)]">
-            Cambiar a {isParticipantPath ? "Administrador" : "Participante"}
+            {isParticipantPath ? t('nav.switchToAdmin') : t('nav.switchToParticipant')}
           </div>
         </Link>
       )}
 
-      {/* Action row: theme toggle · change password · logout */}
-      <div className="mb-3 flex items-center justify-evenly px-4">
+      {/* Action row: language · theme toggle · change password · logout */}
+      <div className="mb-3 flex items-center justify-evenly px-2 relative">
+        {/* Language selector */}
+        <div className="relative">
+          <button
+            onClick={() => setLangOpen((v) => !v)}
+            title={t('language.selector')}
+            className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
+          >
+            <Languages className="size-[16px]" strokeWidth={1.5} />
+          </button>
+          {langOpen && (
+            <div className="absolute bottom-10 left-0 z-50 min-w-[120px] rounded-[12px] border border-[var(--border)] bg-[var(--sidebar)] py-1 shadow-lg">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
+                  className={
+                    "w-full px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--sidebar-accent)] " +
+                    (i18n.language === lang.code ? "font-semibold text-[var(--sidebar-primary)]" : "text-[var(--sidebar-foreground)]")
+                  }
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           onClick={toggleTheme}
-          title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          title={isDark ? t('nav.lightMode') : t('nav.darkMode')}
           className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
         >
           {isDark
@@ -174,7 +205,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         </button>
         <Link
           to="/account"
-          title="Cambiar contraseña"
+          title={t('nav.changePassword')}
           className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
           onClick={() => isMobile && setMobileOpen(false)}
         >
@@ -182,7 +213,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         </Link>
         <button
           onClick={handleLogout}
-          title="Cerrar sesión"
+          title={t('nav.logout')}
           className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
         >
           <LogOut className="size-[16px]" strokeWidth={1.5} />
@@ -246,10 +277,10 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
               )}
               <div className="flex min-w-0 flex-col">
                 <span className="font-sans text-[17px] font-bold leading-[1.2] text-[var(--foreground)]">
-                  EvalPro
+                  {t('common.appName')}
                 </span>
                 <span className="mt-[2px] text-[12px] text-[var(--muted-foreground)]">
-                  Sistema de Evaluación
+                  {t('common.appSubtitle')}
                 </span>
               </div>
             </div>

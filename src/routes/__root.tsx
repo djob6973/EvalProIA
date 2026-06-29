@@ -9,7 +9,9 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { I18nextProvider } from "react-i18next";
 import { Brain } from "lucide-react";
+import i18n from "@/i18n";
 import { NavigationProgress } from "@/components/NavigationProgress";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
@@ -190,10 +192,12 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <FaviconUpdater />
-      <NavigationProgress />
-      <Outlet />
-    </QueryClientProvider>
+    <I18nextProvider i18n={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <FaviconUpdater />
+        <NavigationProgress />
+        <Outlet />
+      </QueryClientProvider>
+    </I18nextProvider>
   );
 }

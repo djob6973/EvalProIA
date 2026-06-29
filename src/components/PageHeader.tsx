@@ -1,6 +1,7 @@
 import { Bell, Check, Menu } from "lucide-react";
 import { useLayout } from "@/components/AppShell";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNotifications } from "@/contexts/NotificationContext";
 
 type PageHeaderProps = {
@@ -14,6 +15,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const { items, unreadCount, markAllAsRead } = useNotifications();
+  const { t } = useTranslation();
 
   useEffect(() => {
     function handleOutside(e: MouseEvent) {
@@ -39,7 +41,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
         <button
           onClick={() => setMobileOpen(true)}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-[12px] border border-[var(--border)] bg-[var(--surface)] text-[var(--muted-foreground)] transition hover:bg-[var(--sidebar-accent)] md:hidden"
-          aria-label="Abrir menú"
+          aria-label={t('notifications.openMenu')}
         >
           <Menu className="size-[18px]" strokeWidth={1.5} />
         </button>
@@ -66,7 +68,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
             onClick={() => setNotifOpen((v) => !v)}
             className="relative grid h-9 w-9 place-items-center rounded-[12px] transition-colors hover:bg-[var(--sidebar-accent)]"
             style={{ color: "var(--muted-foreground)" }}
-            title="Notificaciones"
+            title={t('notifications.title')}
           >
             <Bell className="size-[20px]" strokeWidth={1.5} />
             {unreadCount > 0 && (
@@ -96,7 +98,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
                   className="font-mono text-[10px] font-bold uppercase tracking-[.16em]"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  Notificaciones
+                  {t('notifications.title')}
                 </span>
                 {unreadCount > 0 && (
                   <button
@@ -105,7 +107,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
                     style={{ color: "var(--accent)" }}
                   >
                     <Check className="size-[11px]" />
-                    Marcar todo como leído
+                    {t('notifications.markAllRead')}
                   </button>
                 )}
               </div>
@@ -115,7 +117,7 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
                   className="px-4 py-6 text-center text-[13px]"
                   style={{ color: "var(--muted-foreground)" }}
                 >
-                  Sin notificaciones
+                  {t('notifications.empty')}
                 </div>
               ) : (
                 <div className="flex max-h-[360px] flex-col overflow-y-auto">
