@@ -73,6 +73,7 @@ function GeneratePage() {
   const [dificultad, setDificultad] = useState("medio");
   const [categoria, setCategoria] = useState("");
   const [tiempoLimite, setTiempoLimite] = useState(30);
+  const [idioma, setIdioma] = useState("Español");
   const [categorias, setCategorias] = useState<string[]>([]);
   const [nuevaCategoria, setNuevaCategoria] = useState(false);
   const [distribucion, setDistribucion] = useState<Record<QuestionType, number>>({
@@ -160,7 +161,7 @@ function GeneratePage() {
       const customSystemPrompt = getSystemPrompt();
       const { model, temperature, maxTokens, retries } = getModelConfig();
       const questionsArray = await generateQuestionsFn({
-        data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries },
+        data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma },
       });
 
       setQuestions(questionsArray);
@@ -494,6 +495,17 @@ function GeneratePage() {
                     onChange={(e) => setTiempoLimite(parseInt(e.target.value) || 1)}
                     className="field-base"
                   />
+                </Field>
+                <Field label="Idioma">
+                  <select
+                    value={idioma}
+                    onChange={(e) => setIdioma(e.target.value)}
+                    className="field-base"
+                  >
+                    <option value="Español">Español</option>
+                    <option value="Inglés">Inglés</option>
+                    <option value="Portugués">Portugués</option>
+                  </select>
                 </Field>
               </div>
 

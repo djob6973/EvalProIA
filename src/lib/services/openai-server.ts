@@ -159,11 +159,13 @@ function buildPrompt(
   dificultad: string,
   categoria: string,
   distribucion: Record<QuestionType, number>,
-  extractedText: string
+  extractedText: string,
+  idioma = "Español"
 ): string {
   return `Eres un experto diseñador de evaluaciones. Genera ${numPreguntas} preguntas de evaluación basadas en el siguiente texto.
 
 Parámetros:
+- Idioma de salida: ${idioma} (TODAS las preguntas, opciones, contexto y justificaciones deben estar en ${idioma})
 - Dificultad: ${dificultad}
 - Categoría: ${categoria || 'General'}
 - Distribución por tipo:
@@ -213,9 +215,10 @@ async function generateBatch(
   model: string,
   temperature: number,
   maxTokens: number,
-  retries: number
+  retries: number,
+  idioma = "Español"
 ): Promise<GeneratedQuestion[]> {
-  const prompt = buildPrompt(numPreguntas, dificultad, categoria, distribucion, extractedText);
+  const prompt = buildPrompt(numPreguntas, dificultad, categoria, distribucion, extractedText, idioma);
   let lastError: Error = new Error('Error desconocido al generar preguntas');
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -267,7 +270,8 @@ export async function generateQuestionsServer(
   model = "gpt-4o-mini",
   temperature = 0.3,
   maxTokens = 8192,
-  retries = 3
+  retries = 3,
+  idioma = "Español"
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -278,7 +282,7 @@ export async function generateQuestionsServer(
   const openai = new OpenAI({ apiKey, timeout: 120_000 });
 
   if (numPreguntas <= BATCH_SIZE) {
-    return generateBatch(openai, extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries);
+    return generateBatch(openai, extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma);
   }
 
   // Divide en lotes de BATCH_SIZE para evitar timeouts en generaciones grandes
@@ -293,7 +297,7 @@ export async function generateQuestionsServer(
   for (const batchCount of batches) {
     const batchQuestions = await generateBatch(
       openai, extractedText, batchCount, dificultad, categoria, distribucion,
-      customSystemPrompt, model, temperature, maxTokens, retries
+      customSystemPrompt, model, temperature, maxTokens, retries, idioma
     );
     allQuestions.push(...batchQuestions);
   }
@@ -342,6 +346,7 @@ type GenerateQuestionsInput = {
   temperature?: number;
   maxTokens?: number;
   retries?: number;
+  idioma?: string;
 };
 
 export const generateQuestionsFn = createServerFn({ method: 'POST' })
@@ -357,7 +362,8 @@ export const generateQuestionsFn = createServerFn({ method: 'POST' })
       data.model,
       data.temperature,
       data.maxTokens,
-      data.retries
+      data.retries,
+      data.idioma
     );
   });
 
