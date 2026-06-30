@@ -329,7 +329,7 @@ function LoginPage() {
             {t('login.poweredBy')}
           </div>
 
-          <h2 className="max-w-[380px] text-[36px] font-bold leading-[1.15] tracking-[-0.01em] text-white">
+          <h2 className="max-w-[480px] text-[48px] font-bold leading-[1.1] tracking-[-0.02em] text-white">
             {t('login.tagline')}
           </h2>
 
