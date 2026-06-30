@@ -256,17 +256,6 @@ function LoginPage() {
                 : isLogin ? t('login.loginButton') : t('login.createAccount')}
             </Button>
 
-            {/* Key features — login only */}
-            {isLogin && (
-              <ul className="space-y-2 pt-1">
-                {FEATURES.map((feat, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="mt-0.5 font-bold text-[#ED5650] text-[11px] shrink-0">{">>"}</span>
-                    <span className="text-[12px] text-muted-foreground leading-snug">{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
           </form>
 
           {/* Switch mode */}
