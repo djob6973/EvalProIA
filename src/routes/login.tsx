@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
@@ -25,6 +26,7 @@ function LoginPage() {
   const nav = useNavigate();
   const { redirect: redirectTo } = Route.useSearch();
   const { signIn, loading, user, profile } = useAuth();
+  const { settings } = useSystemSettings();
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -113,12 +115,20 @@ function LoginPage() {
       <div className="flex flex-col bg-[#F5F5F5] dark:bg-background p-8 md:p-12">
         {/* Logo */}
         <Link to="/dashboard" className="mb-16 flex items-center gap-2.5">
-          <div
-            className="flex size-9 items-center justify-center rounded-[10px]"
-            style={{ background: "#1C1C1E", color: "#fff" }}
-          >
-            <ChevronsRight className="size-4" strokeWidth={2.5} />
-          </div>
+          {settings.brand_logo ? (
+            <img
+              src={settings.brand_logo}
+              alt="Logo"
+              className="h-9 max-w-[80px] shrink-0 object-contain"
+            />
+          ) : (
+            <div
+              className="flex size-9 items-center justify-center rounded-[10px]"
+              style={{ background: "#1C1C1E", color: "#fff" }}
+            >
+              <ChevronsRight className="size-4" strokeWidth={2.5} />
+            </div>
+          )}
           <div className="flex flex-col leading-none">
             <span className="text-base font-bold tracking-tight text-foreground">EvalPro</span>
             <span className="mt-[3px] font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
