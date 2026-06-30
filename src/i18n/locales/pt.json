@@ -130,7 +130,15 @@
     "tagline": "Converta documentação em avaliações estruturadas em segundos.",
     "description": "EvalPro extrai conhecimento de qualquer documento e gera avaliações calibradas — prontas para enviar aos seus participantes.",
     "copyright": "© 2026 EvalPro",
-    "version": "Sistema de Avaliação v4"
+    "version": "Sistema de Avaliação v4",
+    "corpEmail": "E-mail Corporativo",
+    "forgotPassword": "Esqueceu sua senha?",
+    "rememberDevice": "Lembrar este dispositivo por 30 dias",
+    "or": "ou",
+    "ssoButton": "Entrar com SSO corporativo",
+    "feature1": "Acesso por SSO e SAML para toda a sua equipe",
+    "feature2": "Criptografia de ponta a ponta e registro de auditoria",
+    "feature3": "Exportação pronta para conformidade legal"
   },
   "dashboard": {
     "pageTitle": "Dashboard — EvalPro",
