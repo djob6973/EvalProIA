@@ -952,12 +952,12 @@ async function listProfiles(request: Request): Promise<Response> {
 
   const rows = await db`
     SELECT
-      p.id, p.email, p.full_name, p.role, p.area_id, p.is_active,
+      p.id, p.email, p.full_name, p.role, p.area_id,
       p.created_at, p.updated_at,
       COUNT(r.id)::int AS evaluation_count
     FROM profiles p
     LEFT JOIN results r ON r.user_id = p.id
-    GROUP BY p.id, p.email, p.full_name, p.role, p.area_id, p.is_active, p.created_at, p.updated_at
+    GROUP BY p.id, p.email, p.full_name, p.role, p.area_id, p.created_at, p.updated_at
     ORDER BY p.created_at DESC
   `;
   return json(rows);
@@ -968,7 +968,7 @@ async function updateProfileById(request: Request, id: string): Promise<Response
   if (adminOrErr instanceof Response) return adminOrErr;
 
   const body = await request.json();
-  const allowed = ["full_name", "role", "area_id", "is_active"];
+  const allowed = ["full_name", "role", "area_id"];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) patch[k] = body[k];

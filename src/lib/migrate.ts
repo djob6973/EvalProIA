@@ -24,13 +24,10 @@ export async function runMigrations(): Promise<void> {
       role          TEXT NOT NULL DEFAULT 'participant',
       area_id       UUID REFERENCES areas(id) ON DELETE SET NULL,
       password_hash TEXT,
-      is_active     BOOLEAN NOT NULL DEFAULT true,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
-
-  await db`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true`;
 
   // Ensure role column accepts all current roles (idempotent)
   await db`

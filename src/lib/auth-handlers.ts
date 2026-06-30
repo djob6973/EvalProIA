@@ -23,8 +23,6 @@ export async function handleLogin(request: Request): Promise<Response> {
     const [user] = await db`SELECT * FROM profiles WHERE email = ${email}`;
     if (!user || !user.password_hash || !verifyPassword(password, user.password_hash))
       return Response.json({ error: "Credenciales inválidas" }, { status: 401 });
-    if (user.is_active === false)
-      return Response.json({ error: "Tu cuenta está desactivada. Contacta al administrador." }, { status: 403 });
 
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + SESSION_MS).toISOString();
