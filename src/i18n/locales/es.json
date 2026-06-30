@@ -113,7 +113,7 @@
     "fullName": "Nombre completo",
     "namePlaceholder": "Tu nombre",
     "email": "Correo",
-    "emailPlaceholder": "tu@empresa.com",
+    "emailPlaceholder": "tu@email.com",
     "password": "Contraseña",
     "passwordPlaceholder": "••••••••",
     "loggingIn": "Iniciando sesión...",

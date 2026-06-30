@@ -278,8 +278,8 @@ function LoginPage() {
 
       {/* ── Right panel ─────────────────────────────────────────── */}
       <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between p-12"
-        style={{ background: "#1C1C1E", color: "#F1F1F1" }}
+        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-12 pb-12"
+        style={{ background: "#1C1C1E", color: "#F1F1F1", paddingTop: '120px' }}
       >
         {/* Chevron pattern background */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden select-none" aria-hidden>
@@ -299,12 +299,12 @@ function LoginPage() {
         </div>
 
         {/* Top label */}
-        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40">
+        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-10">
           {t('login.systemLabel')}
         </div>
 
-        {/* Center content */}
-        <div className="relative space-y-6">
+        {/* Hero content */}
+        <div className="relative max-w-[650px] space-y-5">
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
             style={{ background: "rgba(237,86,80,.18)", color: "#ED5650" }}
@@ -319,11 +319,11 @@ function LoginPage() {
 
           <div className="h-[3px] w-10 rounded-full bg-[#ED5650]" />
 
-          <p className="max-w-[320px] text-[14px] leading-relaxed text-white/55">
+          <p className="max-w-[380px] text-[14px] leading-relaxed text-white/55">
             {t('login.description')}
           </p>
 
-          <ul className="mt-2 space-y-3">
+          <ul className="space-y-3 pt-1">
             {FEATURES.map((feat, i) => (
               <li key={i} className="flex items-start gap-3">
                 <span className="mt-0.5 font-bold text-[#ED5650] text-[13px]">{">>"}</span>
@@ -334,7 +334,7 @@ function LoginPage() {
         </div>
 
         {/* Bottom */}
-        <div className="relative font-mono text-[10px] uppercase tracking-widest text-white/30">
+        <div className="relative mt-auto font-mono text-[10px] uppercase tracking-widest text-white/30">
           {t('login.copyright')}
         </div>
       </div>
