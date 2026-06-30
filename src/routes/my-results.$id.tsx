@@ -131,10 +131,12 @@ function MyResultPage() {
       const allSelected = correctAnswers.every((ans: string) => userAnswers.includes(ans));
       const isCorrect = allCorrect && allSelected;
 
-      // Verificar si es parcial (algunas correctas pero no todas)
+      // Verificar si es parcial: algunas correctas, ninguna incorrecta, pero no todas seleccionadas
+      // (aplica regla anti-gaming: si hay alguna incorrecta → no es parcial, es incorrecto)
       const hasSomeCorrect = userAnswers.length > 0 &&
         userAnswers.some((ans: string) => correctAnswers.includes(ans));
-      const isPartial = hasSomeCorrect && !isCorrect;
+      const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
+      const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
 
       if (isCorrect) {
         correctCount++;
@@ -283,7 +285,8 @@ function MyResultPage() {
                   const isCorrect = allCorrect && allSelected;
                   const hasSomeCorrect = userAnswers.length > 0 &&
                     userAnswers.some((ans: string) => correctAnswers.includes(ans));
-                  const isPartial = hasSomeCorrect && !isCorrect;
+                  const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
+                  const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
 
                   const statusConfig = isCorrect
                     ? { label: t('myResults.correctBadge'), icon: <CheckCircle className="size-3" />, card: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" }

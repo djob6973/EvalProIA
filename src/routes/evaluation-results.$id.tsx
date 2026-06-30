@@ -1059,7 +1059,8 @@ function EvaluationResultsPage() {
                         const hasSomeCorrect =
                           userAnswers.length > 0 &&
                           userAnswers.some((ans: string) => correctAnswers.includes(ans));
-                        const isPartial = hasSomeCorrect && !isCorrect;
+                        const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
+                        const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
                         if (isCorrect) correctCount++;
                         else if (isPartial) partialCount++;
                         else incorrectCount++;
@@ -1167,7 +1168,8 @@ function EvaluationResultsPage() {
                                     const hasSomeCorrect =
                                       userAnswers.length > 0 &&
                                       userAnswers.some((ans: string) => correctAnswers.includes(ans));
-                                    const isPartial = hasSomeCorrect && !isCorrect;
+                                    const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
+                                    const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
 
                                     const selectedCorrectCount = userAnswers.filter((a: string) =>
                                       correctAnswers.includes(a)
