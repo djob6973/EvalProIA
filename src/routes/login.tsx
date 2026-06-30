@@ -313,7 +313,7 @@ function LoginPage() {
             {t('login.poweredBy')}
           </div>
 
-          <h2 className="max-w-[540px] text-[38px] font-bold leading-[1.15] tracking-[-0.02em] text-white">
+          <h2 className="max-w-[540px] text-[38px] font-bold leading-[1.15] tracking-[-0.02em] text-white" style={{ whiteSpace: 'pre-line' }}>
             {t('login.tagline')}
           </h2>
 
