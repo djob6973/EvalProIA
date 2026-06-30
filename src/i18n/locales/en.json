@@ -136,9 +136,10 @@
     "rememberDevice": "Remember this device for 30 days",
     "or": "or",
     "ssoButton": "Continue with corporate SSO",
-    "feature1": "SSO and SAML access for your entire team",
-    "feature2": "End-to-end encryption and audit logging",
-    "feature3": "Export ready for legal compliance"
+    "feature1": "AI-powered question generation from documents.",
+    "feature2": "Customizable question types and parameters.",
+    "feature3": "Multilingual personalized evaluation creation.",
+    "feature4": "Per-evaluation and global reports."
   },
   "dashboard": {
     "pageTitle": "Dashboard — EvalPro",

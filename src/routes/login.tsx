@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronsRight, Mail, Lock, Eye, EyeOff, Building2 } from "lucide-react";
+import { ChevronsRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,7 @@ function LoginPage() {
     t('login.feature1'),
     t('login.feature2'),
     t('login.feature3'),
+    t('login.feature4'),
   ];
 
   return (
@@ -255,22 +256,16 @@ function LoginPage() {
                 : isLogin ? t('login.loginButton') : t('login.createAccount')}
             </Button>
 
-            {/* SSO divider + button — login only */}
+            {/* Key features — login only */}
             {isLogin && (
-              <>
-                <div className="relative flex items-center gap-3">
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-[12px] text-muted-foreground">{t('login.or')}</span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-transparent py-[10px] text-[13px] font-medium text-foreground transition hover:bg-accent"
-                >
-                  <Building2 className="size-[15px]" strokeWidth={1.5} />
-                  {t('login.ssoButton')}
-                </button>
-              </>
+              <ul className="space-y-2 pt-1">
+                {FEATURES.map((feat, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="mt-0.5 font-bold text-[#ED5650] text-[11px] shrink-0">{">>"}</span>
+                    <span className="text-[12px] text-muted-foreground leading-snug">{feat}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </form>
 

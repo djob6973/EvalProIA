@@ -136,9 +136,10 @@
     "rememberDevice": "Recordar este equipo durante 30 días",
     "or": "o",
     "ssoButton": "Acceder con SSO corporativo",
-    "feature1": "Acceso por SSO y SAML para todo tu equipo",
-    "feature2": "Cifrado de extremo a extremo y registro de auditoría",
-    "feature3": "Exportación lista para la DIAN y conformidad legal"
+    "feature1": "Generación de preguntas con IA a partir de documentos.",
+    "feature2": "Parámetros y tipos de preguntas personalizables.",
+    "feature3": "Creación de evaluaciones personalizadas en múltiples idiomas.",
+    "feature4": "Informe por evaluación y global."
   },
   "dashboard": {
     "pageTitle": "Dashboard — EvalPro",
