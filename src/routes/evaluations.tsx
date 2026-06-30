@@ -127,7 +127,8 @@ function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
   return lines.slice(0, maxLines);
 }
 
-async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null, brandLogo?: string | null) {
+async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName: string | null, brandLogo?: string | null, t?: (key: string) => string) {
+  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -143,7 +144,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   const PAD = 32;
   const expired = isExpired(ev);
   const stateColor = expired ? "#ef4444" : ev.activa ? "#10b981" : "#94a3b8";
-  const stateLabel = expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA";
+  const stateLabel = expired ? tr('evaluations.expired', 'VENCIDA') : ev.activa ? "ACTIVA" : tr('evaluations.inactive', 'INACTIVA').toUpperCase();
 
   // helper: truncate text to fit maxWidth with ellipsis
   function truncateFit(text: string, maxWidth: number): string {
@@ -243,7 +244,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   let weekPillW = 0;
   if (weekNum) {
     ctx.font = "bold 11px system-ui, sans-serif";
-    weekPillW = ctx.measureText(`Semana ${weekNum}`).width + 20 + 10; // +10 gap
+    weekPillW = ctx.measureText(`${tr('evaluations.weekLabel', 'Semana')} ${weekNum}`).width + 20 + 10; // +10 gap
   }
 
   ctx.font = "bold 21px 'Space Grotesk', system-ui, sans-serif";
@@ -252,7 +253,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
 
   // Semana pill — right-aligned, vertically centered with title
   if (weekNum) {
-    const wLabel = `Semana ${weekNum}`;
+    const wLabel = `${tr('evaluations.weekLabel', 'Semana')} ${weekNum}`;
     ctx.font = "bold 11px system-ui, sans-serif";
     const wW = ctx.measureText(wLabel).width + 20;
     const pillX = W - PAD - wW;
@@ -293,10 +294,10 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
   ctx.stroke();
 
   const stats = [
-    { label: "APROBACIÓN",  value: `${ev.config.porcentaje_aprobacion}%`, color: "#059669" },
-    { label: "PREGUNTAS",   value: String(ev.config.num_preguntas),         color: "#2563eb" },
-    { label: "TIEMPO",      value: ev.tiempo_limite > 0 ? `${ev.tiempo_limite} min` : "Sin límite", color: "#d97706" },
-    { label: "INTENTOS",    value: String(ev.intentos_permitidos),           color: "#7c3aed" },
+    { label: tr('evaluations.colApproval', 'APROBACIÓN'),  value: `${ev.config.porcentaje_aprobacion}%`, color: "#059669" },
+    { label: tr('evaluations.colQuestions', 'PREGUNTAS'),  value: String(ev.config.num_preguntas),       color: "#2563eb" },
+    { label: tr('evaluations.colTime', 'TIEMPO'),          value: ev.tiempo_limite > 0 ? `${ev.tiempo_limite} ${tr('common.min', 'min')}` : tr('common.noLimit', 'Sin límite'), color: "#d97706" },
+    { label: tr('evaluations.colAttempts', 'INTENTOS'),    value: String(ev.intentos_permitidos),        color: "#7c3aed" },
   ];
 
   const COL = STATS_W / 4;
@@ -359,7 +360,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
       ctx.font = "bold 9px system-ui, sans-serif";
       ctx.fillStyle = "#94a3b8";
       ctx.textAlign = "center";
-      ctx.fillText("CREADA", cX, LABEL_Y);
+      ctx.fillText(tr('evaluations.colCreated', 'CREADA'), cX, LABEL_Y);
       ctx.font = "bold 14px system-ui, sans-serif";
       ctx.fillStyle = "#334155";
       ctx.fillText(dStr, cX, VALUE_Y);
@@ -372,7 +373,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
       ctx.font = "bold 9px system-ui, sans-serif";
       ctx.fillStyle = expired ? "#ef444480" : "#94a3b8";
       ctx.textAlign = "center";
-      ctx.fillText("VENCE", vX, LABEL_Y);
+      ctx.fillText(tr('evaluations.colExpires', 'VENCE'), vX, LABEL_Y);
       ctx.font = "bold 14px system-ui, sans-serif";
       ctx.fillStyle = expired ? "#ef4444" : "#334155";
       ctx.fillText(vStr, vX, VALUE_Y);
@@ -440,7 +441,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
 
   ctx.textAlign = "right";
   ctx.fillStyle = "#cbd5e1";
-  ctx.fillText("Compartido desde EvalPro", W - PAD, fY + 35);
+  ctx.fillText(tr('evaluations.sharedFrom', 'Compartido desde EvalPro'), W - PAD, fY + 35);
   ctx.textAlign = "left";
 }
 
@@ -664,7 +665,7 @@ function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
   useEffect(() => {
     setReady(false);
     if (!canvasRef.current) return;
-    drawShareCard(canvasRef.current, ev, areaName, settings.brand_logo).then(() => setReady(true));
+    drawShareCard(canvasRef.current, ev, areaName, settings.brand_logo, t).then(() => setReady(true));
   }, [ev, areaName, settings.brand_logo]);
 
   function handleDownload() {
@@ -1516,7 +1517,7 @@ function EvaluationsPage() {
           >
             <ClipboardList className="mx-auto mb-3 size-10" style={{ color: "var(--text-faint)" }} />
             <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
-              {filtered.length === items.length ? 'No hay evaluaciones. Crea la primera con "Nueva Evaluación".' : 'No hay evaluaciones que coincidan con los filtros.'}
+              {filtered.length === items.length ? t('evaluations.emptyState') : t('evaluations.noMatch')}
             </p>
           </div>
         ) : (
@@ -1538,10 +1539,10 @@ function EvaluationsPage() {
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        title="¿Eliminar evaluación?"
-        description={`Se eliminará permanentemente "${items.find((e) => e.id === deletingId)?.nombre ?? "esta evaluación"}". Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
-        loadingLabel="Eliminando…"
+        title={t('evaluations.deleteTitle')}
+        description={t('evaluations.deleteConfirm', { name: items.find((e) => e.id === deletingId)?.nombre ?? "" })}
+        confirmLabel={t('common.delete')}
+        loadingLabel={t('evaluations.deleting')}
         variant="destructive"
         loading={isDeleting}
         onConfirm={executeDelete}
@@ -1579,7 +1580,7 @@ function EvaluationsPage() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Eye className="size-4 transition-all duration-300" style={{ color: "var(--accent)" }} />
-                  <span className="font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-all duration-300" style={{ color: "var(--accent)" }}>Vista Previa</span>
+                  <span className="font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-all duration-300" style={{ color: "var(--accent)" }}>{t('evaluations.preview')}</span>
                 </div>
                 <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>{previewEval.nombre}</h3>
               </div>
@@ -1596,20 +1597,20 @@ function EvaluationsPage() {
             <div className="flex flex-wrap items-center gap-3 border-b border-border bg-secondary/40 px-6 py-3 transition-all duration-300">
               <span className="flex items-center gap-1.5 text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                 <ClipboardList className="size-3.5" />
-                {previewEval.config.num_preguntas} preguntas
+                {previewEval.config.num_preguntas} {t('common.questions')}
               </span>
               {previewEval.tiempo_limite > 0 && (
                 <span className="flex items-center gap-1.5 text-xs transition-colors duration-300" style={{ color: "#FBBF24" }}>
                   <Clock className="size-3.5" />
-                  {previewEval.tiempo_limite} min
+                  {previewEval.tiempo_limite} {t('common.min')}
                 </span>
               )}
               <span className="flex items-center gap-1.5 text-xs transition-colors duration-300" style={{ color: "#10B981" }}>
                 <CheckCircle className="size-3.5" />
-                Aprueba {previewEval.config.porcentaje_aprobacion}%
+                {t('evaluations.approves')} {previewEval.config.porcentaje_aprobacion}%
               </span>
               <span className="ml-auto rounded px-2 py-0.5 text-[10px] font-bold transition-all duration-300" style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}>
-                VISTA PREVIA — sin registro de respuestas
+                {t('evaluations.previewBanner')}
               </span>
             </div>
 
@@ -1621,7 +1622,7 @@ function EvaluationsPage() {
                 </div>
               ) : previewQuestions.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm transition-all duration-300 animate-fade-in" style={{ color: "var(--muted-foreground)" }}>
-                  No hay preguntas en el banco que coincidan con la configuración de esta evaluación.
+                  {t('evaluations.noQuestionsMatch')}
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -1665,7 +1666,7 @@ function EvaluationsPage() {
 
             <div className="border-t border-border px-6 py-4 transition-all duration-300">
               <Button variant="outline" className="w-full transition-all duration-300 hover:scale-105" onClick={() => setPreviewEval(null)}>
-                Cerrar Vista Previa
+                {t('evaluations.closePreview')}
               </Button>
             </div>
           </div>
@@ -1683,7 +1684,7 @@ function EvaluationsPage() {
               style={{ borderBottom: "1px solid var(--border)" }}
             >
               <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>
-                {editing ? "Editar" : "Nueva"} Evaluación
+                {editing ? t('evaluations.formEditTitle') : t('evaluations.formNewTitle')}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -1698,20 +1699,20 @@ function EvaluationsPage() {
               <div className="space-y-3">
                 <div className="animate-fade-in" style={{ animationDelay: "0ms" }}>
                   <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                    Nombre *
+                    {t('evaluations.nameLabel')}
                   </label>
                   <input
                     required
                     value={form.nombre}
                     onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                    placeholder="Ej: Evaluación de Seguridad Industrial"
+                    placeholder={t('evaluations.namePlaceholder')}
                     className="w-full rounded-md border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                     style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   />
                 </div>
                 <div className="animate-fade-in" style={{ animationDelay: "50ms" }}>
                   <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                    Descripción
+                    {t('common.description')}
                   </label>
                   <textarea
                     rows={2}
@@ -1724,7 +1725,7 @@ function EvaluationsPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="animate-fade-in" style={{ animationDelay: "100ms" }}>
                     <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                      Tiempo límite (min, 0 = sin límite)
+                      {t('evaluations.timeLimit')}
                     </label>
                     <input
                       type="number"
@@ -1739,7 +1740,7 @@ function EvaluationsPage() {
                   </div>
                   <div className="animate-fade-in" style={{ animationDelay: "150ms" }}>
                     <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                      Intentos permitidos
+                      {t('evaluations.attemptsAllowed')}
                     </label>
                     <input
                       type="number"
@@ -1765,11 +1766,11 @@ function EvaluationsPage() {
                   ) : (
                     <ToggleLeft className="size-6" />
                   )}
-                  {form.activa ? "Evaluación activa" : "Evaluación inactiva"}
+                  {form.activa ? t('evaluations.evalActive') : t('evaluations.evalInactive')}
                 </button>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                    Fecha y hora de vencimiento
+                    {t('evaluations.expiresAt')}
                   </label>
                   <input
                     type="datetime-local"
@@ -1778,13 +1779,13 @@ function EvaluationsPage() {
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Opcional — cuando se cumpla la fecha se inactivará automáticamente para todos los participantes
+                    {t('evaluations.expiresHint')}
                   </p>
                 </div>
                 {areas.length > 0 && (
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                      Área
+                      {t('evaluations.areaLabel')}
                     </label>
                     <select
                       value={form.area_id || ""}
@@ -1793,7 +1794,7 @@ function EvaluationsPage() {
                       }
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                     >
-                      <option value="">Sin área (solo por asignación directa)</option>
+                      <option value="">{t('evaluations.noAreaOption')}</option>
                       {areas.map((a) => (
                         <option key={a.id} value={a.id}>
                           {a.name}
@@ -1807,13 +1808,13 @@ function EvaluationsPage() {
               <div className="border-t border-border pt-4">
                 <div className="mb-3 flex items-center gap-2">
                   <Settings className="size-4 text-accent" />
-                  <h4 className="text-sm font-semibold">Configuración de Preguntas</h4>
+                  <h4 className="text-sm font-semibold">{t('evaluations.questionsConfig')}</h4>
                 </div>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                        N° de preguntas
+                        {t('evaluations.numQuestions')}
                       </label>
                       <input
                         type="number"
@@ -1829,13 +1830,13 @@ function EvaluationsPage() {
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       />
                       <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-accent/10 px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">Peso por pregunta:</span>
+                        <span className="text-muted-foreground">{t('evaluations.weightPerQuestion')}</span>
                         <span className="font-mono font-bold text-accent">{pesoPorPregunta}%</span>
                       </div>
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                        Dificultad
+                        {t('evaluations.difficulty')}
                       </label>
                       <select
                         value={form.config.dificultad}
@@ -1850,16 +1851,16 @@ function EvaluationsPage() {
                         }
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                       >
-                        <option value="mixto">Mixto</option>
-                        <option value="facil">Fácil</option>
-                        <option value="medio">Medio</option>
-                        <option value="dificil">Difícil</option>
+                        <option value="mixto">{t('common.mixed')}</option>
+                        <option value="facil">{t('common.easy')}</option>
+                        <option value="medio">{t('common.medium')}</option>
+                        <option value="dificil">{t('common.hard')}</option>
                       </select>
                     </div>
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                      Porcentaje de aprobación (%)
+                      {t('evaluations.approvalPct')}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -1880,23 +1881,23 @@ function EvaluationsPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      El participante aprueba si obtiene al menos este puntaje
+                      {t('evaluations.approvalHint')}
                     </p>
                   </div>
                   <div>
                     <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                      Distribución por tipo{" "}
+                      {t('evaluations.distribution')}{" "}
                       {totalDist !== 100 && (
                         <span className="ml-1 text-destructive">
-                          (debe sumar 100% — actual: {totalDist}%)
+                          {t('evaluations.distributionHint')} {totalDist}%)
                         </span>
                       )}
                     </label>
                     {(
                       [
-                        { key: "dist_unica", label: "Selección Única" },
-                        { key: "dist_multiple", label: "Selección Múltiple" },
-                        { key: "dist_vf", label: "Verdadero / Falso" },
+                        { key: "dist_unica", label: t('evaluations.singleChoice') },
+                        { key: "dist_multiple", label: t('evaluations.multipleChoice') },
+                        { key: "dist_vf", label: t('evaluations.trueFalse') },
                       ] as const
                     ).map(({ key, label }) => (
                       <div key={key} className="mb-1.5 flex items-center gap-2">
@@ -1931,15 +1932,15 @@ function EvaluationsPage() {
                         })
                       }
                     />
-                    Orden aleatorio de preguntas
+                    {t('evaluations.randomOrder')}
                   </label>
                 </div>
               </div>
 
               <div className="border-t border-border pt-4">
                 <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                  Categorías incluidas{" "}
-                  <span className="text-muted-foreground/70">(vacío = todas)</span>
+                  {t('evaluations.categories')}{" "}
+                  <span className="text-muted-foreground/70">{t('evaluations.categoriesHint')}</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {categories.map((cat) => {
@@ -1970,18 +1971,18 @@ function EvaluationsPage() {
                   className="flex-1"
                   onClick={() => setShowModal(false)}
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" className="flex-1" disabled={totalDist !== 100}>
                   <Save className="size-4" />
-                  {editing ? "Actualizar" : "Crear"}
+                  {editing ? t('common.update') : t('common.create')}
                 </Button>
 
                 <ConfirmDialog
                   open={showSaveConfirm}
-                  title={editing ? "¿Actualizar evaluación?" : "¿Crear evaluación?"}
-                  description={editing ? `Confirma que deseas guardar los cambios en "${form.nombre}".` : `Confirma que deseas crear la evaluación "${form.nombre}".`}
-                  confirmLabel={editing ? "Actualizar" : "Crear"}
+                  title={editing ? t('evaluations.formEditTitle') : t('evaluations.formNewTitle')}
+                  description={editing ? t('evaluations.confirmUpdate', { name: form.nombre }) : t('evaluations.confirmCreate', { name: form.nombre })}
+                  confirmLabel={editing ? t('common.update') : t('common.create')}
                   loading={isSaving}
                   onConfirm={executeSave}
                   onCancel={() => setShowSaveConfirm(false)}
