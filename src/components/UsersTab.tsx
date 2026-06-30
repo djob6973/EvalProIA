@@ -271,7 +271,7 @@ export function UsersTab() {
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="rounded-full bg-[var(--secondary)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                      <span className="rounded-lg bg-[var(--secondary)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
                         {t(`roles.${u.role}`)}
                       </span>
                     </td>
