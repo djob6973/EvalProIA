@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ import { getModelConfig, getSystemPrompt } from "@/routes/settings";
 export const Route = createFileRoute("/generate")({
   head: () => ({
     meta: [
-      { title: "Generador de Preguntas IA — EvalPro" },
+      { title: "generate.pageTitle" },
       {
         name: "description",
         content: "Genera, revisa y guarda preguntas de evaluación calibradas desde cualquier documento usando IA.",
@@ -43,13 +44,17 @@ export const Route = createFileRoute("/generate")({
 
 type QuestionType = "seleccion_unica" | "seleccion_multiple" | "verdadero_falso";
 
-const TYPE_LABELS: Record<QuestionType, string> = {
-  seleccion_unica: "Selección Única",
-  seleccion_multiple: "Selección Múltiple",
-  verdadero_falso: "Verdadero / Falso",
-};
+function getTypeLabels(t: (key: string) => string): Record<QuestionType, string> {
+  return {
+    seleccion_unica: t('evaluations.singleChoice'),
+    seleccion_multiple: t('evaluations.multipleChoice'),
+    verdadero_falso: t('evaluations.trueFalse'),
+  };
+}
 
 function GeneratePage() {
+  const { t } = useTranslation();
+  const TYPE_LABELS = getTypeLabels(t);
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -105,7 +110,7 @@ function GeneratePage() {
     if (!f) return;
     const ok = /\.(pdf|docx|txt)$/i.test(f.name);
     if (!ok) {
-      alert("Solo se permiten archivos PDF, DOCX y TXT");
+      alert(t('generate.fileTypeError'));
       return;
     }
     setFile(f);
@@ -116,32 +121,32 @@ function GeneratePage() {
     if (!file) return;
     setExtracting(true);
     setExtractionProgress(0);
-    setExtractionStatus("Subiendo a almacenamiento seguro…");
+    setExtractionStatus(t('generate.extracting1'));
     setExtractionProgress(20);
-    
+
     try {
-      setExtractionStatus("Codificando documento para IA…");
+      setExtractionStatus(t('generate.extracting2'));
       setExtractionProgress(40);
-      
-      setExtractionStatus("Llamando a OpenAI Responses API…");
+
+      setExtractionStatus(t('generate.extracting3'));
       setExtractionProgress(60);
-      
+
       const text = await extractTextWithOCR(file);
-      
-      setExtractionStatus("Analizando texto extraído…");
+
+      setExtractionStatus(t('generate.extracting4'));
       setExtractionProgress(80);
-      
-      setExtractionStatus("Validando contenido…");
+
+      setExtractionStatus(t('generate.extracting5'));
       setExtractionProgress(100);
-      
+
       setExtractedText(text);
       setExtracting(false);
-      setExtractionStatus("Extracción completada");
+      setExtractionStatus(t('generate.extractionDone'));
     } catch (error) {
       setExtracting(false);
-      setExtractionStatus("Error en la extracción");
+      setExtractionStatus(t('generate.extractionError'));
       console.error('Error extracting text:', error);
-      alert('Error al extraer el texto: ' + (error as Error).message);
+      alert(t('generate.extractError', { error: (error as Error).message }));
     }
   }
 
@@ -169,7 +174,7 @@ function GeneratePage() {
       setSelected(new Set(questionsArray.map((q) => q.id)));
     } catch (error) {
       console.error('❌ Error generating questions:', error);
-      alert('Error al generar preguntas: ' + (error as Error).message);
+      alert(t('generate.generateError', { error: (error as Error).message }));
     }
     
     setGenerating(false);
@@ -229,7 +234,7 @@ function GeneratePage() {
         prev.map((item) => (item.id === q.id ? { ...newQ, id: q.id } : item))
       );
     } catch (error) {
-      alert("Error al regenerar la pregunta: " + (error as Error).message);
+      alert(t('generate.regenerateError', { error: (error as Error).message }));
     } finally {
       setRegeneratingId(null);
     }
@@ -251,7 +256,7 @@ function GeneratePage() {
 
   async function saveSelected() {
     if (selected.size === 0) {
-      alert("Selecciona al menos una pregunta para guardar");
+      alert(t('generate.minOneQuestion'));
       return;
     }
     setSaving(true);
@@ -266,14 +271,14 @@ function GeneratePage() {
       );
 
       if (validQuestions.length === 0) {
-        alert('Ninguna de las preguntas seleccionadas tiene enunciado, opciones y respuesta correcta. Regenera las preguntas.');
+        alert(t('generate.noValidQuestions'));
         setSaving(false);
         return;
       }
 
       if (validQuestions.length < selectedQuestions.length) {
         const skipped = selectedQuestions.length - validQuestions.length;
-        alert(`Se omitieron ${skipped} pregunta(s) incompletas (sin enunciado, opciones o respuesta correcta).`);
+        alert(t('generate.skippedQuestions', { count: skipped }));
       }
 
       const questionsToSave = validQuestions.map(q => ({
@@ -303,7 +308,7 @@ function GeneratePage() {
       setTimeout(() => setSaved(false), 3500);
     } catch (error) {
       console.error('❌ Error al guardar preguntas:', error);
-      alert('Error al guardar las preguntas: ' + (error instanceof Error ? error.message : String(error)));
+      alert(t('generate.saveError', { error: error instanceof Error ? error.message : String(error) }));
     } finally {
       setSaving(false);
     }
@@ -312,11 +317,11 @@ function GeneratePage() {
   return (
     <AppShell>
       <PageHeader
-        title="Generador IA"
-        subtitle="Extrae preguntas de tus documentos con inteligencia artificial"
+        title={t('generate.title')}
+        subtitle={t('generate.subtitle')}
         actions={
           <Button asChild variant="outline" size="sm">
-            <Link to="/question-bank">Ver Banco de Preguntas</Link>
+            <Link to="/question-bank">{t('generate.viewBank')}</Link>
           </Button>
         }
       />
@@ -325,7 +330,7 @@ function GeneratePage() {
           {/* LEFT: Upload + Extraction + Config */}
           <div className="space-y-6 lg:col-span-2">
             {/* 1. Upload - Enhanced Design */}
-            <Card title="1. Cargar Documento" subtitle="Sube PDF, DOCX o TXT para extraer contenido">
+            <Card title={t('generate.step1Title')} subtitle={t('generate.step1Desc')}>
               {file ? (
                 <div className="flex items-center gap-3 rounded-lg border border-border bg-accent/5 p-4 animate-slide-up transition-all">
                   <div className="grid size-10 place-items-center rounded-md bg-accent/15 text-accent animate-pulse-accent">
@@ -351,8 +356,8 @@ function GeneratePage() {
                 <label className="group flex h-40 cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border text-muted-foreground transition-all duration-300 hover:border-accent/40 hover:bg-accent/5">
                   <div className="flex flex-col items-center transition-transform duration-300 group-hover:scale-110">
                     <Upload className="mb-2 size-6 transition-colors group-hover:text-accent" />
-                    <span className="text-sm font-semibold">Arrastra tu archivo aquí o haz clic</span>
-                    <span className="mt-1 text-[10px]">PDF, DOCX, TXT (máx. 10MB)</span>
+                    <span className="text-sm font-semibold">{t('generate.dragFile')}</span>
+                    <span className="mt-1 text-[10px]">{t('generate.fileTypes')}</span>
                   </div>
                   <input
                     type="file"
@@ -374,11 +379,11 @@ function GeneratePage() {
                   </>
                 ) : extractedText ? (
                   <>
-                    <CheckCircle2 className="size-4" /> Re-extraer Texto
+                    <CheckCircle2 className="size-4" /> {t('generate.reExtractButton')}
                   </>
                 ) : (
                   <>
-                    <Sparkles className="size-4" /> Extraer Texto del Documento
+                    <Sparkles className="size-4" /> {t('generate.extractButton')}
                   </>
                 )}
               </Button>
@@ -387,7 +392,7 @@ function GeneratePage() {
                 <div className="mt-4 space-y-2 animate-slide-up">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">{extractionProgress}%</span>
-                    <span className="text-muted-foreground">Procesando...</span>
+                    <span className="text-muted-foreground">{t('generate.processingButton')}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-secondary">
                     <div
@@ -407,12 +412,12 @@ function GeneratePage() {
                     {showExtractedText ? (
                       <>
                         <EyeOff className="size-4 transition-transform group-hover:scale-110" />
-                        Ocultar texto extraído ({extractedText.length} chars)
+                        {t('generate.hideExtracted', { length: extractedText.length })}
                       </>
                     ) : (
                       <>
                         <Eye className="size-4 transition-transform group-hover:scale-110" />
-                        Ver texto extraído ({extractedText.length} chars)
+                        {t('generate.viewExtracted', { length: extractedText.length })}
                       </>
                     )}
                   </button>
@@ -430,12 +435,12 @@ function GeneratePage() {
 
             {/* 2. Configuration - Enhanced Design */}
             <Card
-              title="2. Configuración de Preguntas"
-              subtitle="Define los parámetros de generación"
+              title={t('generate.step2Title')}
+              subtitle={t('generate.step2Desc')}
               disabled={!extractedText}
             >
               <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                <Field label="N.º de Preguntas" hint="1 – 50">
+                <Field label={t('generate.numQuestions')} hint="1 – 50">
                   <input
                     type="number"
                     min={1}
@@ -445,18 +450,18 @@ function GeneratePage() {
                     className="field-base"
                   />
                 </Field>
-                <Field label="Dificultad">
+                <Field label={t('generate.difficulty')}>
                   <select
                     value={dificultad}
                     onChange={(e) => setDificultad(e.target.value)}
                     className="field-base"
                   >
-                    <option value="facil">Fácil</option>
-                    <option value="medio">Medio</option>
-                    <option value="dificil">Difícil</option>
+                    <option value="facil">{t('common.easy')}</option>
+                    <option value="medio">{t('common.medium')}</option>
+                    <option value="dificil">{t('common.hard')}</option>
                   </select>
                 </Field>
-                <Field label="Categoría">
+                <Field label={t('generate.category')}>
                   <select
                     value={nuevaCategoria ? "__new__" : categoria}
                     onChange={(e) => {
@@ -470,24 +475,24 @@ function GeneratePage() {
                     }}
                     className="field-base"
                   >
-                    <option value="">Sin categoría</option>
+                    <option value="">{t('generate.noCategory')}</option>
                     {categorias.map((cat) => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
-                    <option value="__new__">+ Crear nueva categoría…</option>
+                    <option value="__new__">{t('generate.createCategory')}</option>
                   </select>
                   {nuevaCategoria && (
                     <input
                       type="text"
                       value={categoria}
                       onChange={(e) => setCategoria(e.target.value)}
-                      placeholder="Nombre de la nueva categoría"
+                      placeholder={t('generate.newCategoryName')}
                       autoFocus
                       className="mt-2 field-base"
                     />
                   )}
                 </Field>
-                <Field label="Tiempo Límite (min)" hint="default: 30">
+                <Field label={t('generate.timeLimit')} hint={t('generate.timeLimitHint')}>
                   <input
                     type="number"
                     min={1}
@@ -496,15 +501,15 @@ function GeneratePage() {
                     className="field-base"
                   />
                 </Field>
-                <Field label="Idioma">
+                <Field label={t('generate.language')}>
                   <select
                     value={idioma}
                     onChange={(e) => setIdioma(e.target.value)}
                     className="field-base"
                   >
-                    <option value="Español">Español</option>
-                    <option value="Inglés">Inglés</option>
-                    <option value="Portugués">Portugués</option>
+                    <option value="Español">{t('generate.spanish')}</option>
+                    <option value="Inglés">{t('generate.english')}</option>
+                    <option value="Portugués">{t('generate.portuguese')}</option>
                   </select>
                 </Field>
               </div>
@@ -513,10 +518,10 @@ function GeneratePage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-                      Distribución por Tipo de Pregunta
+                      {t('generate.distributionTitle')}
                     </p>
                     <p className="mt-0.5 text-[10px] text-[var(--text-faint)]">
-                      Ajusta los porcentajes — deben sumar 100%
+                      {t('generate.distributionHint')}
                     </p>
                   </div>
                   <span
@@ -526,7 +531,7 @@ function GeneratePage() {
                         : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
                     }`}
                   >
-                    Total: {total}%
+                    {t('generate.distributionTotal', { total })}
                   </span>
                 </div>
                 {(Object.keys(distribucion) as QuestionType[]).map((tipo) => (
@@ -556,11 +561,11 @@ function GeneratePage() {
               >
                 {generating ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Generando preguntas con IA…
+                    <Loader2 className="size-4 animate-spin" /> {t('generate.generatingButton')}
                   </>
                 ) : (
                   <>
-                    <Wand2 className="size-4" /> Generar Preguntas
+                    <Wand2 className="size-4" /> {t('generate.generateButton')}
                   </>
                 )}
               </Button>
@@ -572,18 +577,18 @@ function GeneratePage() {
             {/* Flujo de Extracción */}
             {(() => {
               const steps = [
-                { label: "Cargar documento",             completed: !!file },
-                { label: "Extracción de texto con IA",   completed: !!extractedText },
-                { label: "Configurar parámetros",        completed: questions.length > 0 || generating },
-                { label: "Generar preguntas",            completed: questions.length > 0 },
-                { label: "Revisar y seleccionar",        completed: questions.length > 0 && selected.size > 0 },
-                { label: "Guardar en Banco de Preguntas", completed: saved },
+                { label: t('generate.flow1'), completed: !!file },
+                { label: t('generate.flow2'), completed: !!extractedText },
+                { label: t('generate.flow3'), completed: questions.length > 0 || generating },
+                { label: t('generate.flow4'), completed: questions.length > 0 },
+                { label: t('generate.flow5'), completed: questions.length > 0 && selected.size > 0 },
+                { label: t('generate.flow6'), completed: saved },
               ];
               const currentStepIndex = steps.findIndex((s) => !s.completed);
               return (
                 <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-6 transition-all duration-300 hover:shadow-lg">
                   <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[var(--text-faint)]">
-                    ✨ Flujo de Extracción
+                    {t('generate.flowTitle')}
                   </div>
                   <ol className="mt-5 space-y-3.5 text-xs">
                     {steps.map((s, i) => {
@@ -628,27 +633,27 @@ function GeneratePage() {
             <div className="rounded-xl border border-border bg-card p-6 transition-all duration-300 hover:shadow-lg hover:border-accent/30">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-lg">💡</span>
-                <h3 className="font-bold">Recomendaciones</h3>
+                <h3 className="font-bold">{t('generate.recTitle')}</h3>
               </div>
               <ul className="space-y-2.5 text-xs leading-relaxed text-muted-foreground">
                 <li className="flex gap-2 transition-all hover:text-foreground">
                   <span className="shrink-0 text-accent font-bold">•</span>
-                  <span>Los archivos PDF y DOCX se procesan directamente para extraer texto.</span>
+                  <span>{t('generate.rec1')}</span>
                 </li>
                 <li className="flex gap-2 transition-all hover:text-foreground">
                   <span className="shrink-0 text-accent font-bold">•</span>
-                  <span>Las imágenes (.jpg, .png) se procesan con IA de visión de OpenAI.</span>
+                  <span>{t('generate.rec2')}</span>
                 </li>
                 <li className="flex gap-2 transition-all hover:text-foreground">
                   <span className="shrink-0 text-accent font-bold">•</span>
-                  <span>Los archivos de texto (.txt) se leen directamente sin procesamiento adicional.</span>
+                  <span>{t('generate.rec3')}</span>
                 </li>
                 <li className="flex gap-2 transition-all hover:text-foreground">
                   <span className="shrink-0 text-accent font-bold">•</span>
                   <span>
-                    Personaliza los prompts en{" "}
+                    {t('generate.rec4')}{" "}
                     <Link to="/settings" className="text-accent font-semibold hover:underline">
-                      Configuración de Prompts
+                      {t('generate.rec4Link')}
                     </Link>
                     .
                   </span>
@@ -663,14 +668,14 @@ function GeneratePage() {
           <div className="rounded-xl border border-border bg-card shadow-md overflow-hidden animate-slide-up">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-secondary/40 to-accent/5 p-6">
               <div>
-                <h2 className="text-lg font-bold">3. Revisar y Seleccionar Preguntas</h2>
+                <h2 className="text-lg font-bold">{t('generate.step3Title')}</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Marca las preguntas que quieras conservar y guárdalas en el banco.
+                  {t('generate.step3Desc')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-accent/15 px-3 py-1.5 font-mono text-[10px] font-bold uppercase text-accent border border-accent/30">
-                  {selected.size} de {questions.length}
+                  {t('generate.selectedOf', { selected: selected.size, total: questions.length })}
                 </span>
                 <Button
                   variant="ghost"
@@ -682,7 +687,7 @@ function GeneratePage() {
                   }
                   className="transition-all duration-300 hover:bg-secondary"
                 >
-                  {selected.size === questions.length ? "Deseleccionar" : "Seleccionar"}
+                  {selected.size === questions.length ? t('generate.deselect') : t('generate.select')}
                 </Button>
                 <Button 
                   onClick={() => setShowSaveConfirm(true)} 
@@ -691,24 +696,24 @@ function GeneratePage() {
                 >
                   {saving ? (
                     <>
-                      <Loader2 className="size-4 animate-spin" /> Guardando…
+                      <Loader2 className="size-4 animate-spin" /> {t('generate.savingButton')}
                     </>
                   ) : saved ? (
                     <>
-                      <CheckCircle2 className="size-4" /> Guardadas
+                      <CheckCircle2 className="size-4" /> {t('generate.savedButton')}
                     </>
                   ) : (
                     <>
-                      <Save className="size-4" /> Guardar
+                      <Save className="size-4" /> {t('generate.saveButton')}
                     </>
                   )}
                 </Button>
 
                 <ConfirmDialog
                   open={showSaveConfirm}
-                  title="¿Guardar preguntas seleccionadas?"
-                  description={`Se agregarán ${selected.size} pregunta${selected.size !== 1 ? "s" : ""} al banco de preguntas.`}
-                  confirmLabel="Guardar"
+                  title={t('generate.confirmSaveTitle')}
+                  description={t('generate.confirmSaveDesc', { count: selected.size })}
+                  confirmLabel={t('generate.saveButton')}
                   loading={saving}
                   onConfirm={async () => { setShowSaveConfirm(false); await saveSelected(); }}
                   onCancel={() => setShowSaveConfirm(false)}
@@ -737,7 +742,7 @@ function GeneratePage() {
                       <button
                         onClick={() => toggle(q.id)}
                         className="mt-0.5 shrink-0 text-accent transition-transform duration-300 hover:scale-125"
-                        aria-label="Seleccionar pregunta"
+                        aria-label={t('generate.selectQuestion')}
                       >
                         {isSel ? (
                           <CheckSquare className="size-5 animate-scale-in" />
@@ -770,21 +775,21 @@ function GeneratePage() {
                               title="Regenerar esta pregunta"
                             >
                               {regeneratingId === q.id ? (
-                                <><Loader2 className="size-3 animate-spin" /> Regenerando…</>
+                                <><Loader2 className="size-3 animate-spin" /> {t('common.regenerating')}</>
                               ) : (
-                                <><RefreshCw className="size-3" /> Regenerar</>
+                                <><RefreshCw className="size-3" /> {t('common.regenerate')}</>
                               )}
                             </button>
                             <button
                               onClick={() => editingId === q.id ? cancelEdit() : startEdit(q)}
                               disabled={regeneratingId === q.id}
                               className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                              aria-label={editingId === q.id ? "Cancelar edición" : "Editar pregunta"}
+                              aria-label={editingId === q.id ? t('generate.cancelEditing') : t('common.edit')}
                             >
                               {editingId === q.id ? (
-                                <><X className="size-3" /> Cancelar</>
+                                <><X className="size-3" /> {t('generate.cancelEdit')}</>
                               ) : (
-                                <><Pencil className="size-3" /> Editar</>
+                                <><Pencil className="size-3" /> {t('common.edit')}</>
                               )}
                             </button>
                           </div>
@@ -795,7 +800,7 @@ function GeneratePage() {
                           <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4 animate-slide-down">
                             {/* Pregunta */}
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pregunta</label>
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editQuestion')}</label>
                               <textarea
                                 rows={3}
                                 value={editDraft.pregunta}
@@ -806,7 +811,7 @@ function GeneratePage() {
 
                             {/* Contexto */}
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contexto (opcional)</label>
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editContext')}</label>
                               <textarea
                                 rows={2}
                                 value={editDraft.contexto}
@@ -818,7 +823,7 @@ function GeneratePage() {
                             {/* Opciones */}
                             <div className="space-y-1.5">
                               <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                                Opciones — haz clic en la letra para marcar como correcta
+                                {t('generate.editOptions')}
                               </label>
                               {editDraft.opciones.map((opt, i) => {
                                 const isCorrect = editDraft.respuesta_correcta.includes(i);
@@ -834,7 +839,7 @@ function GeneratePage() {
                                     <button
                                       type="button"
                                       onClick={() => toggleCorrectAnswer(i)}
-                                      title={isCorrect ? "Quitar como correcta" : "Marcar como correcta"}
+                                      title={isCorrect ? t('generate.unmarkCorrect') : t('generate.markCorrect')}
                                       className={`grid size-5 shrink-0 place-items-center rounded-sm font-mono text-[10px] font-bold transition-all duration-300 ${
                                         isCorrect
                                           ? "bg-emerald-500 text-white"
@@ -861,19 +866,19 @@ function GeneratePage() {
                             {/* Dificultad + Categoría */}
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Dificultad</label>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editDifficulty')}</label>
                                 <select
                                   value={editDraft.dificultad}
                                   onChange={(e) => setEditDraft({ ...editDraft, dificultad: e.target.value })}
                                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
                                 >
-                                  <option value="facil">Fácil</option>
-                                  <option value="medio">Medio</option>
-                                  <option value="dificil">Difícil</option>
+                                  <option value="facil">{t('common.easy')}</option>
+                                  <option value="medio">{t('common.medium')}</option>
+                                  <option value="dificil">{t('common.hard')}</option>
                                 </select>
                               </div>
                               <div className="space-y-1">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Categoría</label>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editCategory')}</label>
                                 <input
                                   value={editDraft.categoria}
                                   onChange={(e) => setEditDraft({ ...editDraft, categoria: e.target.value })}
@@ -884,7 +889,7 @@ function GeneratePage() {
 
                             {/* Justificación */}
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Justificación</label>
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editJustification')}</label>
                               <textarea
                                 rows={2}
                                 value={editDraft.justificacion}
@@ -896,10 +901,10 @@ function GeneratePage() {
                             {/* Actions */}
                             <div className="flex gap-2 pt-2">
                               <Button size="sm" onClick={saveEdit} className="transition-all duration-300">
-                                <Save className="size-3.5" /> Guardar cambios
+                                <Save className="size-3.5" /> {t('generate.saveChanges')}
                               </Button>
                               <Button size="sm" variant="ghost" onClick={cancelEdit}>
-                                Cancelar
+                                {t('generate.cancelEdit')}
                               </Button>
                             </div>
                           </div>
