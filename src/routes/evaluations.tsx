@@ -931,14 +931,14 @@ const EvaluationCard = memo(function EvaluationCard({
                 style={{ color: "var(--foreground)" }}
               >
                 {duplicatingId === ev.id ? <Loader2 className="size-4 animate-spin" /> : <Copy className="size-4" style={{ color: "var(--muted-foreground)" }} />}
-                Duplicar
+                {t('evaluations.duplicate')}
               </button>
               <button
                 onClick={() => { onEdit(ev); setMenuOpen(false); }}
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-secondary transition-colors"
                 style={{ color: "var(--foreground)" }}
               >
-                <Edit2 className="size-4" style={{ color: "var(--muted-foreground)" }} /> Editar
+                <Edit2 className="size-4" style={{ color: "var(--muted-foreground)" }} /> {t('common.edit')}
               </button>
               <div style={{ height: 1, background: "var(--border)" }} />
               <button
@@ -946,7 +946,7 @@ const EvaluationCard = memo(function EvaluationCard({
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-destructive/10 transition-colors"
                 style={{ color: "var(--destructive)" }}
               >
-                <Trash2 className="size-4" /> Eliminar
+                <Trash2 className="size-4" /> {t('common.delete')}
               </button>
             </div>
           )}
@@ -971,6 +971,7 @@ type GroupedCardsProps = {
 };
 
 function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPreview, onAssign, onDuplicate, onEdit, onDelete, onShare }: GroupedCardsProps) {
+  const { t } = useTranslation();
   const renderCard = (ev: Evaluation, idx: number) => (
     <div key={ev.id} style={{ animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 40}ms both` }}>
       <EvaluationCard
@@ -997,9 +998,9 @@ function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPr
   items.forEach((ev) => {
     let key: string;
     if (groupBy === "area") {
-      key = ev.area_id ? (areas.find((a) => a.id === ev.area_id)?.name ?? "Sin área") : "Sin área";
+      key = ev.area_id ? (areas.find((a) => a.id === ev.area_id)?.name ?? t('evaluations.noArea')) : t('evaluations.noArea');
     } else {
-      key = ev.created_at ? `Semana ${getISOWeek(new Date(ev.created_at))}` : "Sin fecha";
+      key = ev.created_at ? `${t('evaluations.weekLabel')} ${getISOWeek(new Date(ev.created_at))}` : t('evaluations.noGroup');
     }
     if (!groupMap.has(key)) groupMap.set(key, []);
     groupMap.get(key)!.push(ev);
@@ -1031,6 +1032,7 @@ function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPr
 }
 
 function EvaluationsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -1208,7 +1210,7 @@ function EvaluationsPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (totalDist !== 100) {
-      showToast("La distribución debe sumar 100%", "error");
+      showToast(t('evaluations.distributionError'), "error");
       return;
     }
     setShowSaveConfirm(true);
@@ -1236,7 +1238,7 @@ function EvaluationsPage() {
         });
 
         setItems((p) => p.map((x) => (x.id === editing.id ? { ...form, id: editing.id, fecha_vencimiento: form.fecha_vencimiento || undefined } : x)));
-        showToast("Evaluación actualizada");
+        showToast(t('evaluations.updated'));
       } else {
         // Crear en Supabase
         const newEvaluation = await evaluationsService.create({
@@ -1267,13 +1269,13 @@ function EvaluationsPage() {
         };
         
         setItems((p) => [mappedItem, ...p]);
-        showToast("Evaluación creada");
+        showToast(t('evaluations.created_toast'));
       }
       setShowModal(false);
       setShowSaveConfirm(false);
     } catch (err) {
       console.error('Error saving evaluation:', err);
-      showToast("Error al guardar la evaluación", "error");
+      showToast(t('evaluations.saveError'), "error");
     } finally {
       setIsSaving(false);
     }
@@ -1290,10 +1292,10 @@ function EvaluationsPage() {
     try {
       await evaluationsService.delete(deletingId);
       setItems((p) => p.filter((e) => e.id !== deletingId));
-      showToast("Evaluación eliminada");
+      showToast(t('evaluations.deleted'));
     } catch (err) {
       console.error('Error deleting evaluation:', err);
-      showToast("Error al eliminar la evaluación", "error");
+      showToast(t('evaluations.deleteError'), "error");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
@@ -1333,7 +1335,7 @@ function EvaluationsPage() {
     setDuplicatingId(ev.id);
     try {
       const newEvaluation = await evaluationsService.create({
-        title: `Copia de ${ev.nombre}`,
+        title: `${t('evaluations.copyOf')} ${ev.nombre}`,
         description: ev.descripcion,
         created_by: profile?.id || null,
         tiempo_limite: ev.tiempo_limite,
@@ -1347,7 +1349,7 @@ function EvaluationsPage() {
 
       const mappedItem: Evaluation = {
         id: newEvaluation.id,
-        nombre: `Copia de ${ev.nombre}`,
+        nombre: `${t('evaluations.copyOf')} ${ev.nombre}`,
         descripcion: ev.descripcion,
         tiempo_limite: ev.tiempo_limite,
         intentos_permitidos: ev.intentos_permitidos,
@@ -1362,7 +1364,7 @@ function EvaluationsPage() {
       showToast(`"${mappedItem.nombre}" creada`);
     } catch (err) {
       console.error("Error duplicating evaluation:", err);
-      showToast("Error al duplicar la evaluación", "error");
+      showToast(t('evaluations.duplicateError'), "error");
     } finally {
       setDuplicatingId(null);
     }
@@ -1384,7 +1386,7 @@ function EvaluationsPage() {
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando evaluaciones...</p>
+            <p className="text-sm text-muted-foreground">{t('evaluations.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -1409,7 +1411,7 @@ function EvaluationsPage() {
     <AppShell>
       <PageHeader
         title="Evaluaciones"
-        actions={<Button onClick={openCreate}><Plus className="size-4" /> Nueva Evaluación</Button>}
+        actions={<Button onClick={openCreate}><Plus className="size-4" /> {t('evaluations.newEvaluation')}</Button>}
       />
       {toast && (
         <div
@@ -1434,7 +1436,7 @@ function EvaluationsPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar evaluaciones…"
+              placeholder={t('evaluations.searchPlaceholder')}
               className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
             />
@@ -1446,7 +1448,7 @@ function EvaluationsPage() {
             className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
             style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
           >
-            <option value="todas">Todas las categorías</option>
+            <option value="todas">{t('evaluations.allCategories')}</option>
             {categories.map((c) => (
               <option key={c} value={c}>
                 {c}
@@ -1460,9 +1462,9 @@ function EvaluationsPage() {
             className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
             style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
           >
-            <option value="todos">Todos los estados</option>
-            <option value="activa">Activas</option>
-            <option value="inactiva">Inactivas</option>
+            <option value="todos">{t('evaluations.allStatuses')}</option>
+            <option value="activa">{t('evaluations.active')}</option>
+            <option value="inactiva">{t('evaluations.inactive')}</option>
           </select>
 
           {areas.length > 0 && (
@@ -1472,8 +1474,8 @@ function EvaluationsPage() {
               className="px-3 py-2 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
             >
-              <option value="todas">Todas las áreas</option>
-              <option value="sin_area">Sin área</option>
+              <option value="todas">{t('evaluations.allAreas')}</option>
+              <option value="sin_area">{t('evaluations.noArea')}</option>
               {areas.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -1494,7 +1496,7 @@ function EvaluationsPage() {
                   color: groupBy === g ? "var(--accent-foreground)" : "var(--muted-foreground)",
                 }}
               >
-                {g === "none" ? "Sin agrupar" : g === "area" ? "Por área" : "Por semana"}
+                {g === "none" ? t('evaluations.noGroup') : g === "area" ? t('evaluations.byArea') : t('evaluations.byWeek')}
               </button>
             ))}
           </div>
