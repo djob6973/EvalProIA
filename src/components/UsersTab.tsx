@@ -375,7 +375,7 @@ export function UsersTab() {
             <form onSubmit={(e) => { e.preventDefault(); setEditError(null); setConfirmEdit(true); }} className="space-y-4">
               {editError && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{editError}</div>}
               <Field label={t('users.nameLabel')}>
-                <Input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} disabled={updating} />
+                <Input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} disabled={updating} className="rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5 text-sm" />
               </Field>
               <Field label={t('users.roleLabel')}>
                 <div className="relative">
