@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/areas")({
 });
 
 function AreasPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -54,7 +56,7 @@ function AreasPage() {
       setAreas(data);
     } catch (err) {
       console.error("Error fetching areas:", err);
-      showToast("Error al cargar las áreas", "error");
+      showToast(t('areas.loadError'), "error");
     } finally {
       setLoading(false);
     }
@@ -100,19 +102,19 @@ function AreasPage() {
           description: formDesc.trim() || null,
         });
         setAreas((prev) => prev.map((a) => (a.id === editing.id ? updated : a)));
-        showToast("Área actualizada");
+        showToast(t('areas.updated'));
       } else {
         const created = await areasService.create({
           name: formName.trim(),
           description: formDesc.trim() || null,
         });
         setAreas((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-        showToast("Área creada");
+        showToast(t('areas.created'));
       }
       setShowModal(false);
       setShowSaveConfirm(false);
     } catch (err: any) {
-      setFormError(err.message || "Error al guardar el área");
+      setFormError(err.message || t('areas.saveError'));
     } finally {
       setIsSaving(false);
     }
@@ -129,11 +131,11 @@ function AreasPage() {
     try {
       await areasService.delete(deletingArea.id);
       setAreas((prev) => prev.filter((a) => a.id !== deletingArea.id));
-      showToast("Área eliminada");
+      showToast(t('areas.deleted'));
       setShowDeleteModal(false);
       setDeletingArea(null);
     } catch (err: any) {
-      showToast(err.message || "Error al eliminar el área", "error");
+      showToast(err.message || t('areas.deleteError'), "error");
     } finally {
       setIsDeleting(false);
     }
@@ -143,7 +145,7 @@ function AreasPage() {
     <AppShell>
       <PageHeader
         title="Áreas"
-        actions={isAdmin ? <Button onClick={openCreate}><Plus className="size-4" /> Nueva Área</Button> : undefined}
+        actions={isAdmin ? <Button onClick={openCreate}><Plus className="size-4" /> {t('areas.newArea')}</Button> : undefined}
       />
       {toast && (
         <div
@@ -160,13 +162,13 @@ function AreasPage() {
       <div className="space-y-4">
         {loading ? (
           <div className="flex items-center justify-center py-12 text-muted-foreground">
-            Cargando áreas...
+            {t('areas.loading')}
           </div>
         ) : areas.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-12 text-center">
             <Layers className="mx-auto mb-3 size-10 text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">
-              No hay áreas creadas. Usa "Nueva Área" para comenzar.
+              {t('areas.emptyState')}
             </p>
           </div>
         ) : (
@@ -174,10 +176,10 @@ function AreasPage() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <th className="px-6 py-3">Nombre</th>
-                  <th className="px-6 py-3">Descripción</th>
-                  <th className="px-6 py-3">Creada</th>
-                  <th className="px-6 py-3">Acciones</th>
+                  <th className="px-6 py-3">{t('areas.colName')}</th>
+                  <th className="px-6 py-3">{t('areas.colDescription')}</th>
+                  <th className="px-6 py-3">{t('areas.colCreated')}</th>
+                  <th className="px-6 py-3">{t('areas.colActions')}</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
@@ -202,14 +204,14 @@ function AreasPage() {
                         <button
                           onClick={() => openEdit(area)}
                           className="rounded p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
-                          title="Editar área"
+                          title={t('areas.editArea')}
                         >
                           <Edit2 className="size-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(area)}
                           className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                          title="Eliminar área"
+                          title={t('areas.deleteArea')}
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -228,7 +230,7 @@ function AreasPage() {
           <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold">
-                {editing ? "Editar Área" : "Nueva Área"}
+                {editing ? t('areas.editTitle') : t('areas.newArea')}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -247,25 +249,25 @@ function AreasPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Nombre *
+                  {t('areas.nameLabel')}
                 </Label>
                 <Input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ej: Recursos Humanos"
+                  placeholder={t('areas.namePlaceholder')}
                   disabled={isSaving}
                 />
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Descripción
+                  {t('common.description')}
                 </Label>
                 <textarea
                   rows={3}
                   value={formDesc}
                   onChange={(e) => setFormDesc(e.target.value)}
-                  placeholder="Descripción opcional del área..."
+                  placeholder={t('areas.descPlaceholder')}
                   disabled={isSaving}
                   className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                 />
@@ -279,23 +281,23 @@ function AreasPage() {
                   disabled={isSaving}
                   className="flex-1"
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={isSaving} className="flex-1">
                   <Save className="size-4" />
-                  {editing ? "Actualizar" : "Crear"}
+                  {editing ? t('common.update') : t('common.create')}
                 </Button>
               </div>
 
               <ConfirmDialog
                 open={showSaveConfirm}
-                title={editing ? "¿Actualizar área?" : "¿Crear área?"}
+                title={editing ? t('areas.confirmUpdate') : t('areas.confirmCreate')}
                 description={
                   editing
-                    ? `Confirma que deseas guardar los cambios en "${formName}".`
-                    : `Confirma que deseas crear el área "${formName}".`
+                    ? t('areas.confirmUpdateDesc', { name: formName })
+                    : t('areas.confirmCreateDesc', { name: formName })
                 }
-                confirmLabel={editing ? "Actualizar" : "Crear"}
+                confirmLabel={editing ? t('common.update') : t('common.create')}
                 loading={isSaving}
                 onConfirm={executeSave}
                 onCancel={() => setShowSaveConfirm(false)}
@@ -308,11 +310,9 @@ function AreasPage() {
       {showDeleteModal && deletingArea && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-lg">
-            <h3 className="text-lg font-semibold">Eliminar Área</h3>
+            <h3 className="text-lg font-semibold">{t('areas.deleteTitle')}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              ¿Estás seguro de que deseas eliminar el área{" "}
-              <strong>{deletingArea.name}</strong>? Los usuarios y evaluaciones
-              asignados a esta área quedarán sin área asignada.
+              {t('areas.deleteConfirm', { name: deletingArea.name })}
             </p>
             <div className="mt-4 flex gap-2">
               <Button
@@ -324,7 +324,7 @@ function AreasPage() {
                 disabled={isDeleting}
                 className="flex-1"
               >
-                Cancelar
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="destructive"
@@ -332,7 +332,7 @@ function AreasPage() {
                 disabled={isDeleting}
                 className="flex-1"
               >
-                {isDeleting ? "Eliminando..." : "Eliminar"}
+                {isDeleting ? t('common.deleting') : t('common.delete')}
               </Button>
             </div>
           </div>

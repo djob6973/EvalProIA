@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { resultsService } from "@/lib/services/evaluations";
 import { Calendar, CheckCircle, Tag, Search, Filter, TrendingUp } from "lucide-react";
 import {
@@ -18,7 +19,7 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/my-history")({
-  head: () => ({ meta: [{ title: "Mi Historial — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "Mi Historial — EvalPro" }] }), // static head, translated at runtime in component
   component: HistoryPage,
 });
 
@@ -84,29 +85,27 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-  const { promedio, count } = payload[0].payload;
-  return (
-    <div
-      className="rounded-[12px] px-4 py-3 text-[13px]"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-md)",
-      }}
-    >
-      <p className="font-medium" style={{ color: "var(--foreground)" }}>Semana del {label}</p>
-      <p className="mt-1 font-mono font-bold" style={{ color: "var(--accent)" }}>{promedio}% promedio</p>
-      <p className="text-[11px]" style={{ color: "var(--muted-foreground)" }}>
-        {count} evaluación{count !== 1 ? "es" : ""}
-      </p>
-    </div>
-  );
-}
-
 function HistoryPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
+
+  function CustomTooltip({ active, payload, label }: any) {
+    if (!active || !payload?.length) return null;
+    const { promedio } = payload[0].payload;
+    return (
+      <div
+        className="rounded-[12px] px-4 py-3 text-[13px]"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-md)",
+        }}
+      >
+        <p className="font-medium" style={{ color: "var(--foreground)" }}>{t('myHistory.weekOf', { label })}</p>
+        <p className="mt-1 font-mono font-bold" style={{ color: "var(--accent)" }}>{t('myHistory.weekAvgTooltip', { pct: promedio })}</p>
+      </div>
+    );
+  }
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +128,7 @@ function HistoryPage() {
         setResults(data);
       } catch (err) {
         console.error("Error loading results:", err);
-        setError("Error al cargar el historial");
+        setError(t('myHistory.loadError'));
       } finally {
         setLoading(false);
       }
@@ -146,9 +145,9 @@ function HistoryPage() {
   const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
 
   const kpis = [
-    { label: "Completadas", value: String(results.length) },
-    { label: "Puntaje Promedio", value: `${averageScore}%` },
-    { label: "Mejor Puntaje", value: `${bestScore}%` },
+    { label: t('myHistory.completed'), value: String(results.length) },
+    { label: t('myHistory.avgScore'), value: `${averageScore}%` },
+    { label: t('myHistory.bestScore'), value: `${bestScore}%` },
   ];
 
   // Años disponibles para el gráfico
@@ -253,14 +252,14 @@ function HistoryPage() {
   if (loading) {
     return (
       <AppShell>
-        <PageHeader title="Mi Historial" />
+        <PageHeader title={t('myHistory.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
               className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
               style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
             />
-            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>Cargando historial...</p>
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>{t('myHistory.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -270,11 +269,11 @@ function HistoryPage() {
   if (error) {
     return (
       <AppShell>
-        <PageHeader title="Mi Historial" />
+        <PageHeader title={t('myHistory.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t('common.retry')}</Button>
           </div>
         </div>
       </AppShell>
@@ -283,7 +282,7 @@ function HistoryPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Mi Historial" subtitle="Tu rendimiento y evaluaciones completadas" />
+      <PageHeader title={t('myHistory.title')} subtitle={t('myHistory.subtitle')} />
       <div className="flex flex-col gap-[28px]">
         {/* KPIs */}
         <div className="grid gap-[16px] sm:grid-cols-3">
@@ -325,14 +324,14 @@ function HistoryPage() {
                 <div className="flex items-center gap-[10px]">
                   <TrendingUp className="size-4" style={{ color: "var(--accent)" }} />
                   <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
-                    Promedio semanal
+                    {t('myHistory.weeklyAvg')}
                   </h2>
                   {weeklyData.length > 0 && (
                     <span
                       className="rounded-full px-[10px] py-0.5 font-mono text-[9px] font-bold uppercase tracking-[.08em]"
                       style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
                     >
-                      {chartAverage}% este año
+                      {t('myHistory.yearlyAvg', { pct: chartAverage })}
                     </span>
                   )}
                 </div>
@@ -350,7 +349,7 @@ function HistoryPage() {
               <div className="p-[22px]">
                 {weeklyData.length === 0 ? (
                   <div className="flex h-48 items-center justify-center text-[13px]" style={{ color: "var(--muted-foreground)" }}>
-                    Sin evaluaciones en {chartYear}.
+                    {t('myHistory.noDataYear', { year: chartYear })}
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height={220}>
@@ -398,7 +397,7 @@ function HistoryPage() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar evaluación…"
+                  placeholder={t('myHistory.searchPlaceholder')}
                   className="w-full rounded-[10px] border py-2 pl-9 pr-3 text-[13px]"
                   style={{
                     border: "1px solid var(--border)",
@@ -416,7 +415,7 @@ function HistoryPage() {
                   className="rounded-[10px] border px-3 py-2 text-[13px]"
                   style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
                 >
-                  <option value="todos">Todos los meses</option>
+                  <option value="todos">{t('myHistory.allMonths')}</option>
                   {allMonths.map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
                   ))}
@@ -429,14 +428,14 @@ function HistoryPage() {
                   className="rounded-[10px] border px-3 py-2 text-[13px]"
                   style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
                 >
-                  <option value="todas">Todas las categorías</option>
+                  <option value="todas">{t('myHistory.allCategories')}</option>
                   {allCategories.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               )}
               <span className="ml-auto font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
-                {filtered.length} de {results.length}
+                {t('myHistory.countOf', { count: filtered.length, total: results.length })}
               </span>
             </div>
 
@@ -451,7 +450,7 @@ function HistoryPage() {
                 }}
               >
                 <p className="text-[14px]" style={{ color: "var(--muted-foreground)" }}>
-                  No hay resultados con los filtros seleccionados.
+                  {t('myHistory.noFiltered')}
                 </p>
               </div>
             ) : (
@@ -486,7 +485,7 @@ function HistoryPage() {
                               className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold"
                               style={{ background: "#EFF6FF", color: "#1E40AF" }}
                             >
-                              Intento {attemptNumber} de {totalAttempts}
+                              {t('myHistory.attemptOf', { n: attemptNumber, total: totalAttempts })}
                             </span>
                           )}
                           {cats.map((c) => (
@@ -509,20 +508,20 @@ function HistoryPage() {
                         {result.evaluations?.created_at && (
                           <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
                             <Calendar className="size-3 shrink-0" />
-                            <span>Creada: {formatDateTime(result.evaluations.created_at)}</span>
+                            <span>{t('evaluations.created')} {formatDateTime(result.evaluations.created_at)}</span>
                           </div>
                         )}
                         {result.completed_at && (
                           <div className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "#059669" }}>
                             <CheckCircle className="size-3 shrink-0" />
-                            <span>Presentada: {formatDateTime(result.completed_at)}</span>
+                            <span>{t('participant.submitted')} {formatDateTime(result.completed_at)}</span>
                           </div>
                         )}
                       </div>
 
                       <Button asChild variant="outline" size="sm" className="w-full mt-auto">
                         <Link to="/my-results/$id" params={{ id: result.id }}>
-                          Ver Resultados
+                          {t('myHistory.viewResults')}
                         </Link>
                       </Button>
                     </div>
@@ -543,7 +542,7 @@ function HistoryPage() {
             }}
           >
             <p className="text-[14px]" style={{ color: "var(--muted-foreground)" }}>
-              No has completado ninguna evaluación todavía.
+              {t('myHistory.noCompleted')}
             </p>
           </div>
         )}

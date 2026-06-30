@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -20,7 +21,7 @@ import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { questionsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/question-bank")({
-  head: () => ({ meta: [{ title: "Banco de Preguntas — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "Banco de Preguntas — EvalPro" }] }), // translated at runtime via useTranslation
   component: QuestionBankPage,
 });
 
@@ -136,6 +137,7 @@ function emptyQuestion(): Question {
 }
 
 function QuestionBankPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -187,7 +189,7 @@ function QuestionBankPage() {
         if (lastActiveCat) setFilterCat(lastActiveCat);
       } catch (err) {
         console.error('Error loading questions:', err);
-        setError('Error al cargar las preguntas');
+        setError(t('questionBank.loadError'));
         // Usar datos de ejemplo si falla la carga
         setItems(SEED);
         setCategories(DEFAULT_CATEGORIES);
@@ -263,14 +265,14 @@ function QuestionBankPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta pregunta?")) return;
+    if (!confirm(t('questionBank.confirmDelete'))) return;
     try {
       await questionsService.delete(id);
       setItems((p) => p.filter((q) => q.id !== id));
-      showToast("Pregunta eliminada");
+      showToast(t('questionBank.deleted'));
     } catch (error) {
       console.error('Error deleting question:', error);
-      showToast("Error al eliminar la pregunta", "error");
+      showToast(t('questionBank.deleteError'), "error");
     }
   };
 
@@ -326,16 +328,16 @@ function QuestionBankPage() {
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!form.enunciado.trim()) return showToast("Escribe el enunciado", "error");
-    if (!form.contexto.trim()) return showToast("Añade un contexto a la pregunta", "error");
+    if (!form.enunciado.trim()) return showToast(t('questionBank.validStatement'), "error");
+    if (!form.contexto.trim()) return showToast(t('questionBank.validContext'), "error");
     if (isCreatingCategory && !newCategoryName.trim())
-      return showToast("Escribe el nombre de la nueva categoría", "error");
+      return showToast(t('questionBank.validCategory'), "error");
     const opcionesValidas = form.opciones.every((o) => o.trim().length > 0);
-    if (!opcionesValidas) return showToast("Completa todas las opciones", "error");
+    if (!opcionesValidas) return showToast(t('questionBank.validOptions'), "error");
     if (form.correctas.length === 0)
-      return showToast("Marca al menos una respuesta correcta", "error");
+      return showToast(t('questionBank.validCorrect'), "error");
     if (form.tipo === "unica" && form.correctas.length > 1)
-      return showToast("Selección única: solo una correcta", "error");
+      return showToast(t('questionBank.validSingleChoice'), "error");
     setShowSaveConfirm(true);
   };
 
@@ -360,7 +362,7 @@ function QuestionBankPage() {
           justificacion: form.justificacion
         });
         setItems((p) => p.map((q) => (q.id === editing.id ? { ...form, id: editing.id } : q)));
-        showToast("Pregunta actualizada");
+        showToast(t('questionBank.updated'));
       } else {
         // Crear nueva pregunta en Supabase (sin evaluation_id para banco de preguntas)
         const created = await questionsService.create({
@@ -390,13 +392,13 @@ function QuestionBankPage() {
           justificacion: created.justificacion || '',
         };
         setItems((prev) => [mappedItem, ...prev]);
-        showToast("Pregunta creada");
+        showToast(t('questionBank.created'));
       }
       setShowModal(false);
       setShowSaveConfirm(false);
     } catch (error) {
       console.error('Error saving question:', error);
-      showToast("Error al guardar la pregunta", "error");
+      showToast(t('questionBank.saveError'), "error");
     } finally {
       setIsSaving(false);
     }
@@ -405,11 +407,11 @@ function QuestionBankPage() {
   if (loading) {
     return (
       <AppShell>
-        <PageHeader title="Banco de Preguntas" />
+        <PageHeader title={t('questionBank.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando preguntas...</p>
+            <p className="text-sm text-muted-foreground">{t('questionBank.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -419,11 +421,11 @@ function QuestionBankPage() {
   if (error) {
     return (
       <AppShell>
-        <PageHeader title="Banco de Preguntas" />
+        <PageHeader title={t('questionBank.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t('common.retry')}</Button>
           </div>
         </div>
       </AppShell>
@@ -433,8 +435,8 @@ function QuestionBankPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Banco de Preguntas"
-        actions={<Button onClick={openCreate}><Plus className="size-4" /> Nueva Pregunta</Button>}
+        title={t('questionBank.title')}
+        actions={<Button onClick={openCreate}><Plus className="size-4" /> {t('questionBank.newQuestion')}</Button>}
       />
       {toast && (
         <div
@@ -453,7 +455,7 @@ function QuestionBankPage() {
         <aside className="space-y-4 lg:col-span-1">
           <div className="rounded-lg border border-border bg-card p-5 transition-all duration-300" style={{ boxShadow: "var(--shadow-sm)" }}>
             <div className="mb-4 font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors duration-300" style={{ color: "var(--accent)" }}>
-              Categorías
+              {t('questionBank.categories')}
             </div>
             <ul className="space-y-1">
               <li>
@@ -465,7 +467,7 @@ function QuestionBankPage() {
                       : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
-                  <span>Todas</span>
+                  <span>{t('questionBank.all')}</span>
                   <span className="font-mono text-[10px] font-bold">{counts.Todas}</span>
                 </button>
               </li>
@@ -495,7 +497,7 @@ function QuestionBankPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar preguntas…"
+                placeholder={t('questionBank.searchPlaceholder')}
                 className="w-full rounded-lg border pl-9 pr-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                 style={{ borderColor: "var(--border)", background: "var(--card)" }}
               />
@@ -506,10 +508,10 @@ function QuestionBankPage() {
               className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
               style={{ borderColor: "var(--border)", background: "var(--card)" }}
             >
-              <option value="todos">Todos los tipos</option>
-              <option value="unica">Selección Única</option>
-              <option value="multiple">Selección Múltiple</option>
-              <option value="vf">Verdadero / Falso</option>
+              <option value="todos">{t('questionBank.allTypes')}</option>
+              <option value="unica">{t('evaluations.singleChoice')}</option>
+              <option value="multiple">{t('evaluations.multipleChoice')}</option>
+              <option value="vf">{t('evaluations.trueFalse')}</option>
             </select>
             <select
               value={filterEstado}
@@ -517,13 +519,13 @@ function QuestionBankPage() {
               className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
               style={{ borderColor: "var(--border)", background: "var(--card)" }}
             >
-              <option value="todos">Todos los estados</option>
-              <option value="activa">Activas</option>
-              <option value="borrador">Borradores</option>
-              <option value="inactiva">Inactivas</option>
+              <option value="todos">{t('questionBank.allStatuses')}</option>
+              <option value="activa">{t('questionBank.active')}</option>
+              <option value="borrador">{t('questionBank.draft')}</option>
+              <option value="inactiva">{t('questionBank.inactive')}</option>
             </select>
             <span className="ml-auto font-mono text-[9px] font-bold uppercase tracking-[.12em] px-3 py-2 rounded-lg transition-all duration-300" style={{ background: "var(--secondary)/40", border: "1px solid var(--border)", color: "var(--foreground)" }}>
-              {filtered.length} de {items.length}
+              {t('questionBank.countOf', { count: filtered.length, total: items.length })}
             </span>
           </div>
 
@@ -531,7 +533,7 @@ function QuestionBankPage() {
             <div className="rounded-lg border border-border bg-card p-12 text-center animate-fade-in transition-all duration-300" style={{ boxShadow: "var(--shadow-sm)" }}>
               <HelpCircle className="mx-auto mb-3 size-10 transition-colors duration-300" style={{ color: "var(--text-faint)" }} />
               <p className="text-sm transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                No hay preguntas que coincidan con los filtros.
+                {t('questionBank.emptyFilters')}
               </p>
             </div>
           ) : (
@@ -571,7 +573,7 @@ function QuestionBankPage() {
                         <p className="mb-2 text-sm leading-relaxed transition-colors duration-300" style={{ color: "var(--foreground)" }}>{q.enunciado}</p>
                         {q.contexto && (
                           <p className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--muted-foreground)" }}>
-                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>Contexto:</strong> {q.contexto}
+                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.context')}</strong> {q.contexto}
                           </p>
                         )}
                         <ul className="space-y-2">
@@ -597,7 +599,7 @@ function QuestionBankPage() {
                         </ul>
                         {q.justificacion && (
                           <p className="mt-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
-                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>Justificación:</strong> {q.justificacion}
+                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.justification')}</strong> {q.justificacion}
                           </p>
                         )}
                       </div>
@@ -629,7 +631,7 @@ function QuestionBankPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-border pt-4">
                   <span className="text-xs text-muted-foreground">
-                    Página {page} de {totalPages} · {filtered.length} preguntas
+                    {t('questionBank.page', { current: page, total: totalPages, count: filtered.length })}
                   </span>
                   <div className="flex gap-2">
                     <Button
@@ -638,7 +640,7 @@ function QuestionBankPage() {
                       onClick={() => setPage((p) => p - 1)}
                       disabled={page === 1}
                     >
-                      ← Anterior
+                      {t('questionBank.prev')}
                     </Button>
                     <Button
                       variant="outline"
@@ -646,7 +648,7 @@ function QuestionBankPage() {
                       onClick={() => setPage((p) => p + 1)}
                       disabled={page === totalPages}
                     >
-                      Siguiente →
+                      {t('questionBank.next')}
                     </Button>
                   </div>
                 </div>
@@ -661,7 +663,7 @@ function QuestionBankPage() {
           <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-card shadow-2xl transition-all duration-300" style={{ borderRadius: 16, border: "1px solid var(--border)" }}>
             <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-5 transition-all duration-300" style={{ borderBottom: "1px solid var(--border)", background: "var(--surface)" }}>
               <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>
-                {editing ? "Editar" : "Nueva"} Pregunta
+                {editing ? t('questionBank.editTitle') : t('questionBank.newTitle')}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
@@ -675,14 +677,14 @@ function QuestionBankPage() {
             <form onSubmit={handleSave} className="space-y-5 p-6">
               <div className="animate-fade-in" style={{ animationDelay: "0ms" }}>
                 <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                  Enunciado *
+                  {t('questionBank.statementLabel')}
                 </label>
                 <textarea
                   required
                   rows={3}
                   value={form.enunciado}
                   onChange={(e) => setForm({ ...form, enunciado: e.target.value })}
-                  placeholder="Escribe la pregunta…"
+                  placeholder={t('questionBank.statementPlaceholder')}
                   className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                   style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 />
@@ -690,9 +692,9 @@ function QuestionBankPage() {
 
               <div className="animate-fade-in" style={{ animationDelay: "50ms" }}>
                 <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                  Contexto *
+                  {t('questionBank.contextLabel')}
                   <span className="ml-1 font-normal normal-case transition-colors duration-300" style={{ color: "var(--muted-foreground)/70" }}>
-                    — explica el enunciado sin revelar la respuesta
+                    {t('questionBank.contextHint')}
                   </span>
                 </label>
                 <textarea
@@ -700,7 +702,7 @@ function QuestionBankPage() {
                   rows={3}
                   value={form.contexto}
                   onChange={(e) => setForm({ ...form, contexto: e.target.value })}
-                  placeholder="Describe el escenario, marco teórico o situación que da sentido a la pregunta. No insinúes ni adelantes la respuesta correcta."
+                  placeholder={t('questionBank.contextDesc')}
                   className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                   style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 />
@@ -710,7 +712,7 @@ function QuestionBankPage() {
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div className="col-span-2 animate-fade-in" style={{ animationDelay: "100ms" }}>
                   <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                    Tipo
+                    {t('questionBank.typeLabel')}
                   </label>
                   <select
                     value={form.tipo}
@@ -718,14 +720,14 @@ function QuestionBankPage() {
                     className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                     style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   >
-                    <option value="unica">Selección Única</option>
-                    <option value="multiple">Selección Múltiple</option>
-                    <option value="vf">Verdadero / Falso</option>
+                    <option value="unica">{t('evaluations.singleChoice')}</option>
+                    <option value="multiple">{t('evaluations.multipleChoice')}</option>
+                    <option value="vf">{t('evaluations.trueFalse')}</option>
                   </select>
                 </div>
                 <div className="animate-fade-in" style={{ animationDelay: "150ms" }}>
                   <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                    Categoría
+                    {t('questionBank.categoryLabel')}
                   </label>
                   <select
                     value={isCreatingCategory ? "nueva" : form.categoria}
@@ -746,7 +748,7 @@ function QuestionBankPage() {
                         {c}
                       </option>
                     ))}
-                    <option value="nueva">+ Crear nueva categoría</option>
+                    <option value="nueva">{t('questionBank.createCategory')}</option>
                   </select>
                   {isCreatingCategory && (
                     <input
@@ -756,7 +758,7 @@ function QuestionBankPage() {
                         setNewCategoryName(e.target.value);
                         setForm({ ...form, categoria: e.target.value });
                       }}
-                      placeholder="Nombre de la nueva categoría"
+                      placeholder={t('questionBank.newCategoryName')}
                       className="mt-2 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                       style={{ borderColor: "var(--border)", background: "var(--background)" }}
                     />
@@ -764,7 +766,7 @@ function QuestionBankPage() {
                 </div>
                 <div className="animate-fade-in" style={{ animationDelay: "200ms" }}>
                   <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                    Dificultad
+                    {t('questionBank.difficultyLabel')}
                   </label>
                   <select
                     value={form.dificultad}
@@ -774,9 +776,9 @@ function QuestionBankPage() {
                     className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                     style={{ borderColor: "var(--border)", background: "var(--background)" }}
                   >
-                    <option value="facil">Fácil</option>
-                    <option value="medio">Medio</option>
-                    <option value="dificil">Difícil</option>
+                    <option value="facil">{t('common.easy')}</option>
+                    <option value="medio">{t('common.medium')}</option>
+                    <option value="dificil">{t('common.hard')}</option>
                   </select>
                 </div>
               </div>
@@ -784,7 +786,7 @@ function QuestionBankPage() {
               <div className="animate-fade-in" style={{ animationDelay: "250ms" }}>
                 <div className="mb-2 flex items-center justify-between">
                   <label className="text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                    Opciones — marca la(s) correcta(s)
+                    {t('questionBank.optionsLabel')}
                   </label>
                   {form.tipo !== "vf" && form.opciones.length < 6 && (
                     <button
@@ -793,7 +795,7 @@ function QuestionBankPage() {
                       className="text-xs font-medium transition-all duration-300 hover:underline"
                       style={{ color: "var(--accent)" }}
                     >
-                      + Añadir opción
+                      {t('questionBank.addOption')}
                     </button>
                   )}
                 </div>
@@ -811,7 +813,7 @@ function QuestionBankPage() {
                             background: ok ? "var(--coral-soft)" : "var(--background)",
                             color: ok ? "var(--coral-text)" : "transparent"
                           }}
-                          title="Marcar como correcta"
+                          title={t('questionBank.markCorrect')}
                         >
                           <Check className="size-4" />
                         </button>
@@ -843,7 +845,7 @@ function QuestionBankPage() {
 
               <div className="animate-fade-in" style={{ animationDelay: "300ms" }}>
                 <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-                  Justificación (opcional)
+                  {t('questionBank.justificationLabel')}
                 </label>
                 <textarea
                   rows={2}
@@ -855,34 +857,34 @@ function QuestionBankPage() {
               </div>
 
               <div className="flex items-center gap-3 animate-fade-in" style={{ animationDelay: "350ms" }}>
-                <label className="text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>Estado</label>
+                <label className="text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>{t('questionBank.statusLabel')}</label>
                 <select
                   value={form.estado}
                   onChange={(e) => setForm({ ...form, estado: e.target.value as Status })}
                   className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                   style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 >
-                  <option value="activa">Activa</option>
-                  <option value="borrador">Borrador</option>
-                  <option value="inactiva">Inactiva</option>
+                  <option value="activa">{t('questionBank.statusActive')}</option>
+                  <option value="borrador">{t('questionBank.statusDraft')}</option>
+                  <option value="inactiva">{t('questionBank.statusInactive')}</option>
                 </select>
               </div>
 
               <div className="flex items-center justify-end gap-2 border-t border-border pt-4 transition-all duration-300">
                 <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                  Cancelar
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit">
                   <CheckCircle className="size-4" />
-                  {editing ? "Guardar cambios" : "Crear pregunta"}
+                  {editing ? t('questionBank.saveButton') : t('questionBank.createButton')}
                 </Button>
               </div>
 
               <ConfirmDialog
                 open={showSaveConfirm}
-                title={editing ? "¿Guardar cambios?" : "¿Crear pregunta?"}
-                description={editing ? "Confirma que deseas guardar los cambios en esta pregunta." : "Confirma que deseas agregar esta pregunta al banco."}
-                confirmLabel={editing ? "Guardar cambios" : "Crear pregunta"}
+                title={editing ? t('questionBank.confirmSave') : t('questionBank.confirmCreate')}
+                description={editing ? t('questionBank.confirmSaveDesc') : t('questionBank.confirmCreateDesc')}
+                confirmLabel={editing ? t('questionBank.saveButton') : t('questionBank.createButton')}
                 loading={isSaving}
                 onConfirm={executeSave}
                 onCancel={() => setShowSaveConfirm(false)}

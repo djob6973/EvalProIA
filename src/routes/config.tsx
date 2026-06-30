@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -15,22 +16,23 @@ export const Route = createFileRoute("/config")({
   component: ConfigPage,
 });
 
-const TABS = [
-  { key: "users",  label: "Usuarios",        icon: Users     },
-  { key: "roles",  label: "Roles y permisos", icon: Shield    },
-  { key: "org",    label: "Organización",     icon: Building2 },
-  { key: "brand",  label: "Marca",            icon: Paintbrush},
-] as const;
-
-type TabKey = typeof TABS[number]["key"];
+type TabKey = "users" | "roles" | "org" | "brand";
 
 function ConfigPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<TabKey>("users");
+
+  const TABS = [
+    { key: "users" as const,  label: t('config.tabUsers'),  icon: Users     },
+    { key: "roles" as const,  label: t('config.tabRoles'),  icon: Shield    },
+    { key: "org"   as const,  label: t('config.tabOrg'),    icon: Building2 },
+    { key: "brand" as const,  label: t('config.tabBrand'),  icon: Paintbrush},
+  ];
 
   useEffect(() => {
     if (!profile) return;
@@ -40,7 +42,7 @@ function ConfigPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Configuración" subtitle="Usuarios, roles y organización" />
+      <PageHeader title={t('config.title')} subtitle={t('config.subtitle')} />
 
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
       <div className="mb-6 flex gap-1 border-b border-[var(--border)]">
@@ -82,6 +84,7 @@ function ConfigPage() {
 // ── Organización tab ──────────────────────────────────────────────────────────
 
 function OrgTab() {
+  const { t } = useTranslation();
   return (
     <div className="max-w-2xl">
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]">
@@ -93,13 +96,13 @@ function OrgTab() {
             <Building2 className="size-[16px]" strokeWidth={1.5} />
           </div>
           <div>
-            <h2 className="font-semibold text-[var(--foreground)]">Organización</h2>
-            <p className="text-xs text-[var(--muted-foreground)]">Datos generales de la organización</p>
+            <h2 className="font-semibold text-[var(--foreground)]">{t('config.orgTitle')}</h2>
+            <p className="text-xs text-[var(--muted-foreground)]">{t('config.orgDesc')}</p>
           </div>
         </div>
         <div className="p-6">
           <p className="text-sm text-[var(--muted-foreground)]">
-            Próximamente: nombre de la organización, zona horaria, idioma y configuración regional.
+            {t('config.orgSoon')}
           </p>
         </div>
       </div>
@@ -110,6 +113,7 @@ function OrgTab() {
 // ── Marca tab (logo management) ───────────────────────────────────────────────
 
 function BrandTab() {
+  const { t } = useTranslation();
   const { settings } = useSystemSettings();
   const [logoPreview,      setLogoPreview]      = useState<string | null>(null);
   const [logoSaving,       setLogoSaving]       = useState(false);
@@ -125,8 +129,8 @@ function BrandTab() {
   function processFile(file: File) {
     setLogoError(null); setLogoSuccess(false);
     if (!["image/png","image/jpeg","image/svg+xml","image/webp"].includes(file.type))
-      return setLogoError("Solo se aceptan imágenes PNG, JPG o SVG.");
-    if (file.size > 500_000) return setLogoError("La imagen no debe superar 500 KB.");
+      return setLogoError(t('config.brandRules1'));
+    if (file.size > 500_000) return setLogoError(t('config.brandRules2'));
     const reader = new FileReader();
     reader.onload = (ev) => setLogoPreview(ev.target?.result as string);
     reader.readAsDataURL(file);
@@ -170,8 +174,8 @@ function BrandTab() {
             <Paintbrush className="size-[16px]" strokeWidth={1.5} />
           </div>
           <div>
-            <h2 className="font-semibold text-[var(--foreground)]">Identidad visual</h2>
-            <p className="text-xs text-[var(--muted-foreground)]">El logo aparecerá en el menú lateral del sistema</p>
+            <h2 className="font-semibold text-[var(--foreground)]">{t('config.brandTitle')}</h2>
+            <p className="text-xs text-[var(--muted-foreground)]">{t('config.brandDesc')}</p>
           </div>
         </div>
 
@@ -203,20 +207,20 @@ function BrandTab() {
                   <ImageIcon className="size-6 text-[var(--muted-foreground)]" strokeWidth={1.5} />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-[var(--foreground)]">Haz clic para seleccionar imagen</p>
-                  <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">PNG, JPG, SVG · máx 500 KB</p>
+                  <p className="text-sm font-medium text-[var(--foreground)]">{t('config.brandClickToSelect')}</p>
+                  <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{t('config.brandFileTypes')}</p>
                 </div>
               </>
             )}
             {logoPreview && (
               <div className="absolute bottom-3 right-3 rounded-md bg-[var(--card)] px-2 py-1 text-[10px] font-semibold text-[var(--muted-foreground)] shadow border border-[var(--border)]">
-                Vista previa
+                {t('config.brandPreview')}
               </div>
             )}
           </div>
 
           {logoError   && <p className="mt-3 text-xs text-destructive">{logoError}</p>}
-          {logoSuccess && !logoPreview && <p className="mt-3 text-xs text-emerald-600">Logo guardado correctamente.</p>}
+          {logoSuccess && !logoPreview && <p className="mt-3 text-xs text-emerald-600">{t('config.brandSaved')}</p>}
 
           <div className="mt-4 flex items-center gap-2">
             <button
@@ -225,21 +229,21 @@ function BrandTab() {
               className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition hover:border-[var(--border-strong)] hover:bg-[var(--secondary)] disabled:opacity-50"
             >
               <Upload className="size-4" strokeWidth={1.5} />
-              Seleccionar logo
+              {t('config.brandSelectLogo')}
             </button>
             {logoPreview && (
               <button onClick={saveLogo} disabled={logoSaving} className="rounded-xl px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50" style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}>
-                {logoSaving ? "Guardando…" : "Guardar logo"}
+                {logoSaving ? t('common.saving') : t('config.brandSaveLogo')}
               </button>
             )}
             {logoPreview && (
               <button onClick={() => { setLogoPreview(null); setLogoError(null); }} disabled={logoSaving} className="rounded-xl border border-[var(--border)] bg-[var(--card)] px-4 py-2 text-sm font-medium text-[var(--muted-foreground)] transition hover:bg-[var(--secondary)] disabled:opacity-50">
-                Cancelar
+                {t('common.cancel')}
               </button>
             )}
             {currentLogo && !logoPreview && (
               <button onClick={() => setShowDeleteConfirm(true)} disabled={logoSaving} className="ml-auto rounded-xl px-4 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:opacity-50">
-                Eliminar logo
+                {t('config.brandDeleteLogo')}
               </button>
             )}
           </div>
@@ -248,9 +252,9 @@ function BrandTab() {
 
       <ConfirmDialog
         open={showDeleteConfirm}
-        title="¿Eliminar logo de la organización?"
-        description="Se eliminará el logo de marca del sistema."
-        confirmLabel="Eliminar"
+        title={t('config.brandDeleteTitle')}
+        description={t('config.brandDeleteDesc')}
+        confirmLabel={t('common.delete')}
         onConfirm={deleteLogo}
         onCancel={() => setShowDeleteConfirm(false)}
       />

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, UserPlus, RefreshCw, Edit2, KeyRound, Trash2, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,24 +30,16 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super Admin",
-  admin:       "Administrador",
-  supervisor:  "Supervisor",
-  leader:      "Líder",
-  participant: "Participante",
-  both:        "Admin + Part.",
-};
-
-const ROLE_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "super_admin", label: "Super Admin"   },
-  { value: "admin",       label: "Administrador" },
-  { value: "supervisor",  label: "Supervisor"    },
-  { value: "leader",      label: "Líder"         },
-  { value: "participant", label: "Participante"  },
+const ROLE_OPTIONS: Array<{ value: string }> = [
+  { value: "super_admin" },
+  { value: "admin"       },
+  { value: "supervisor"  },
+  { value: "leader"      },
+  { value: "participant" },
 ];
 
 export function UsersTab() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "both";
 
@@ -136,7 +129,7 @@ export function UsersTab() {
       setTimeout(fetchUsers, 800);
     } catch (e: any) {
       setConfirmInvite(false);
-      setInviteError(e.message || "Error al crear usuario");
+      setInviteError(e.message || t('users.createError'));
     } finally { setInviting(false); }
   }
 
@@ -161,7 +154,7 @@ export function UsersTab() {
       setConfirmEdit(false); setShowEdit(false); setEditUser(null);
       fetchUsers();
     } catch (e: any) {
-      setEditError(e.message || "Error al actualizar");
+      setEditError(e.message || t('users.updateError'));
     } finally { setUpdating(false); }
   }
 
@@ -173,8 +166,8 @@ export function UsersTab() {
 
   async function executeChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    if (newPw.length < 6) { setPwError("Mínimo 6 caracteres"); return; }
-    if (newPw !== confirmPw) { setPwError("Las contraseñas no coinciden"); return; }
+    if (newPw.length < 6) { setPwError(t('users.minChars')); return; }
+    if (newPw !== confirmPw) { setPwError(t('users.passwordMismatch')); return; }
     setChangingPw(true);
     try {
       const res = await fetch("/api/change-password", {
@@ -185,7 +178,7 @@ export function UsersTab() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       setPwSuccess(true); setNewPw(""); setConfirmPw("");
     } catch (e: any) {
-      setPwError(e.message || "Error al cambiar contraseña");
+      setPwError(e.message || t('users.changePasswordError'));
     } finally { setChangingPw(false); }
   }
 
@@ -207,7 +200,7 @@ export function UsersTab() {
       setShowDelete(false); setDeleteUser(null);
       fetchUsers();
     } catch (e: any) {
-      setDeleteError(e.message || "Error al eliminar");
+      setDeleteError(e.message || t('users.deleteError'));
     } finally { setDeleting(false); }
   }
 
@@ -219,7 +212,7 @@ export function UsersTab() {
         <div className="relative min-w-0 flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--muted-foreground)]" strokeWidth={1.5} />
           <input
-            placeholder="Buscar usuario..."
+            placeholder={t('users.searchPlaceholder')}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] py-2 pl-9 pr-3 text-sm outline-none focus:border-[var(--sidebar-primary)]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -227,7 +220,7 @@ export function UsersTab() {
         </div>
         <div className="ml-auto flex items-center gap-3">
           <span className="text-sm text-[var(--muted-foreground)]">
-            <span className="font-semibold text-[var(--foreground)]">{users.filter(u => u.is_active !== false).length}</span> usuarios activos
+            <span className="font-semibold text-[var(--foreground)]">{users.filter(u => u.is_active !== false).length}</span> {t('users.activeUsers')}
           </span>
           <button
             onClick={fetchUsers}
@@ -238,7 +231,7 @@ export function UsersTab() {
           {isAdmin && (
             <Button onClick={openInvite}>
               <UserPlus className="size-4" strokeWidth={1.5} />
-              Nuevo usuario
+              {t('users.newUser')}
             </Button>
           )}
         </div>
@@ -246,14 +239,14 @@ export function UsersTab() {
 
       {/* table */}
       {loading ? (
-        <div className="py-16 text-center text-sm text-[var(--muted-foreground)]">Cargando usuarios…</div>
+        <div className="py-16 text-center text-sm text-[var(--muted-foreground)]">{t('users.loading')}</div>
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--card)]">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-[var(--border)]">
-                  {["Usuario","Rol","Área","Ingreso","Acciones"].map((h) => (
+                  {[t('users.colUser'), t('users.colRole'), t('users.colArea'), t('users.colJoined'), t('users.colActions')].map((h) => (
                     <th key={h} className="px-5 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
                       {h}
                     </th>
@@ -279,7 +272,7 @@ export function UsersTab() {
                     </td>
                     <td className="px-5 py-3.5">
                       <span className="rounded-full border border-[var(--border)] bg-[var(--secondary)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-                        {ROLE_LABELS[u.role] ?? u.role}
+                        {t(`roles.${u.role}`)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-[var(--muted-foreground)]">
@@ -291,14 +284,14 @@ export function UsersTab() {
                     <td className="px-5 py-3.5">
                       {isAdmin && (
                         <div className="flex items-center gap-1">
-                          <button onClick={() => openEdit(u)} title="Editar" className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
+                          <button onClick={() => openEdit(u)} title={t('users.tooltipEdit')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
                             <Edit2 className="size-3.5" strokeWidth={1.5} />
                           </button>
-                          <button onClick={() => openPassword(u)} title="Cambiar contraseña" className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
+                          <button onClick={() => openPassword(u)} title={t('users.tooltipPassword')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
                             <KeyRound className="size-3.5" strokeWidth={1.5} />
                           </button>
                           {u.id !== profile?.id && (
-                            <button onClick={() => openDelete(u)} title="Eliminar" className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-destructive/10 hover:text-destructive transition">
+                            <button onClick={() => openDelete(u)} title={t('users.tooltipDelete')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-destructive/10 hover:text-destructive transition">
                               <Trash2 className="size-3.5" strokeWidth={1.5} />
                             </button>
                           )}
@@ -308,7 +301,7 @@ export function UsersTab() {
                   </tr>
                 ))}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} className="py-12 text-center text-sm text-[var(--muted-foreground)]">No se encontraron usuarios.</td></tr>
+                  <tr><td colSpan={5} className="py-12 text-center text-sm text-[var(--muted-foreground)]">{t('users.noResults')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -321,7 +314,7 @@ export function UsersTab() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-[var(--card)] p-6 shadow-2xl border border-[var(--border)]">
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Nuevo usuario</h3>
+              <h3 className="text-lg font-semibold">{t('users.newUserTitle')}</h3>
               <button onClick={() => setShowInvite(false)} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)]">
                 <X className="size-4" strokeWidth={1.5} />
               </button>
@@ -329,40 +322,40 @@ export function UsersTab() {
 
             {inviteSuccess ? (
               <div className="space-y-4">
-                <div className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">Usuario creado correctamente.</div>
-                <Button onClick={() => setShowInvite(false)} className="w-full">Cerrar</Button>
+                <div className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">{t('users.createdOk')}</div>
+                <Button onClick={() => setShowInvite(false)} className="w-full">{t('common.close')}</Button>
               </div>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); if (!inviteEmail || !inviteFullName || !invitePassword) { setInviteError("Completa todos los campos"); return; } setConfirmInvite(true); }} className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); if (!inviteEmail || !inviteFullName || !invitePassword) { setInviteError(t('users.fillFields')); return; } setConfirmInvite(true); }} className="space-y-4">
                 {inviteError && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{inviteError}</div>}
 
-                <Field label="Nombre completo">
-                  <Input placeholder="Juan Pérez" value={inviteFullName} onChange={(e) => setInviteFullName(e.target.value)} disabled={inviting} />
+                <Field label={t('users.nameLabel')}>
+                  <Input placeholder={t('users.namePlaceholder')} value={inviteFullName} onChange={(e) => setInviteFullName(e.target.value)} disabled={inviting} />
                 </Field>
-                <Field label="Correo">
-                  <Input type="email" placeholder="juan@empresa.com" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} disabled={inviting} />
+                <Field label={t('users.emailLabel')}>
+                  <Input type="email" placeholder={t('users.emailPlaceholder')} value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} disabled={inviting} />
                 </Field>
-                <Field label="Contraseña">
-                  <Input type="password" placeholder="••••••••" value={invitePassword} onChange={(e) => setInvitePassword(e.target.value)} disabled={inviting} />
+                <Field label={t('users.passwordLabel')}>
+                  <Input type="password" placeholder={t('users.passwordPlaceholder')} value={invitePassword} onChange={(e) => setInvitePassword(e.target.value)} disabled={inviting} />
                 </Field>
-                <Field label="Rol">
+                <Field label={t('users.roleLabel')}>
                   <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={inviting} className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">
-                    {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{t(`roles.${r.value}`)}</option>)}
                   </select>
                 </Field>
                 {areas.length > 0 && (
-                  <Field label="Área">
+                  <Field label={t('users.areaLabel')}>
                     <select value={inviteAreaId} onChange={(e) => setInviteAreaId(e.target.value)} disabled={inviting} className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">
-                      <option value="">Sin área</option>
+                      <option value="">{t('users.noArea')}</option>
                       {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </Field>
                 )}
                 <div className="flex gap-2 pt-1">
-                  <Button type="button" variant="outline" onClick={() => setShowInvite(false)} disabled={inviting} className="flex-1">Cancelar</Button>
-                  <Button type="submit" disabled={inviting} className="flex-1">{inviting ? "Creando…" : "Crear usuario"}</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowInvite(false)} disabled={inviting} className="flex-1">{t('common.cancel')}</Button>
+                  <Button type="submit" disabled={inviting} className="flex-1">{inviting ? t('users.creating') : t('users.createUser')}</Button>
                 </div>
-                <ConfirmDialog open={confirmInvite} title="¿Crear usuario?" description={`Se creará la cuenta para "${inviteEmail}" con rol ${ROLE_LABELS[inviteRole]}.`} confirmLabel="Crear" loading={inviting} onConfirm={executeInvite} onCancel={() => setConfirmInvite(false)} />
+                <ConfirmDialog open={confirmInvite} title="¿Crear usuario?" description={t('users.confirmCreate', { email: inviteEmail, role: t(`roles.${inviteRole}`) })} confirmLabel="Crear" loading={inviting} onConfirm={executeInvite} onCancel={() => setConfirmInvite(false)} />
               </form>
             )}
           </div>
@@ -374,36 +367,36 @@ export function UsersTab() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-[var(--card)] p-6 shadow-2xl border border-[var(--border)]">
             <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Editar usuario</h3>
+              <h3 className="text-lg font-semibold">{t('users.editUserTitle')}</h3>
               <button onClick={() => { setShowEdit(false); setEditUser(null); }} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)]">
                 <X className="size-4" strokeWidth={1.5} />
               </button>
             </div>
             <form onSubmit={(e) => { e.preventDefault(); setEditError(null); setConfirmEdit(true); }} className="space-y-4">
               {editError && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{editError}</div>}
-              <Field label="Nombre completo">
+              <Field label={t('users.nameLabel')}>
                 <Input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} disabled={updating} />
               </Field>
-              <Field label="Rol">
+              <Field label={t('users.roleLabel')}>
                 <div className="relative">
                   <div className="pointer-events-none flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5">
-                    <span className="text-sm">{ROLE_LABELS[editRole]}</span>
+                    <span className="text-sm">{t(`roles.${editRole}`)}</span>
                     <ChevronDown className="size-4 text-[var(--muted-foreground)]" strokeWidth={1.5} />
                   </div>
                   <select value={editRole} onChange={(e) => setEditRole(e.target.value)} disabled={updating} className="absolute inset-0 w-full cursor-pointer opacity-0">
-                    {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    {ROLE_OPTIONS.map((r) => <option key={r.value} value={r.value}>{t(`roles.${r.value}`)}</option>)}
                   </select>
                 </div>
               </Field>
               {areas.length > 0 && (
-                <Field label="Área">
+                <Field label={t('users.areaLabel')}>
                   <div className="relative">
-                    <div className="pointer-events-none flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5">
-                      <span className="text-sm">{areas.find((a) => a.id === editAreaId)?.name || "Sin área"}</span>
+                    <div className="pointer-devices-none flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5">
+                      <span className="text-sm">{areas.find((a) => a.id === editAreaId)?.name || t('users.noArea')}</span>
                       <ChevronDown className="size-4 text-[var(--muted-foreground)]" strokeWidth={1.5} />
                     </div>
                     <select value={editAreaId} onChange={(e) => setEditAreaId(e.target.value)} disabled={updating} className="absolute inset-0 w-full cursor-pointer opacity-0">
-                      <option value="">Sin área</option>
+                      <option value="">{t('users.noArea')}</option>
                       {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </div>
@@ -412,20 +405,20 @@ export function UsersTab() {
               <div className="rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Estado de la cuenta</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{editIsActive ? "El usuario puede iniciar sesión" : "El usuario no puede iniciar sesión"}</p>
+                    <p className="text-sm font-medium">{t('users.accountStatus')}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{editIsActive ? t('users.accountActive') : t('users.accountInactive')}</p>
                   </div>
                   <button type="button" onClick={() => setEditIsActive(!editIsActive)} className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${editIsActive ? "bg-emerald-500/15 text-emerald-600" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}`}>
                     <span className={`inline-block size-1.5 rounded-full ${editIsActive ? "bg-emerald-500" : "bg-[var(--muted-foreground)]"}`} />
-                    {editIsActive ? "Activo" : "Inactivo"}
+                    {editIsActive ? t('users.statusActive') : t('users.statusInactive')}
                   </button>
                 </div>
               </div>
               <div className="flex gap-2 pt-1">
-                <Button type="button" variant="outline" onClick={() => { setShowEdit(false); setEditUser(null); }} disabled={updating} className="flex-1">Cancelar</Button>
-                <Button type="submit" disabled={updating} className="flex-1 border-0 bg-[#ED5650] text-white hover:bg-[#d94d47]">{updating ? "Guardando…" : "Guardar"}</Button>
+                <Button type="button" variant="outline" onClick={() => { setShowEdit(false); setEditUser(null); }} disabled={updating} className="flex-1">{t('common.cancel')}</Button>
+                <Button type="submit" disabled={updating} className="flex-1 border-0 bg-[#ED5650] text-white hover:bg-[#d94d47]">{updating ? t('common.saving') : t('common.save')}</Button>
               </div>
-              <ConfirmDialog open={confirmEdit} title="¿Guardar cambios?" description={`Confirma los cambios para "${editUser.email}".`} confirmLabel="Guardar" loading={updating} onConfirm={executeEdit} onCancel={() => setConfirmEdit(false)} />
+              <ConfirmDialog open={confirmEdit} title="¿Guardar cambios?" description={t('users.confirmEdit', { email: editUser.email })} confirmLabel="Guardar" loading={updating} onConfirm={executeEdit} onCancel={() => setConfirmEdit(false)} />
             </form>
           </div>
         </div>
@@ -437,7 +430,7 @@ export function UsersTab() {
           <div className="w-full max-w-sm rounded-2xl bg-[var(--card)] p-6 shadow-2xl border border-[var(--border)]">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Cambiar contraseña</h3>
+                <h3 className="text-lg font-semibold">{t('users.changePasswordTitle')}</h3>
                 <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{pwUser.email}</p>
               </div>
               <button onClick={() => setShowPassword(false)} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)]">
@@ -446,17 +439,17 @@ export function UsersTab() {
             </div>
             {pwSuccess ? (
               <div className="space-y-4">
-                <div className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">Contraseña actualizada correctamente.</div>
-                <Button onClick={() => setShowPassword(false)} className="w-full">Cerrar</Button>
+                <div className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">{t('users.passwordUpdated')}</div>
+                <Button onClick={() => setShowPassword(false)} className="w-full">{t('common.close')}</Button>
               </div>
             ) : (
               <form onSubmit={executeChangePassword} className="space-y-4">
                 {pwError && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{pwError}</div>}
-                <Field label="Nueva contraseña"><Input type="password" placeholder="••••••••" value={newPw} onChange={(e) => setNewPw(e.target.value)} disabled={changingPw} /></Field>
-                <Field label="Confirmar contraseña"><Input type="password" placeholder="••••••••" value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} disabled={changingPw} /></Field>
+                <Field label={t('users.newPassword')}><Input type="password" placeholder={t('users.passwordPlaceholder')} value={newPw} onChange={(e) => setNewPw(e.target.value)} disabled={changingPw} /></Field>
+                <Field label={t('users.confirmPassword')}><Input type="password" placeholder={t('users.passwordPlaceholder')} value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} disabled={changingPw} /></Field>
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setShowPassword(false)} disabled={changingPw} className="flex-1">Cancelar</Button>
-                  <Button type="submit" disabled={changingPw} className="flex-1">{changingPw ? "Guardando…" : "Cambiar"}</Button>
+                  <Button type="button" variant="outline" onClick={() => setShowPassword(false)} disabled={changingPw} className="flex-1">{t('common.cancel')}</Button>
+                  <Button type="submit" disabled={changingPw} className="flex-1">{changingPw ? t('common.saving') : t('users.change')}</Button>
                 </div>
               </form>
             )}
@@ -468,14 +461,14 @@ export function UsersTab() {
       {showDelete && deleteUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-2xl bg-[var(--card)] p-6 shadow-2xl border border-[var(--border)]">
-            <h3 className="text-lg font-semibold">Eliminar usuario</h3>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              ¿Eliminar a <strong>{deleteUser.email}</strong>? Esta acción no se puede deshacer.
-            </p>
+            <h3 className="text-lg font-semibold">{t('users.deleteUserTitle')}</h3>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]"
+              dangerouslySetInnerHTML={{ __html: t('users.confirmDelete', { email: `<strong>${deleteUser.email}</strong>` }) }}
+            />
             {deleteError && <div className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{deleteError}</div>}
             <div className="mt-5 flex gap-2">
-              <Button variant="outline" onClick={() => { setShowDelete(false); setDeleteUser(null); }} disabled={deleting} className="flex-1">Cancelar</Button>
-              <Button variant="destructive" onClick={executeDelete} disabled={deleting} className="flex-1">{deleting ? "Eliminando…" : "Eliminar"}</Button>
+              <Button variant="outline" onClick={() => { setShowDelete(false); setDeleteUser(null); }} disabled={deleting} className="flex-1">{t('common.cancel')}</Button>
+              <Button variant="destructive" onClick={executeDelete} disabled={deleting} className="flex-1">{deleting ? t('common.deleting') : t('common.delete')}</Button>
             </div>
           </div>
         </div>

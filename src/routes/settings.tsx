@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export function getSystemPrompt(): string {
 }
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Configuración — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "Configuración — EvalPro" }] }), // translated at runtime via useTranslation
   component: SettingsPage,
 });
 
@@ -183,6 +184,7 @@ const AVAILABLE_MODELS = [
 const TOKEN_OPTIONS = [1024, 2048, 4096, 8192, 16384];
 
 function SettingsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -280,15 +282,15 @@ function SettingsPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Prompts IA" subtitle="Configura el comportamiento del generador de preguntas" />
+      <PageHeader title={t('settings.title')} subtitle={t('settings.subtitle')} />
       <div className="grid gap-6 lg:grid-cols-3">
         {/* ── Prompt editor ─────────────────────────────────────────────── */}
         <div className="space-y-6 lg:col-span-2">
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="border-b border-border p-6">
-              <h2 className="font-bold">Prompt de Extracción</h2>
+              <h2 className="font-bold">{t('settings.promptEditor')}</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Este prompt se envía a OpenAI en cada extracción de documento. Edita con cuidado.
+                {t('settings.promptDesc')}
               </p>
             </div>
             <div className="p-6">
@@ -299,16 +301,16 @@ function SettingsPage() {
                 className="w-full rounded-md border border-input bg-secondary/30 p-4 font-mono text-xs leading-relaxed"
               />
               <div className="mt-4 flex justify-end gap-2">
-                <Button variant="ghost" onClick={resetPrompt}>Restablecer</Button>
+                <Button variant="ghost" onClick={resetPrompt}>{t('settings.reset')}</Button>
                 {isPromptDirty && (
-                  <Button onClick={() => setShowPromptConfirm(true)}>Guardar Prompt</Button>
+                  <Button onClick={() => setShowPromptConfirm(true)}>{t('settings.savePrompt')}</Button>
                 )}
               </div>
               <ConfirmDialog
                 open={showPromptConfirm}
-                title="¿Guardar prompt?"
-                description="Se reemplazará el prompt actual con los cambios realizados. Esta acción afectará todas las generaciones futuras."
-                confirmLabel="Guardar Prompt"
+                title={t('settings.confirmPromptTitle')}
+                description={t('settings.confirmPromptDesc')}
+                confirmLabel={t('settings.savePrompt')}
                 onConfirm={savePrompt}
                 onCancel={() => setShowPromptConfirm(false)}
               />
@@ -321,16 +323,16 @@ function SettingsPage() {
           {/* Model config card */}
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="border-b border-border px-6 py-4">
-              <h3 className="font-bold">Configuración del Modelo</h3>
+              <h3 className="font-bold">{t('settings.modelConfig')}</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Parámetros usados al generar preguntas con IA.
+                {t('settings.modelConfigDesc')}
               </p>
             </div>
             <div className="space-y-4 p-6">
               {/* Modelo */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Modelo
+                  {t('settings.modelLabel')}
                 </label>
                 <select
                   value={config.model}
@@ -347,7 +349,7 @@ function SettingsPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Temperatura
+                    {t('settings.temperatureLabel')}
                   </label>
                   <span className="font-mono text-xs font-semibold">{config.temperature.toFixed(1)}</span>
                 </div>
@@ -370,7 +372,7 @@ function SettingsPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Tokens Máx.
+                    {t('settings.maxTokensLabel')}
                   </label>
                   <span className="font-mono text-xs font-semibold">{config.maxTokens.toLocaleString()}</span>
                 </div>
@@ -404,8 +406,8 @@ function SettingsPage() {
                   ))}
                 </div>
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>Mín. 1 024</span>
-                  <span>Máx. 128 000</span>
+                  <span>{t('settings.maxTokensMin')}</span>
+                  <span>{t('settings.maxTokensMax')}</span>
                 </div>
               </div>
 
@@ -413,7 +415,7 @@ function SettingsPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Reintentos
+                    {t('settings.retriesLabel')}
                   </label>
                   <span className="font-mono text-xs font-semibold">{config.retries}</span>
                 </div>
@@ -435,11 +437,11 @@ function SettingsPage() {
               {/* Actions */}
               <div className="flex justify-end gap-2 border-t border-border pt-4">
                 <Button variant="ghost" size="sm" onClick={resetConfig}>
-                  Restablecer
+                  {t('settings.reset')}
                 </Button>
                 {isConfigDirty && (
                   <Button size="sm" onClick={() => setShowConfigConfirm(true)}>
-                    Guardar
+                    {t('common.save')}
                   </Button>
                 )}
               </div>
@@ -447,9 +449,9 @@ function SettingsPage() {
 
             <ConfirmDialog
               open={showConfigConfirm}
-              title="¿Guardar configuración del modelo?"
-              description={`Se usará "${config.model}" con temperatura ${config.temperature.toFixed(1)} y ${config.maxTokens.toLocaleString()} tokens en todas las generaciones futuras.`}
-              confirmLabel="Guardar"
+              title={t('settings.confirmModelTitle')}
+              description={t('settings.confirmModelDesc', { model: config.model, temp: config.temperature.toFixed(1), tokens: config.maxTokens.toLocaleString() })}
+              confirmLabel={t('common.save')}
               onConfirm={saveConfig}
               onCancel={() => setShowConfigConfirm(false)}
             />
@@ -457,12 +459,11 @@ function SettingsPage() {
 
           <div className="rounded-xl p-6" style={{ background: "#333333", color: "#F1F1F1" }}>
             <div className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "rgba(241,241,241,0.5)" }}>
-              Estrategia Actual
+              {t('settings.strategyTitle')}
             </div>
-            <h3 className="mt-2 font-bold">Extracción Semántica v4</h3>
+            <h3 className="mt-2 font-bold">{t('settings.strategyName')}</h3>
             <p className="mt-2 text-xs leading-relaxed" style={{ color: "rgba(241,241,241,0.7)" }}>
-              La calidad subió <strong className="text-emerald-400">+14%</strong> desde la última
-              revisión del prompt. Mantén el foco en la fidelidad del esquema.
+              {t('settings.strategyDesc')}
             </p>
           </div>
         </div>

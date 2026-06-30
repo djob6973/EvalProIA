@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect, memo, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
@@ -37,7 +38,7 @@ import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/evaluations")({
-  head: () => ({ meta: [{ title: "Evaluaciones — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "evaluations.pageTitle" }] }),
   component: EvaluationsPage,
 });
 
@@ -460,6 +461,7 @@ type AssignModalProps = {
 };
 
 function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProps) {
+  const { t } = useTranslation();
   const [participants, setParticipants] = useState<ParticipantProfile[]>([]);
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
   const [loadingModal, setLoadingModal] = useState(true);
@@ -539,7 +541,7 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
           style={{ borderBottom: "1px solid var(--border)" }}
         >
           <div className="min-w-0">
-            <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>Asignar Participantes</h3>
+            <h3 className="font-display text-[15px] font-semibold transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('evaluations.assignParticipants')}</h3>
             <p className="mt-0.5 truncate text-[12px] transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>{evaluation.nombre}</p>
           </div>
           <button
@@ -557,14 +559,14 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar participante…"
+              placeholder={t('evaluations.searchParticipant')}
               className="w-full py-2 pl-9 pr-3 text-[13px] outline-none focus:ring-2 focus:ring-accent transition-all duration-300 hover:border-accent/50"
               style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--background)", color: "var(--foreground)" }}
             />
           </div>
           <div className="mt-2 flex items-center justify-between">
             <p className="text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
-              {assignedIds.size} participante{assignedIds.size !== 1 ? "s" : ""} asignado{assignedIds.size !== 1 ? "s" : ""}
+              {assignedIds.size} {assignedIds.size !== 1 ? t('common.participants') : t('common.participant')} {assignedIds.size !== 1 ? t('evaluations.assignedPlural') : t('evaluations.assigned')}
             </p>
             {filtered.length > 0 && (
               <button
@@ -573,7 +575,7 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
                 className="text-xs font-medium transition-all duration-300 hover:underline disabled:opacity-50"
                 style={{ color: "var(--accent)" }}
               >
-                {togglingAll ? "Procesando…" : allFilteredAssigned ? "Deseleccionar todos" : "Seleccionar todos"}
+                {togglingAll ? t('common.processing') : allFilteredAssigned ? t('common.deselect_all') : t('common.select_all')}
               </button>
             )}
           </div>
@@ -586,7 +588,7 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-sm transition-colors duration-300 animate-fade-in" style={{ color: "var(--muted-foreground)" }}>
-              {searchQuery ? "No hay participantes que coincidan." : "No hay participantes registrados."}
+              {searchQuery ? t('evaluations.noParticipantsMatch') : t('evaluations.noParticipants')}
             </div>
           ) : (
             <div className="divide-y divide-border">
@@ -639,7 +641,7 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
 
         <div className="border-t border-border px-6 py-4">
           <Button variant="outline" className="w-full" onClick={onClose}>
-            Cerrar
+            {t('common.close')}
           </Button>
         </div>
       </div>
@@ -654,6 +656,7 @@ type ShareModalProps = {
 };
 
 function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const { settings } = useSystemSettings();
@@ -684,7 +687,7 @@ function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Share2 className="size-4" style={{ color: "var(--accent)" }} />
-              <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Compartir Evaluación</span>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--accent)" }}>{t('evaluations.shareEvaluation')}</span>
             </div>
             <p className="text-[13px] font-semibold" style={{ color: "var(--foreground)" }}>{ev.nombre}</p>
           </div>
@@ -703,14 +706,14 @@ function ShareModal({ ev, areaName, onClose }: ShareModalProps) {
             <canvas ref={canvasRef} className="w-full" style={{ display: "block" }} />
           </div>
           <p className="text-xs text-center" style={{ color: "var(--muted-foreground)" }}>
-            800 × 440 px · fondo blanco · diseño minimalista
+            {t('evaluations.previewSize')}
           </p>
         </div>
 
         <div className="flex gap-3 px-6 pb-6">
-          <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
+          <Button variant="outline" className="flex-1" onClick={onClose}>{t('common.cancel')}</Button>
           <Button className="flex-1" onClick={handleDownload} disabled={!ready}>
-            <Download className="size-4" /> Descargar PNG
+            <Download className="size-4" /> {t('evaluations.downloadPNG')}
           </Button>
         </div>
       </div>
@@ -743,6 +746,7 @@ const EvaluationCard = memo(function EvaluationCard({
   onDelete,
   onShare,
 }: EvaluationCardProps) {
+  const { t } = useTranslation();
   const expired = isExpired(ev);
   const areaName = ev.area_id ? areas.find((a) => a.id === ev.area_id)?.name : null;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -795,7 +799,7 @@ const EvaluationCard = memo(function EvaluationCard({
                   : { background: "var(--surface-2)", color: "var(--muted-foreground)" }
               }
             >
-              {expired ? "VENCIDA" : ev.activa ? "ACTIVA" : "INACTIVA"}
+              {expired ? t('evaluations.expired') : ev.activa ? "ACTIVA" : t('evaluations.inactive').toUpperCase()}
             </span>
           </div>
 
@@ -806,18 +810,18 @@ const EvaluationCard = memo(function EvaluationCard({
           {/* Pills */}
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
-              <ClipboardList className="size-3" />{ev.config.num_preguntas} preguntas
+              <ClipboardList className="size-3" />{ev.config.num_preguntas} {t('common.questions')}
             </span>
             <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(5,150,105,.12)", color: "#10B981" }}>
-              <CheckCircle className="size-3" />Aprueba {ev.config.porcentaje_aprobacion}%
+              <CheckCircle className="size-3" />{t('evaluations.approves')} {ev.config.porcentaje_aprobacion}%
             </span>
             {ev.tiempo_limite > 0 && (
               <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(217,119,6,.12)", color: "#FBBF24" }}>
-                <Clock className="size-3" />{ev.tiempo_limite} min
+                <Clock className="size-3" />{ev.tiempo_limite} {t('common.min')}
               </span>
             )}
             <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
-              {ev.intentos_permitidos} intento{ev.intentos_permitidos !== 1 ? "s" : ""}
+              {ev.intentos_permitidos} {ev.intentos_permitidos !== 1 ? t('common.attemptsPlural') : t('common.attempt')}
             </span>
             {areaName && (
               <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}>
@@ -839,17 +843,17 @@ const EvaluationCard = memo(function EvaluationCard({
             {createdDate && (
               <span className="flex items-center gap-1.5" style={{ color: "var(--muted-foreground)" }}>
                 <Calendar className="size-3" />
-                Creada: {formatDateTime(ev.created_at!)}
+                {t('evaluations.created')} {formatDateTime(ev.created_at!)}
                 {weekNum && (
                   <span className="ml-1 rounded px-1.5 py-0.5 font-bold" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
-                    Sem. {weekNum}
+                    {t('evaluations.weekLabel')} {weekNum}
                   </span>
                 )}
               </span>
             )}
             {ev.fecha_vencimiento && (
               <span className="flex items-center gap-1.5 font-medium" style={{ color: expired ? "#EF4444" : "#FBBF24" }}>
-                <CalendarX className="size-3" />Vence: {formatDateTime(ev.fecha_vencimiento)}
+                <CalendarX className="size-3" />{t('evaluations.expires')} {formatDateTime(ev.fecha_vencimiento)}
               </span>
             )}
           </div>
@@ -859,7 +863,7 @@ const EvaluationCard = memo(function EvaluationCard({
         {participantCount > 0 && (
           <div className="shrink-0 text-right">
             <div className="font-mono text-xl font-bold" style={{ color: "var(--accent)" }}>{participantCount}</div>
-            <div className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>completaron</div>
+            <div className="text-[10px]" style={{ color: "var(--muted-foreground)" }}>{t('evaluations.completed')}</div>
           </div>
         )}
       </div>
@@ -876,7 +880,7 @@ const EvaluationCard = memo(function EvaluationCard({
           style={{ color: "var(--muted-foreground)" }}
           title="Ver resultados"
         >
-          <BarChart3 className="size-3.5" /> Resultados
+          <BarChart3 className="size-3.5" /> {t('evaluations.results')}
         </a>
         <button
           onClick={() => onAssign(ev)}
@@ -884,7 +888,7 @@ const EvaluationCard = memo(function EvaluationCard({
           style={{ color: "var(--muted-foreground)" }}
           title="Asignar participantes"
         >
-          <Users className="size-3.5" /> Asignar
+          <Users className="size-3.5" /> {t('evaluations.assign')}
         </button>
         <button
           onClick={() => onShare(ev)}
@@ -892,7 +896,7 @@ const EvaluationCard = memo(function EvaluationCard({
           style={{ color: "var(--muted-foreground)" }}
           title="Compartir"
         >
-          <Share2 className="size-3.5" /> Compartir
+          <Share2 className="size-3.5" /> {t('evaluations.share')}
         </button>
 
         {/* Spacer */}
@@ -904,7 +908,7 @@ const EvaluationCard = memo(function EvaluationCard({
             onClick={() => setMenuOpen((o) => !o)}
             className="rounded-lg p-1.5 transition-all hover:bg-secondary"
             style={{ color: "var(--muted-foreground)" }}
-            title="Más opciones"
+            title={t('evaluations.moreOptions')}
           >
             <MoreHorizontal className="size-4" />
           </button>
@@ -918,7 +922,7 @@ const EvaluationCard = memo(function EvaluationCard({
                 className="flex w-full items-center gap-2 px-4 py-2.5 text-[13px] hover:bg-secondary transition-colors"
                 style={{ color: "var(--foreground)" }}
               >
-                <Eye className="size-4" style={{ color: "var(--muted-foreground)" }} /> Vista previa
+                <Eye className="size-4" style={{ color: "var(--muted-foreground)" }} /> {t('evaluations.previewOption')}
               </button>
               <button
                 onClick={() => { onDuplicate(ev); setMenuOpen(false); }}

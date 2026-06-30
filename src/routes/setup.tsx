@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Brain, ShieldCheck, Loader2, CheckCircle2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/setup")({
   head: () => ({
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/setup")({
 });
 
 function SetupPage() {
+  const { t } = useTranslation();
   const nav = useNavigate();
 
   const [checking, setChecking] = useState(true);
@@ -41,15 +43,15 @@ function SetupPage() {
     setError(null);
 
     if (!email.trim() || !password) {
-      setError("El email y la contraseña son obligatorios.");
+      setError(t('setup.emailRequired'));
       return;
     }
     if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
+      setError(t('setup.minChars'));
       return;
     }
     if (password !== confirm) {
-      setError("Las contraseñas no coinciden.");
+      setError(t('setup.mismatch'));
       return;
     }
 
@@ -62,13 +64,13 @@ function SetupPage() {
       });
       const data = await r.json();
       if (!r.ok) {
-        setError(data.error ?? "Ocurrió un error inesperado.");
+        setError(data.error ?? t('setup.unexpectedError'));
         return;
       }
       setDone(true);
       setTimeout(() => nav({ to: "/dashboard" }), 1800);
     } catch {
-      setError("No se pudo conectar con el servidor.");
+      setError(t('setup.connectionError'));
     } finally {
       setSubmitting(false);
     }
@@ -90,13 +92,13 @@ function SetupPage() {
           </div>
           <div className="flex flex-col leading-none">
             <span className="text-lg font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-              EvalPro
+              {t('common.appName')}
             </span>
             <span
               className="mt-0.5 font-mono text-[10px] uppercase tracking-widest"
               style={{ color: "var(--muted-foreground)" }}
             >
-              Sistema de Evaluación
+              {t('common.appSubtitle')}
             </span>
           </div>
         </div>
@@ -115,7 +117,7 @@ function SetupPage() {
             <div className="flex flex-col items-center gap-3 py-8">
               <Loader2 className="size-6 animate-spin" style={{ color: "var(--muted-foreground)" }} />
               <p className="text-sm" style={{ color: "var(--muted-foreground)" }}>
-                Verificando estado del sistema…
+                {t('setup.checking')}
               </p>
             </div>
           ) : alreadyConfigured ? (
@@ -123,10 +125,10 @@ function SetupPage() {
               <ShieldCheck className="size-10" style={{ color: "#10B981" }} />
               <div>
                 <h2 className="text-lg font-bold" style={{ color: "var(--foreground)" }}>
-                  Sistema ya configurado
+                  {t('setup.alreadyConfigured')}
                 </h2>
                 <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                  Ya existe al menos un administrador. Esta página no está disponible.
+                  {t('setup.alreadyConfiguredDesc')}
                 </p>
               </div>
               <a
@@ -134,7 +136,7 @@ function SetupPage() {
                 className="mt-2 inline-flex items-center justify-center rounded-[10px] px-5 py-2.5 text-sm font-medium transition-colors"
                 style={{ background: "#333333", color: "#fff" }}
               >
-                Ir al login
+                {t('setup.goToLogin')}
               </a>
             </div>
           ) : done ? (
@@ -142,10 +144,10 @@ function SetupPage() {
               <CheckCircle2 className="size-10" style={{ color: "#10B981" }} />
               <div>
                 <h2 className="text-lg font-bold" style={{ color: "var(--foreground)" }}>
-                  ¡Administrador creado!
+                  {t('setup.adminCreated')}
                 </h2>
                 <p className="mt-1 text-sm" style={{ color: "var(--muted-foreground)" }}>
-                  Redirigiendo al panel…
+                  {t('setup.redirecting')}
                 </p>
               </div>
             </div>
@@ -157,13 +159,13 @@ function SetupPage() {
                   style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
                 >
                   <ShieldCheck className="size-3" />
-                  Configuración inicial
+                  {t('setup.badge')}
                 </div>
                 <h1 className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>
-                  Crear administrador
+                  {t('setup.formTitle')}
                 </h1>
                 <p className="mt-1.5 text-[16px] font-normal leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-                  Esta página solo está disponible cuando no hay usuarios registrados. Crea la cuenta administradora del sistema.
+                  {t('setup.formDesc')}
                 </p>
               </div>
 
@@ -177,10 +179,10 @@ function SetupPage() {
                   </div>
                 )}
 
-                <Field label="Nombre completo">
+                <Field label={t('setup.fullName')}>
                   <input
                     type="text"
-                    placeholder="Ej. David Ortega"
+                    placeholder={t('setup.namePlaceholder')}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     disabled={submitting}
@@ -190,10 +192,10 @@ function SetupPage() {
                   />
                 </Field>
 
-                <Field label="Correo electrónico" required>
+                <Field label={t('setup.email')} required>
                   <input
                     type="email"
-                    placeholder="admin@empresa.com"
+                    placeholder={t('setup.emailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={submitting}
@@ -204,10 +206,10 @@ function SetupPage() {
                   />
                 </Field>
 
-                <Field label="Contraseña" required>
+                <Field label={t('setup.password')} required>
                   <input
                     type="password"
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder={t('setup.passwordPlaceholder')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={submitting}
@@ -218,10 +220,10 @@ function SetupPage() {
                   />
                 </Field>
 
-                <Field label="Confirmar contraseña" required>
+                <Field label={t('setup.confirmPassword')} required>
                   <input
                     type="password"
-                    placeholder="Repite la contraseña"
+                    placeholder={t('setup.confirmPasswordPlaceholder')}
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}
                     disabled={submitting}
@@ -239,7 +241,7 @@ function SetupPage() {
                   style={{ background: "#333333", color: "#fff" }}
                 >
                   {submitting && <Loader2 className="size-4 animate-spin" />}
-                  {submitting ? "Creando cuenta…" : "Crear administrador"}
+                  {submitting ? t('setup.creating') : t('setup.createButton')}
                 </button>
               </form>
             </>
@@ -250,7 +252,7 @@ function SetupPage() {
           className="mt-6 text-center font-mono text-[10px] uppercase tracking-widest"
           style={{ color: "var(--muted-foreground)" }}
         >
-          EvalPro · Configuración del sistema
+          {t('setup.footer')}
         </p>
       </div>
     </div>

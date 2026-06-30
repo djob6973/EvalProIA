@@ -8,6 +8,7 @@ import { useEffect, useState, useMemo } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService, areasService } from "@/lib/services/evaluations";
 import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff, ImageDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/evaluation-results/$id")({
   head: () => ({ meta: [{ title: "Resultados de Evaluación — EvalPro" }] }),
@@ -519,6 +520,7 @@ function getDificultadClass(dificultad: string): string {
 }
 
 function EvaluationResultsPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -595,7 +597,7 @@ function EvaluationResultsPage() {
         setStats({ totalParticipants, averageScore, passRate, bestScore });
       } catch (err) {
         console.error("Error loading evaluation results:", err);
-        setError("Error al cargar los resultados de la evaluación");
+        setError(t('evalResults.loadError'));
       } finally {
         setLoading(false);
       }
@@ -762,11 +764,11 @@ function EvaluationResultsPage() {
   if (loading) {
     return (
       <AppShell>
-        <PageHeader title="Resultados" />
+        <PageHeader title={t('evalResults.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando resultados...</p>
+            <p className="text-sm text-muted-foreground">{t('evalResults.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -776,11 +778,11 @@ function EvaluationResultsPage() {
   if (error) {
     return (
       <AppShell>
-        <PageHeader title="Resultados" />
+        <PageHeader title={t('evalResults.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t('common.retry')}</Button>
           </div>
         </div>
       </AppShell>
@@ -790,19 +792,19 @@ function EvaluationResultsPage() {
   return (
     <AppShell>
       <PageHeader
-        title={evaluation?.title || "Resultados"}
+        title={evaluation?.title || t('evalResults.title')}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={exportResultsCsv} disabled={results.length === 0}>
-              <Download className="size-4" /> Exportar CSV
+              <Download className="size-4" /> {t('common.export_csv')}
             </Button>
             <Button variant="outline" size="sm" onClick={exportImage} disabled={capturing || loading}>
               <ImageDown className="size-4" />
-              {capturing ? "Generando…" : "Exportar PNG"}
+              {capturing ? t('common.generating') : t('common.export_png')}
             </Button>
             <Button asChild variant="outline" size="sm">
               <Link to="/evaluations">
-                <ArrowLeft className="size-4" /> Volver
+                <ArrowLeft className="size-4" /> {t('evalResults.backToEvals')}
               </Link>
             </Button>
           </div>
@@ -810,7 +812,7 @@ function EvaluationResultsPage() {
       />
       <div className="space-y-6">
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-          <h1 className="text-2xl font-bold">{evaluation?.title || "Evaluación"}</h1>
+          <h1 className="text-2xl font-bold">{evaluation?.title || t('nav.evaluations')}</h1>
           {evaluation?.description && (
             <p className="mt-2 text-sm text-muted-foreground">{evaluation.description}</p>
           )}
@@ -818,7 +820,7 @@ function EvaluationResultsPage() {
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
           <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Información General
+            {t('evalResults.infoTitle')}
           </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex items-start gap-3">
@@ -826,11 +828,11 @@ function EvaluationResultsPage() {
                 <CalendarDays className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Semana</p>
+                <p className="text-xs text-muted-foreground">{t('common.week')}</p>
                 <p className="text-sm font-semibold">
                   {evaluation?.created_at
-                    ? `Semana ${getISOWeek(new Date(evaluation.created_at))}`
-                    : "No definido"}
+                    ? t('evalResults.weekN', { n: getISOWeek(new Date(evaluation.created_at)) })
+                    : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -839,8 +841,8 @@ function EvaluationResultsPage() {
                 <Building2 className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Área</p>
-                <p className="text-sm font-semibold">{area?.name ?? "No definido"}</p>
+                <p className="text-xs text-muted-foreground">{t('common.area')}</p>
+                <p className="text-sm font-semibold">{area?.name ?? t('evalResults.notDefined')}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -848,9 +850,9 @@ function EvaluationResultsPage() {
                 <Hash className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Número de preguntas</p>
+                <p className="text-xs text-muted-foreground">{t('evalResults.numQuestions')}</p>
                 <p className="text-sm font-semibold">
-                  {evaluation?.config?.num_preguntas != null ? evaluation.config.num_preguntas : "No definido"}
+                  {evaluation?.config?.num_preguntas != null ? evaluation.config.num_preguntas : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -859,11 +861,11 @@ function EvaluationResultsPage() {
                 <Percent className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">% Aprobación</p>
+                <p className="text-xs text-muted-foreground">{t('evalResults.approvalPct')}</p>
                 <p className="text-sm font-semibold">
                   {evaluation?.config?.porcentaje_aprobacion != null
                     ? `${evaluation.config.porcentaje_aprobacion}%`
-                    : "No definido"}
+                    : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -872,9 +874,11 @@ function EvaluationResultsPage() {
                 <Clock className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Tiempo límite</p>
+                <p className="text-xs text-muted-foreground">{t('evalResults.timeLimit')}</p>
                 <p className="text-sm font-semibold">
-                  {evaluation?.tiempo_limite != null ? `${evaluation.tiempo_limite} min` : "No definido"}
+                  {evaluation?.tiempo_limite != null
+                    ? t('evalResults.minutesLimit', { n: evaluation.tiempo_limite })
+                    : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -883,9 +887,9 @@ function EvaluationResultsPage() {
                 <RefreshCw className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Intentos permitidos</p>
+                <p className="text-xs text-muted-foreground">{t('evalResults.attemptsAllowed')}</p>
                 <p className="text-sm font-semibold">
-                  {evaluation?.intentos_permitidos != null ? evaluation.intentos_permitidos : "No definido"}
+                  {evaluation?.intentos_permitidos != null ? evaluation.intentos_permitidos : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -894,7 +898,7 @@ function EvaluationResultsPage() {
                 <CalendarCheck className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Fecha de creación</p>
+                <p className="text-xs text-muted-foreground">{t('evalResults.createdAt')}</p>
                 <p className="text-sm font-semibold">
                   {evaluation?.created_at
                     ? new Date(evaluation.created_at).toLocaleDateString("es-ES", {
@@ -902,7 +906,7 @@ function EvaluationResultsPage() {
                         month: "short",
                         year: "numeric",
                       })
-                    : "No definido"}
+                    : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -911,7 +915,7 @@ function EvaluationResultsPage() {
                 <CalendarOff className="size-4 text-accent" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Fecha de vencimiento</p>
+                <p className="text-xs text-muted-foreground">{t('evalResults.expiresAt')}</p>
                 <p className="text-sm font-semibold">
                   {evaluation?.fecha_vencimiento
                     ? new Date(evaluation.fecha_vencimiento).toLocaleDateString("es-ES", {
@@ -919,7 +923,7 @@ function EvaluationResultsPage() {
                         month: "short",
                         year: "numeric",
                       })
-                    : "No definido"}
+                    : t('evalResults.notDefined')}
                 </p>
               </div>
             </div>
@@ -930,28 +934,28 @@ function EvaluationResultsPage() {
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <Users className="size-4" />
-              Participantes
+              {t('common.participants')}
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{stats.totalParticipants}</div>
           </div>
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <TrendingUp className="size-4" />
-              Promedio
+              {t('common.average')}
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{stats.averageScore}%</div>
           </div>
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <Award className="size-4" />
-              Tasa Aprobación
+              {t('results.approvalRate')}
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{stats.passRate}%</div>
           </div>
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
               <Award className="size-4" />
-              Mejor Puntaje
+              {t('results.bestScore')}
             </div>
             <div className="mt-2 font-mono text-3xl font-bold">{stats.bestScore}%</div>
           </div>
@@ -961,12 +965,12 @@ function EvaluationResultsPage() {
           <div className="border-b border-border p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="font-bold">Resultados por Participante</h2>
-                <p className="mt-1 text-xs text-muted-foreground">Detalles de cada intento de evaluación</p>
+                <h2 className="font-bold">{t('results.participantReport')}</h2>
+                <p className="mt-1 text-xs text-muted-foreground">{t('evalResults.participantReportDesc')}</p>
               </div>
               {maxAttemptNumber > 1 && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Filtrar por intento:</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('evalResults.filterAttempt')}</span>
                   <button
                     onClick={() => setAttemptFilter(null)}
                     className={`rounded-full px-3 py-1 text-[11px] font-bold border transition-colors ${
@@ -975,7 +979,7 @@ function EvaluationResultsPage() {
                         : "bg-transparent text-muted-foreground border-border hover:bg-secondary"
                     }`}
                   >
-                    Todos ({resultsWithAttempt.length})
+                    {t('evalResults.allAttempts', { count: resultsWithAttempt.length })}
                   </button>
                   {Array.from({ length: maxAttemptNumber }, (_, i) => i + 1).map((n) => {
                     const count = resultsWithAttempt.filter((r) => r.attemptNumber === n).length;
@@ -989,7 +993,7 @@ function EvaluationResultsPage() {
                             : "bg-transparent text-muted-foreground border-border hover:bg-secondary"
                         }`}
                       >
-                        Intento {n} ({count})
+                        {t('evalResults.attemptN', { n, count })}
                       </button>
                     );
                   })}
@@ -1000,27 +1004,27 @@ function EvaluationResultsPage() {
           <div className="overflow-x-auto">
             {results.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground p-6">
-                <p>No hay resultados registrados para esta evaluación</p>
+                <p>{t('evalResults.noResults')}</p>
               </div>
             ) : displayResults.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground p-6">
-                <p>No hay resultados para el intento {attemptFilter} seleccionado</p>
+                <p>{t('evalResults.noResultsFiltered', { n: attemptFilter })}</p>
               </div>
             ) : (
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-border text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <th className="px-6 py-3 font-bold">Participante</th>
-                    {maxAttemptNumber > 1 && <th className="px-6 py-3 font-bold">Intento</th>}
-                    <th className="px-6 py-3 font-bold">Puntaje</th>
+                    <th className="px-6 py-3 font-bold">{t('evalResults.colParticipant')}</th>
+                    {maxAttemptNumber > 1 && <th className="px-6 py-3 font-bold">{t('evalResults.colAttempt')}</th>}
+                    <th className="px-6 py-3 font-bold">{t('evalResults.colScore')}</th>
                     <th className="px-6 py-3 font-bold text-emerald-600 dark:text-emerald-400">✓</th>
                     <th className="px-6 py-3 font-bold text-amber-600 dark:text-amber-400">~</th>
                     <th className="px-6 py-3 font-bold text-red-600 dark:text-red-400">✗</th>
-                    <th className="px-6 py-3 font-bold">Estado</th>
-                    <th className="px-6 py-3 font-bold">Fecha</th>
+                    <th className="px-6 py-3 font-bold">{t('evalResults.colStatus')}</th>
+                    <th className="px-6 py-3 font-bold">{t('evalResults.colDate')}</th>
                     <th className="px-6 py-3 font-bold">
                       <span className="flex items-center gap-1">
-                        <Clock className="size-3" /> Tiempo
+                        <Clock className="size-3" /> {t('evalResults.colTime')}
                       </span>
                     </th>
                     <th className="px-6 py-3 font-bold"></th>
@@ -1078,7 +1082,7 @@ function EvaluationResultsPage() {
                           {maxAttemptNumber > 1 && (
                             <td className="px-6 py-4">
                               <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
-                                Intento {result.attemptNumber}
+                                {t('evalResults.attemptBadge', { n: result.attemptNumber })}
                               </span>
                             </td>
                           )}
@@ -1100,7 +1104,7 @@ function EvaluationResultsPage() {
                                   : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
                               }`}
                             >
-                              {result.score >= passing ? "APROBADO" : "REPROBADO"}
+                              {result.score >= passing ? t('common.approved') : t('common.failed')}
                             </span>
                           </td>
                           <td className="px-6 py-4 text-muted-foreground text-xs">
@@ -1119,11 +1123,11 @@ function EvaluationResultsPage() {
                             >
                               {isExpanded ? (
                                 <>
-                                  <ChevronDown className="size-3" /> Ocultar
+                                  <ChevronDown className="size-3" /> {t('common.hide')}
                                 </>
                               ) : (
                                 <>
-                                  <ChevronRight className="size-3" /> Ver detalle
+                                  <ChevronRight className="size-3" /> {t('participant.viewDetail')}
                                 </>
                               )}
                             </button>
@@ -1136,7 +1140,7 @@ function EvaluationResultsPage() {
                               <div className="space-y-3">
                                 {!result.answers || Object.keys(result.answers).length === 0 ? (
                                   <p className="text-sm text-muted-foreground">
-                                    No hay respuestas disponibles para este resultado
+                                    {t('evalResults.noAnswers')}
                                   </p>
                                 ) : (
                                   Object.keys(result.answers).map((questionId, qIndex) => {
@@ -1197,7 +1201,7 @@ function EvaluationResultsPage() {
                                             <div className="flex flex-wrap items-start gap-2">
                                               <div className="font-medium text-sm flex-1">
                                                 <span className="text-muted-foreground mr-1">
-                                                  Pregunta {qIndex + 1}:
+                                                  {t('common.question')} {qIndex + 1}:
                                                 </span>
                                                 {question.question_text}
                                               </div>
@@ -1221,7 +1225,7 @@ function EvaluationResultsPage() {
                                                 }}
                                               >
                                                 <strong style={{ color: "var(--foreground)" }}>
-                                                  Contexto:
+                                                  {t('common.context')}
                                                 </strong>{" "}
                                                 {question.contexto}
                                               </p>
@@ -1262,7 +1266,7 @@ function EvaluationResultsPage() {
                                                     <span className="flex-1">{option}</span>
                                                     {isOptionCorrect && !isSelected && (
                                                       <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                                                        Correcta
+                                                        {t('common.correct')}
                                                       </span>
                                                     )}
                                                     {isSelected && isOptionCorrect && (
@@ -1283,8 +1287,7 @@ function EvaluationResultsPage() {
                                             {/* Detalle respuestas parciales */}
                                             {isPartial && (
                                               <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                                                {selectedCorrectCount} de {correctAnswers.length} opciones
-                                                correctas seleccionadas
+                                                {t('evalResults.partialDetail', { correct: selectedCorrectCount, total: correctAnswers.length })}
                                               </p>
                                             )}
 
@@ -1299,7 +1302,7 @@ function EvaluationResultsPage() {
                                                 }}
                                               >
                                                 <strong style={{ color: "var(--foreground)" }}>
-                                                  Justificación:
+                                                  {t('common.justification')}
                                                 </strong>{" "}
                                                 {question.justificacion}
                                               </p>
@@ -1327,10 +1330,9 @@ function EvaluationResultsPage() {
         {questionAnalytics.length > 0 && (
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <div className="border-b border-border p-6">
-              <h2 className="font-bold">Analytics por Pregunta</h2>
+              <h2 className="font-bold">{t('evalResults.analyticsTitle')}</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Preguntas ordenadas de mayor a menor tasa de error — identifica los conceptos más débiles del
-                equipo
+                {t('evalResults.analyticsDesc')}
               </p>
             </div>
             <div className="divide-y divide-border">
@@ -1362,10 +1364,10 @@ function EvaluationResultsPage() {
                           />
                         </div>
                         <span className={`w-24 shrink-0 font-mono text-xs font-bold ${errorLabel}`}>
-                          {qa.errorRate}% errores
+                          {t('evalResults.errorRate', { rate: qa.errorRate })}
                         </span>
                         <span className="shrink-0 text-xs text-muted-foreground">
-                          {qa.attempts - qa.correct}/{qa.attempts} participantes
+                          {t('evalResults.participants_abbr', { count: qa.attempts - qa.correct })}/{qa.attempts} participantes
                         </span>
                       </div>
                     </div>

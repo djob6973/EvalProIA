@@ -7,6 +7,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ArrowLeft, ArrowRight, Clock, FileText, Play, Tag, CheckCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { evaluationsService, questionsService, resultsService, calculateEvaluationScore, evaluationProgressService, evaluationParticipantsService } from "@/lib/services/evaluations";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/take/$code")({
   head: () => ({ meta: [{ title: "Realizar Evaluación — EvalPro" }] }),
@@ -24,6 +25,7 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 function TakeEvaluationRoute() {
+  const { t } = useTranslation();
   const { code } = useParams({ from: "/take/$code" });
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -41,7 +43,7 @@ function TakeEvaluationRoute() {
   useEffect(() => {
     async function loadEvaluation() {
       if (!code || !profile?.id) return;
-      
+
       try {
         setLoading(true);
         // Cargar evaluación
@@ -50,12 +52,12 @@ function TakeEvaluationRoute() {
         // Verificar si la evaluación está activa y no ha vencido
         const expired = evalData.fecha_vencimiento && new Date(evalData.fecha_vencimiento) < new Date();
         if (evalData.activa === false) {
-          setError('Esta evaluación ha sido desactivada por el administrador.');
+          setError(t('take.disabled'));
           setLoading(false);
           return;
         }
         if (expired) {
-          setError(`Esta evaluación venció el ${new Date(evalData.fecha_vencimiento!).toLocaleString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.`);
+          setError(t('take.expired', { date: new Date(evalData.fecha_vencimiento!).toLocaleString('es-ES', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }));
           setLoading(false);
           return;
         }
@@ -68,7 +70,7 @@ function TakeEvaluationRoute() {
           const isAreaMatch = evalData.area_id && evalData.area_id === profile.area_id;
 
           if (!isDirectlyAssigned && !isAreaMatch) {
-            setError('No tienes autorización para realizar esta evaluación.');
+            setError(t('take.noAuth'));
             setLoading(false);
             return;
           }
@@ -81,8 +83,7 @@ function TakeEvaluationRoute() {
           const intentosPermitidos = evalData.intentos_permitidos ?? 1;
           const intentosUsados = await resultsService.getCountByUserAndEvaluation(profile.id, code);
           if (intentosUsados >= intentosPermitidos) {
-            const plural = intentosPermitidos === 1 ? 'intento' : 'intentos';
-            setError(`Has utilizado tus ${intentosPermitidos} ${plural} disponibles para esta evaluación.`);
+            setError(t('take.attemptsExhausted', { count: intentosPermitidos }));
             setLoading(false);
             return;
           }
@@ -119,11 +120,11 @@ function TakeEvaluationRoute() {
             questionsData = shuffled.slice(0, numPreguntas);
           }
         }
-        
+
         setQuestions(questionsData);
       } catch (err) {
         console.error('Error loading evaluation:', err);
-        setError('Error al cargar la evaluación');
+        setError(t('take.loadError'));
       } finally {
         setLoading(false);
       }
@@ -147,7 +148,7 @@ function TakeEvaluationRoute() {
       // Cargar preguntas específicas por ID desde el orden guardado
       const rawOrder = existingProgress.question_order;
       const savedOrder: string[] = Array.isArray(rawOrder) ? rawOrder : (typeof rawOrder === 'string' ? JSON.parse(rawOrder) : []);
-      
+
       // Crear mapa de todas las preguntas disponibles
       const questionMap = new Map(questions.map(q => [q.id, q]));
 
@@ -229,17 +230,17 @@ function TakeEvaluationRoute() {
 
   const handleSubmit = async (answers: Record<string, string | string[]>) => {
     if (!profile?.id || !code) return;
-    
+
     try {
       setSubmitting(true);
-      
+
       // Calcular puntaje con reglas anti-gaming, pasando las preguntas mezcladas para mantener consistencia de IDs
       const score = await calculateEvaluationScore(code, answers, shuffledQuestions);
-      
+
       // Obtener started_at del progreso de evaluación
       const progress = await evaluationProgressService.getByUserAndEvaluation(profile.id, code);
       const startedAt = progress?.started_at || new Date().toISOString();
-      
+
       // Guardar resultado
       const savedResult = await resultsService.create({
         user_id: profile.id,
@@ -256,7 +257,7 @@ function TakeEvaluationRoute() {
       navigate({ to: "/my-results/$id", params: { id: savedResult.id } });
     } catch (err) {
       console.error('Error submitting evaluation:', err);
-      setError('Error al enviar la evaluación');
+      setError(t('take.submitError'));
     } finally {
       setSubmitting(false);
     }
@@ -265,14 +266,14 @@ function TakeEvaluationRoute() {
   if (loading) {
     return (
       <AppShell>
-        <PageHeader title="Tomar Evaluación" />
+        <PageHeader title={t('take.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
               className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
               style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
             />
-            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>Cargando evaluación...</p>
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>{t('take.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -282,13 +283,13 @@ function TakeEvaluationRoute() {
   if (error || !evaluation) {
     return (
       <AppShell>
-        <PageHeader title="Tomar Evaluación" />
+        <PageHeader title={t('take.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error || 'Evaluación no encontrada'}</p>
+            <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error || t('take.notFound')}</p>
             <Button asChild>
               <Link to="/participant">
-                <ArrowLeft className="size-4" /> Volver
+                <ArrowLeft className="size-4" /> {t('take.back')}
               </Link>
             </Button>
           </div>
@@ -309,7 +310,7 @@ function TakeEvaluationRoute() {
           actions={
             <Button variant="outline" asChild>
               <Link to="/participant">
-                <ArrowLeft className="size-4" /> Volver
+                <ArrowLeft className="size-4" /> {t('take.back')}
               </Link>
             </Button>
           }
@@ -351,7 +352,7 @@ function TakeEvaluationRoute() {
                   </div>
                 )}
                 <div className="flex items-center justify-end gap-[6px]">
-                  <FileText className="size-4" /> {questions.length} preguntas
+                  <FileText className="size-4" /> {t('participant.numQuestions', { count: questions.length })}
                 </div>
               </div>
             </div>
@@ -362,9 +363,9 @@ function TakeEvaluationRoute() {
                 className="rounded-[12px] p-[14px]"
                 style={{ background: "var(--coral-soft)" }}
               >
-                <div className="text-[12px] font-medium" style={{ color: "var(--coral-text)" }}>Peso por pregunta</div>
+                <div className="text-[12px] font-medium" style={{ color: "var(--coral-text)" }}>{t('take.weightPerQuestion')}</div>
                 <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "var(--coral-text)" }}>
-                  {pesoPorPregunta}% cada una
+                  {t('take.each', { pct: pesoPorPregunta })}
                 </div>
               </div>
               {evaluation.config?.porcentaje_aprobacion != null && (
@@ -372,9 +373,9 @@ function TakeEvaluationRoute() {
                   className="rounded-[12px] p-[14px]"
                   style={{ background: "#ECFDF5" }}
                 >
-                  <div className="text-[12px] font-medium" style={{ color: "#065F46" }}>Puntaje para aprobar</div>
+                  <div className="text-[12px] font-medium" style={{ color: "#065F46" }}>{t('take.passingScore')}</div>
                   <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "#065F46" }}>
-                    {evaluation.config.porcentaje_aprobacion}% o más
+                    {t('take.orMore', { pct: evaluation.config.porcentaje_aprobacion })}
                   </div>
                 </div>
               )}
@@ -383,9 +384,9 @@ function TakeEvaluationRoute() {
                   className="rounded-[12px] p-[14px]"
                   style={{ background: "#EFF6FF" }}
                 >
-                  <div className="text-[12px] font-medium" style={{ color: "#1E40AF" }}>Intento</div>
+                  <div className="text-[12px] font-medium" style={{ color: "#1E40AF" }}>{t('take.attempt')}</div>
                   <div className="font-display text-[20px] font-medium mt-[2px]" style={{ color: "#1E40AF" }}>
-                    {currentAttempt} de {evaluation.intentos_permitidos}
+                    {t('take.attemptOf', { current: currentAttempt, total: evaluation.intentos_permitidos })}
                   </div>
                 </div>
               )}
@@ -397,14 +398,14 @@ function TakeEvaluationRoute() {
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
             >
               <div className="mb-[8px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--text-faint)" }}>
-                Antes de comenzar
+                {t('take.beforeStart')}
               </div>
               <ul className="flex flex-col gap-[5px]" style={{ color: "var(--muted-foreground)" }}>
                 {[
-                  "Asegúrate de tener una conexión estable.",
-                  "Lee cada pregunta cuidadosamente antes de responder.",
-                  "En preguntas de selección múltiple, marca todas las opciones correctas.",
-                  "Solo dispones de un envío por intento.",
+                  t('take.instruction1'),
+                  t('take.instruction2'),
+                  t('take.instruction3'),
+                  t('take.instruction4'),
                 ].map((rule) => (
                   <li key={rule} className="flex items-start gap-[8px]">
                     <span className="mt-[4px] size-[5px] shrink-0 rounded-full" style={{ background: "var(--accent)" }} />
@@ -428,7 +429,7 @@ function TakeEvaluationRoute() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-[12px]" style={{ color: "var(--muted-foreground)" }}>Sin categorías</span>
+                  <span className="text-[12px]" style={{ color: "var(--muted-foreground)" }}>{t('take.noCategories')}</span>
                 )}
               </div>
               {existingProgress ? (
@@ -438,18 +439,18 @@ function TakeEvaluationRoute() {
                     onClick={() => handleStart(true)}
                     disabled={questions.length === 0}
                   >
-                    <RefreshCw className="size-4" /> Reanudar
+                    <RefreshCw className="size-4" /> {t('take.resume')}
                   </Button>
                   <Button
                     onClick={() => handleStart(false)}
                     disabled={questions.length === 0}
                   >
-                    <Play className="size-4" /> Iniciar de nuevo
+                    <Play className="size-4" /> {t('take.restart')}
                   </Button>
                 </div>
               ) : (
                 <Button onClick={() => handleStart()} disabled={questions.length === 0}>
-                  <Play className="size-4" /> Iniciar evaluación
+                  <Play className="size-4" /> {t('take.start')}
                 </Button>
               )}
             </div>
@@ -460,10 +461,10 @@ function TakeEvaluationRoute() {
   }
 
   return (
-    <QuizRunner 
-      code={code} 
-      nombre={evaluation.title} 
-      questions={shuffledQuestions} 
+    <QuizRunner
+      code={code}
+      nombre={evaluation.title}
+      questions={shuffledQuestions}
       onSubmit={handleSubmit}
       submitting={submitting}
       tiempoLimite={evaluation.tiempo_limite}
@@ -473,18 +474,18 @@ function TakeEvaluationRoute() {
   );
 }
 
-function QuizRunner({ 
-  code, 
-  nombre, 
-  questions, 
+function QuizRunner({
+  code,
+  nombre,
+  questions,
   onSubmit,
   submitting,
   tiempoLimite,
   initialState,
-  userId 
-}: { 
-  code: string; 
-  nombre: string; 
+  userId
+}: {
+  code: string;
+  nombre: string;
   questions: any[];
   onSubmit: (answers: Record<string, string | string[]>) => void;
   submitting: boolean;
@@ -492,6 +493,7 @@ function QuizRunner({
   initialState?: { answers: Record<string, string | string[]>; currentQuestionIndex: number; timeRemaining: number };
   userId?: string;
 }) {
+  const { t } = useTranslation();
   const [i, setI] = useState(initialState?.currentQuestionIndex || 0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(initialState?.answers || {});
   const [timeRemaining, setTimeRemaining] = useState<number>(initialState?.timeRemaining || (tiempoLimite ? tiempoLimite * 60 : 0));
@@ -602,7 +604,7 @@ function QuizRunner({
   };
 
   // Verificar si la pregunta actual tiene respuesta
-  const hasAnswer = isMultipleChoice 
+  const hasAnswer = isMultipleChoice
     ? ((answers[q.id] as string[]) || []).length > 0
     : answers[q.id] !== undefined;
 
@@ -613,7 +615,7 @@ function QuizRunner({
   return (
     <AppShell>
       <PageHeader
-        title={`Pregunta ${i + 1} de ${questions.length}`}
+        title={t('take.questionOf', { index: i + 1, total: questions.length })}
         actions={
           <div className="flex items-center gap-[10px]">
             {tiempoLimite && tiempoLimite > 0 && (
@@ -644,7 +646,7 @@ function QuizRunner({
         <div>
           <div className="mb-[8px] flex items-center justify-between">
             <span className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
-              Pregunta {i + 1} de {questions.length}
+              {t('take.questionOf', { index: i + 1, total: questions.length })}
             </span>
             <span className="font-mono text-[12px] font-bold" style={{ color: "var(--accent)" }}>
               {Math.round(progress)}%
@@ -673,7 +675,7 @@ function QuizRunner({
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
             >
               <div className="mb-[4px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--text-faint)" }}>
-                Contexto
+                {t('common.context')}
               </div>
               {q.contexto}
             </div>
@@ -687,7 +689,7 @@ function QuizRunner({
                 className="shrink-0 rounded-full px-[10px] py-[3px] font-mono text-[9px] font-bold uppercase tracking-[.1em]"
                 style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
               >
-                Selección Múltiple
+                {t('take.multipleChoice')}
               </span>
             )}
           </div>
@@ -741,7 +743,7 @@ function QuizRunner({
               className="mt-[10px] rounded-[10px] px-[14px] py-[10px] text-[13px] font-medium"
               style={{ background: "var(--coral-soft)", color: "var(--coral-text)", border: "1px solid var(--accent)" }}
             >
-              Las respuestas marcadas no pueden ser modificadas.
+              {t('take.lockedAnswer')}
             </div>
           )}
         </div>
@@ -753,11 +755,11 @@ function QuizRunner({
             onClick={() => setI(Math.max(0, i - 1))}
             disabled={i === 0 || submitting}
           >
-            <ArrowLeft className="size-4" /> Anterior
+            <ArrowLeft className="size-4" /> {t('take.previous')}
           </Button>
           {i < questions.length - 1 ? (
             <Button onClick={() => isLocked ? setI(i + 1) : setShowNextConfirm(true)} disabled={!hasAnswer || submitting}>
-              Siguiente <ArrowRight className="size-4" />
+              {t('take.next')} <ArrowRight className="size-4" />
             </Button>
           ) : (
             <Button
@@ -767,11 +769,11 @@ function QuizRunner({
               {submitting ? (
                 <>
                   <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Enviando...
+                  {t('take.submitting')}
                 </>
               ) : (
                 <>
-                  <CheckCircle className="mr-2 size-4" /> Enviar Evaluación
+                  <CheckCircle className="mr-2 size-4" /> {t('take.submit')}
                 </>
               )}
             </Button>
@@ -781,17 +783,17 @@ function QuizRunner({
 
       <ConfirmDialog
         open={showNextConfirm}
-        title="¿Confirmar respuesta?"
-        description="Una vez que avances, tu respuesta quedará bloqueada y no podrás modificarla. ¿Deseas continuar?"
-        confirmLabel="Sí, continuar"
+        title={t('take.confirmAnswerTitle')}
+        description={t('take.confirmAnswerDesc')}
+        confirmLabel={t('take.confirmAnswerBtn')}
         onConfirm={() => { setShowNextConfirm(false); lockCurrentIfAnswered(); setI(i + 1); }}
         onCancel={() => setShowNextConfirm(false)}
       />
       <ConfirmDialog
         open={showSubmitConfirm}
-        title="¿Enviar evaluación?"
-        description="Una vez enviada no podrás modificar tus respuestas. ¿Deseas continuar?"
-        confirmLabel="Enviar Evaluación"
+        title={t('take.confirmSubmitTitle')}
+        description={t('take.confirmSubmitDesc')}
+        confirmLabel={t('take.submit')}
         loading={submitting}
         onConfirm={() => { setShowSubmitConfirm(false); onSubmit(answers); }}
         onCancel={() => setShowSubmitConfirm(false)}

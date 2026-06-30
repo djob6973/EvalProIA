@@ -10,6 +10,7 @@ import {
   ArrowLeft, CheckCircle, XCircle, TrendingUp, ChevronDown, ChevronRight,
   Users, Trophy, Clock, BarChart2,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   resultsService, areasService, questionsService,
 } from "@/lib/services/evaluations";
@@ -78,6 +79,7 @@ function QuestionCard({
   userAnswer: string | string[] | undefined;
   index: number;
 }) {
+  const { t } = useTranslation();
   const userAnswers = userAnswer
     ? String(userAnswer).split(",").map((a) => a.trim()).filter(Boolean)
     : [];
@@ -109,7 +111,7 @@ function QuestionCard({
         <div className="flex-1 space-y-2 min-w-0">
           <div className="flex flex-wrap items-start gap-2">
             <div className="font-medium text-sm flex-1">
-              <span className="text-muted-foreground mr-1">Pregunta {index + 1}:</span>
+              <span className="text-muted-foreground mr-1">{t('common.question')} {index + 1}:</span>
               {question.question_text}
             </div>
             {question.dificultad && (
@@ -130,7 +132,7 @@ function QuestionCard({
                 color: "var(--muted-foreground)",
               }}
             >
-              <strong style={{ color: "var(--foreground)" }}>Contexto:</strong>{" "}
+              <strong style={{ color: "var(--foreground)" }}>{t('common.context')}</strong>{" "}
               {question.contexto}
             </p>
           )}
@@ -162,7 +164,7 @@ function QuestionCard({
                   <span className="flex-1">{option}</span>
                   {isOptionCorrect && !isSelected && (
                     <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                      Correcta
+                      {t('common.correct')}
                     </span>
                   )}
                   {isSelected && isOptionCorrect && (
@@ -182,7 +184,7 @@ function QuestionCard({
 
           {isPartial && (
             <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-              {selectedCorrectCount} de {correctAnswers.length} opciones correctas seleccionadas
+              {t('evalResults.partialDetail', { correct: selectedCorrectCount, total: correctAnswers.length })}
             </p>
           )}
 
@@ -195,7 +197,7 @@ function QuestionCard({
                 color: "var(--muted-foreground)",
               }}
             >
-              <strong style={{ color: "var(--foreground)" }}>Justificación:</strong>{" "}
+              <strong style={{ color: "var(--foreground)" }}>{t('common.justification')}</strong>{" "}
               {question.justificacion}
             </p>
           )}
@@ -206,6 +208,7 @@ function QuestionCard({
 }
 
 function ParticipantDetailPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -256,7 +259,7 @@ function ParticipantDetailPage() {
         const userResults = (allResults as ResultRow[]).filter((r) => r.user_id === userId);
 
         if (userResults.length === 0) {
-          setError("No se encontraron resultados para este participante.");
+          setError(t('myResults.noAnswers'));
           return;
         }
 
@@ -310,7 +313,7 @@ function ParticipantDetailPage() {
         });
       } catch (err) {
         console.error("Error loading participant detail:", err);
-        setError("Error al cargar el detalle del participante.");
+        setError(t('myResults.loadError'));
       } finally {
         setLoading(false);
       }
@@ -328,7 +331,7 @@ function ParticipantDetailPage() {
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando detalle...</p>
+            <p className="text-sm text-muted-foreground">{t('myResults.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -344,7 +347,7 @@ function ParticipantDetailPage() {
             <p className="text-sm text-destructive mb-4">{error}</p>
             <Button asChild variant="outline">
               <Link to="/results">
-                <ArrowLeft className="size-4" /> Volver
+                <ArrowLeft className="size-4" /> {t('common.back')}
               </Link>
             </Button>
           </div>
@@ -360,7 +363,7 @@ function ParticipantDetailPage() {
         actions={
           <Button asChild variant="outline" size="sm">
             <Link to="/results">
-              <ArrowLeft className="size-4" /> Volver
+              <ArrowLeft className="size-4" /> {t('common.back')}
             </Link>
           </Button>
         }
@@ -384,10 +387,10 @@ function ParticipantDetailPage() {
         {/* KPI cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Sesiones", value: String(stats.totalSessions), icon: Clock },
-            { label: "Evaluaciones", value: String(stats.evalCount), icon: Users },
-            { label: "Promedio", value: `${stats.avgScore}%`, icon: BarChart2 },
-            { label: "Mejor Puntaje", value: `${stats.bestScore}%`, icon: Trophy },
+            { label: t('results.colSessions'), value: String(stats.totalSessions), icon: Clock },
+            { label: t('nav.evaluations'), value: String(stats.evalCount), icon: Users },
+            { label: t('common.average'), value: `${stats.avgScore}%`, icon: BarChart2 },
+            { label: t('results.bestScore'), value: `${stats.bestScore}%`, icon: Trophy },
           ].map((k) => (
             <div key={k.label} className="dash-card p-[22px]">
               <div className="flex items-center gap-1.5">
@@ -429,7 +432,7 @@ function ParticipantDetailPage() {
                   <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right">
                       <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        Promedio
+                        {t('common.average')}
                       </div>
                       <div
                         className={`font-mono text-lg font-bold ${
@@ -441,13 +444,13 @@ function ParticipantDetailPage() {
                     </div>
                     <div className="text-right">
                       <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        Mejor
+                        {t('results.colBest')}
                       </div>
                       <div className="font-mono text-lg font-bold text-foreground">{groupBest}%</div>
                     </div>
                     <div className="text-right">
                       <div className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        Intentos
+                        {t('common.attempts')}
                       </div>
                       <div className="font-mono text-lg font-bold text-foreground">
                         {group.results.length}
@@ -481,7 +484,7 @@ function ParticipantDetailPage() {
                           {/* Attempt badge */}
                           <div className="shrink-0">
                             <span className="rounded-full bg-[var(--surface-2)] border border-border px-2.5 py-0.5 font-mono text-xs text-muted-foreground">
-                              Intento {attemptIdx + 1}
+                              {t('common.attempt_n', { n: attemptIdx + 1 })}
                             </span>
                           </div>
 
@@ -501,7 +504,7 @@ function ParticipantDetailPage() {
                                   : "bg-[var(--surface-2)] text-muted-foreground"
                               }`}
                             >
-                              {isPassing ? "Aprobado" : "Reprobado"}
+                              {isPassing ? t('common.approved').toLowerCase() : t('common.failed').toLowerCase()}
                             </span>
                           </div>
 
@@ -544,11 +547,11 @@ function ParticipantDetailPage() {
                               >
                                 {isExpanded ? (
                                   <>
-                                    <ChevronDown className="size-3" /> Ocultar
+                                    <ChevronDown className="size-3" /> {t('common.hide')}
                                   </>
                                 ) : (
                                   <>
-                                    <ChevronRight className="size-3" /> Ver preguntas
+                                    <ChevronRight className="size-3" /> {t('common.show_questions')}
                                   </>
                                 )}
                               </button>
@@ -562,7 +565,7 @@ function ParticipantDetailPage() {
                             <div className="space-y-3">
                               {Object.keys(result.answers).length === 0 ? (
                                 <p className="text-sm text-muted-foreground">
-                                  No hay respuestas disponibles.
+                                  {t('evalResults.noAnswers')}
                                 </p>
                               ) : (
                                 Object.entries(result.answers).map(([qId, ans], qIdx) => {

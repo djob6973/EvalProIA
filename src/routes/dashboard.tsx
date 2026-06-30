@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState } from "react";
 import { statsService } from "@/lib/services/stats";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -33,6 +34,7 @@ function StatusPill({ children }: { children: React.ReactNode }) {
 
 
 function Dashboard() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -67,10 +69,10 @@ function Dashboard() {
   }, [isAdmin]);
 
   const kpis = stats ? [
-    { label: "Total Evaluaciones", value: String(stats.totalEvaluations), delta: "Evaluaciones creadas", highlight: false },
-    { label: "Participantes", value: String(stats.totalParticipants), delta: "Usuarios registrados", highlight: false },
-    { label: "Puntaje Promedio", value: String(stats.averageScore), suffix: "/100", delta: "Rendimiento global", highlight: true },
-    { label: "Preguntas Totales", value: String(stats.totalQuestions), delta: "Generadas por IA", highlight: false },
+    { label: t('dashboard.totalEvals'), value: String(stats.totalEvaluations), delta: t('dashboard.evalsCreated'), highlight: false },
+    { label: t('dashboard.participants'), value: String(stats.totalParticipants), delta: t('dashboard.registeredUsers'), highlight: false },
+    { label: t('dashboard.avgScore'), value: String(stats.averageScore), suffix: "/100", delta: t('dashboard.globalPerformance'), highlight: true },
+    { label: t('dashboard.totalQuestions'), value: String(stats.totalQuestions), delta: t('dashboard.generatedByAI'), highlight: false },
   ] : [];
 
   const evaluations = stats?.recentEvaluations?.slice(0, 4).map((ev: any) => ({
@@ -88,7 +90,7 @@ function Dashboard() {
   if (loading) {
     return (
       <AppShell>
-        <PageHeader title="Dashboard" subtitle="Lo que necesitas atender hoy." />
+        <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
@@ -96,7 +98,7 @@ function Dashboard() {
               style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
             />
             <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>
-              Cargando datos del dashboard...
+              {t('dashboard.loading')}
             </p>
           </div>
         </div>
@@ -107,11 +109,11 @@ function Dashboard() {
   if (error) {
     return (
       <AppShell>
-        <PageHeader title="Dashboard" subtitle="Lo que necesitas atender hoy." />
+        <PageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t('common.retry')}</Button>
           </div>
         </div>
       </AppShell>
@@ -122,12 +124,12 @@ function Dashboard() {
     <AppShell>
       <div className="flex flex-col gap-[24px]">
         <PageHeader
-          title="Dashboard"
-          subtitle="Lo que necesitas atender hoy."
+          title={t('dashboard.title')}
+          subtitle={t('dashboard.subtitle')}
           actions={
             <Button asChild className="hidden sm:flex">
               <Link to="/generate">
-                <Sparkles className="size-[15px]" /> Nueva Evaluación
+                <Sparkles className="size-[15px]" /> {t('dashboard.newEvaluation')}
               </Link>
             </Button>
           }
@@ -174,14 +176,14 @@ function Dashboard() {
                 <div className="flex items-center gap-[10px]">
                   <Sparkles className="size-4" style={{ color: "var(--accent)" }} />
                   <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
-                    Generador Inteligente de Preguntas
+                    {t('dashboard.aiGenerator')}
                   </h2>
                 </div>
                 <span
                   className="rounded-full px-[10px] py-1 font-mono text-[9px] font-bold uppercase tracking-[.08em]"
                   style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
                 >
-                  Impulsado por GPT-4
+                  {t('dashboard.poweredBy')}
                 </span>
               </div>
               <div className="p-[22px]">
@@ -191,14 +193,14 @@ function Dashboard() {
                   style={{ borderColor: "var(--border-strong)", color: "var(--muted-foreground)" }}
                 >
                   <span className="text-[14px] font-medium" style={{ color: "var(--foreground)" }}>
-                    Arrastra documentación aquí para extraer preguntas
+                    {t('dashboard.dragDrop')}
                   </span>
-                  <span className="text-[11px]">Acepta PDF, DOCX, TXT — procesado por IA</span>
+                  <span className="text-[11px]">{t('dashboard.fileTypes')}</span>
                 </Link>
                 <div className="mt-4 flex justify-end">
                   <Button asChild variant="ghost" size="sm">
                     <Link to="/generate">
-                      Abrir generador <ArrowUpRight className="size-3.5" />
+                      {t('dashboard.openGenerator')} <ArrowUpRight className="size-3.5" />
                     </Link>
                   </Button>
                 </div>
@@ -212,20 +214,20 @@ function Dashboard() {
                 style={{ borderColor: "var(--border-soft)" }}
               >
                 <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
-                  Evaluaciones Recientes
+                  {t('dashboard.recentEvals')}
                 </h2>
                 <Link
                   to="/evaluations"
                   className="text-[13px] font-medium"
                   style={{ color: "var(--accent)" }}
                 >
-                  Ver todas
+                  {t('dashboard.viewAll')}
                 </Link>
               </div>
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr style={{ borderBottom: "1px solid var(--border-soft)" }}>
-                    {["Nombre", "Participantes", "Estado", "Promedio"].map((h, i) => (
+                    {[t('dashboard.colName'), t('dashboard.colParticipants'), t('dashboard.colStatus'), t('dashboard.colAvg')].map((h, i) => (
                       <th
                         key={h}
                         className={`px-[22px] py-[11px] font-mono text-[9px] font-bold uppercase tracking-[.12em] ${i === 3 ? "text-right" : ""}`}
@@ -249,7 +251,7 @@ function Dashboard() {
                         {String(e.participants).padStart(2, "0")}
                       </td>
                       <td className="px-[22px] py-[14px]">
-                        <StatusPill>Activa</StatusPill>
+                        <StatusPill>{t('dashboard.statusActive')}</StatusPill>
                       </td>
                       <td className="px-[22px] py-[14px] text-right font-display font-medium" style={{ color: "var(--accent)" }}>
                         {e.score}
@@ -269,7 +271,7 @@ function Dashboard() {
               style={{ background: "#333333", color: "#F1F1F1", border: "1px solid rgba(255,255,255,0.10)" }}
             >
               <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "rgba(241,241,241,0.5)" }}>
-                Actividad en Tiempo Real
+                {t('dashboard.realtimeActivity')}
               </div>
               <div className="mt-[18px] flex flex-col gap-[16px]">
                 {activity.map((a: any, i: number) => (
@@ -293,7 +295,7 @@ function Dashboard() {
                 className="mt-[18px] block w-full rounded-[8px] border py-[9px] text-center font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors"
                 style={{ borderColor: "rgba(241,241,241,0.15)", color: "rgba(241,241,241,0.7)" }}
               >
-                Ver Registro Completo
+                {t('dashboard.viewFullLog')}
               </Link>
             </div>
 
@@ -302,7 +304,7 @@ function Dashboard() {
               <div className="mb-4 flex items-center gap-2">
                 <TrendingUp className="size-4" style={{ color: "var(--accent)" }} />
                 <h3 className="font-display text-[16px] font-medium m-0" style={{ color: "var(--foreground)" }}>
-                  Estrategia de Prompt
+                  {t('dashboard.promptStrategy')}
                 </h3>
               </div>
               <div
@@ -326,9 +328,7 @@ function Dashboard() {
                 </svg>
               </div>
               <p className="text-[13px] leading-relaxed m-0" style={{ color: "var(--muted-foreground)" }}>
-                El modelo actual utiliza{" "}
-                <strong style={{ color: "var(--foreground)" }}>Extracción Semántica v4</strong>.
-                La calidad de evaluación ha aumentado un 14% desde el último ajuste de prompt.
+                {t('dashboard.promptDesc')}
               </p>
             </div>
           </div>

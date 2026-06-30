@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { redirect?: string } => ({
@@ -20,6 +21,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const { t } = useTranslation();
   const nav = useNavigate();
   const { redirect: redirectTo } = Route.useSearch();
   const { signIn, loading, user, profile } = useAuth();
@@ -52,7 +54,7 @@ function LoginPage() {
     setIsSubmitting(true);
 
     if (!email || !password) {
-      setError("Por favor, ingresa email y contraseña");
+      setError(t('login.fillFields'));
       setIsSubmitting(false);
       return;
     }
@@ -66,13 +68,13 @@ function LoginPage() {
         });
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Error al crear la cuenta");
+          setError(data.error || t('login.errorCreating'));
           setIsSubmitting(false);
           return;
         }
         nav({ to: "/participant" });
       } catch {
-        setError("Error de conexión. Inténtalo de nuevo.");
+        setError(t('login.connectionError'));
         setIsSubmitting(false);
       }
       return;
@@ -107,19 +109,17 @@ function LoginPage() {
           <div className="flex flex-col leading-none">
             <span className="text-base font-bold tracking-tight">EvalPro</span>
             <span className="mt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              Sistema de Evaluación v4
+              {t('login.version')}
             </span>
           </div>
         </Link>
 
         <div className="mx-auto w-full max-w-sm flex-1 flex flex-col justify-center">
           <h1 className="font-display text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>
-            {isLogin ? "Bienvenido de vuelta" : "Crear cuenta"}
+            {isLogin ? t('login.welcome') : t('login.createAccount')}
           </h1>
           <p className="mt-2 text-[16px] font-normal" style={{ color: "var(--muted-foreground)" }}>
-            {isLogin
-              ? "Inicia sesión para gestionar evaluaciones, generar preguntas y revisar resultados."
-              : "Regístrate para acceder a las evaluaciones asignadas a ti."}
+            {isLogin ? t('login.loginDesc') : t('login.registerDesc')}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
@@ -132,12 +132,12 @@ function LoginPage() {
             {!isLogin && (
               <div className="space-y-1.5">
                 <Label htmlFor="fullName" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Nombre completo
+                  {t('login.fullName')}
                 </Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Tu nombre"
+                  placeholder={t('login.namePlaceholder')}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={isSubmitting}
@@ -147,12 +147,12 @@ function LoginPage() {
 
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Correo
+                {t('login.email')}
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="tu@empresa.com"
+                placeholder={t('login.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}
@@ -160,12 +160,12 @@ function LoginPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Contraseña
+                {t('login.password')}
               </Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('login.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
@@ -173,25 +173,25 @@ function LoginPage() {
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting
-                ? isLogin ? "Iniciando sesión..." : "Creando cuenta..."
-                : isLogin ? "Iniciar sesión" : "Crear cuenta"}
+                ? isLogin ? t('login.loggingIn') : t('login.creating')
+                : isLogin ? t('login.loginButton') : t('login.createAccount')}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm" style={{ color: "var(--muted-foreground)" }}>
-            {isLogin ? "¿No tienes cuenta?" : "¿Ya tienes cuenta?"}{" "}
+            {isLogin ? t('login.noAccount') : t('login.haveAccount')}{" "}
             <button
               type="button"
               onClick={() => switchMode(isLogin ? "register" : "login")}
               className="font-medium underline underline-offset-4"
               style={{ color: "var(--foreground)" }}
             >
-              {isLogin ? "Regístrate" : "Inicia sesión"}
+              {isLogin ? t('login.register') : t('login.loginLink')}
             </button>
           </p>
 
           <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            EvalPro · Infraestructura segura de evaluación
+            {t('login.footer')}
           </p>
         </div>
       </div>
@@ -201,7 +201,7 @@ function LoginPage() {
         style={{ background: "#333333", color: "#F1F1F1" }}
       >
         <div className="font-mono text-[10px] uppercase tracking-widest text-white/50">
-          SISTEMA // EMPRESARIAL
+          {t('login.systemLabel')}
         </div>
 
         <div className="space-y-6">
@@ -209,19 +209,18 @@ function LoginPage() {
             className="inline-block rounded px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider"
             style={{ background: "rgba(237,86,80,.2)", color: "#ED5650" }}
           >
-            Impulsado por GPT-4
+            {t('login.poweredBy')}
           </div>
           <h2 className="max-w-md text-3xl font-bold leading-tight text-white">
-            Convierte documentación en evaluaciones estructuradas en segundos.
+            {t('login.tagline')}
           </h2>
           <p className="max-w-sm text-sm leading-relaxed text-white/60">
-            EvalPro extrae conocimiento de cualquier documento y genera evaluaciones calibradas —
-            listas para enviar a tus participantes.
+            {t('login.description')}
           </p>
         </div>
 
         <div className="font-mono text-[10px] uppercase tracking-widest text-white/40">
-          © 2026 EvalPro
+          {t('login.copyright')}
         </div>
       </div>
     </div>

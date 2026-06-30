@@ -6,14 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 
 export const Route = createFileRoute("/account")({
-  head: () => ({ meta: [{ title: "Mi Cuenta — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "Mi Cuenta — EvalPro" }] }), // static head, translated at runtime in component
   component: AccountPage,
 });
 
 function AccountPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -27,9 +29,9 @@ function AccountPage() {
     e.preventDefault();
     setError(null);
     setSuccess(false);
-    if (!currentPassword) { setError("Ingresa tu contraseña actual"); return; }
-    if (newPassword.length < 6) { setError("La contraseña debe tener al menos 6 caracteres"); return; }
-    if (newPassword !== confirmPassword) { setError("Las contraseñas no coinciden"); return; }
+    if (!currentPassword) { setError(t('account.currentRequired')); return; }
+    if (newPassword.length < 6) { setError(t('account.minChars')); return; }
+    if (newPassword !== confirmPassword) { setError(t('account.mismatch')); return; }
 
     setIsLoading(true);
     try {
@@ -40,14 +42,14 @@ function AccountPage() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Error al cambiar contraseña');
+        throw new Error(err.error || t('account.changeError'));
       }
       setSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: any) {
-      setError(err.message || "Error al cambiar contraseña");
+      setError(err.message || t('account.changeError'));
     } finally {
       setIsLoading(false);
     }
@@ -57,11 +59,11 @@ function AccountPage() {
   const userInitials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';
-  const roleLabel = profile?.role === 'both' ? 'Admin + Participante' : profile?.role === 'admin' ? 'Administrador' : 'Participante';
+  const roleLabel = t(`roles.${profile?.role}`);
 
   return (
     <AppShell>
-      <PageHeader title="Mi Cuenta" />
+      <PageHeader title={t('account.title')} />
       <div className="mx-auto max-w-[480px] flex flex-col gap-[20px]">
         {/* Profile card */}
         <div
@@ -107,7 +109,7 @@ function AccountPage() {
             style={{ borderColor: "var(--border)" }}
           >
             <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
-              Seguridad de la Cuenta
+              {t('account.security')}
             </h2>
           </div>
           <div className="p-[22px]">
@@ -116,7 +118,7 @@ function AccountPage() {
                 className="mb-[16px] rounded-[10px] p-3 text-[13px] font-medium"
                 style={{ background: "#ECFDF5", color: "#059669" }}
               >
-                Contraseña actualizada correctamente.
+                {t('account.passwordUpdated')}
               </div>
             )}
             <form onSubmit={handleSubmit} className="flex flex-col gap-[14px]">
@@ -134,7 +136,7 @@ function AccountPage() {
                   className="font-mono text-[9px] font-bold uppercase tracking-[.12em]"
                   style={{ color: "var(--text-faint)" }}
                 >
-                  Contraseña actual
+                  {t('account.currentPassword')}
                 </Label>
                 <Input id="current" type="password" placeholder="••••••••"
                   value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
@@ -146,7 +148,7 @@ function AccountPage() {
                   className="font-mono text-[9px] font-bold uppercase tracking-[.12em]"
                   style={{ color: "var(--text-faint)" }}
                 >
-                  Nueva contraseña
+                  {t('account.newPassword')}
                 </Label>
                 <Input id="new" type="password" placeholder="••••••••"
                   value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
@@ -158,14 +160,14 @@ function AccountPage() {
                   className="font-mono text-[9px] font-bold uppercase tracking-[.12em]"
                   style={{ color: "var(--text-faint)" }}
                 >
-                  Confirmar nueva contraseña
+                  {t('account.confirmPassword')}
                 </Label>
                 <Input id="confirm" type="password" placeholder="••••••••"
                   value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={isLoading} />
               </div>
               <Button type="submit" disabled={isLoading} className="w-full mt-[6px]">
-                {isLoading ? "Guardando..." : "Cambiar contraseña"}
+                {isLoading ? t('common.saving') : t('account.changeButton')}
               </Button>
             </form>
           </div>

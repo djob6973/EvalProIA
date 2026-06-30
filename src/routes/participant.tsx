@@ -6,6 +6,7 @@ import { ArrowRight, Clock, FileQuestion, Lock, Calendar, CalendarX, CheckCircle
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { evaluationsService, resultsService, evaluationParticipantsService } from "@/lib/services/evaluations";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/participant")({
   head: () => ({ meta: [{ title: "Mis Evaluaciones — EvalPro" }] }),
@@ -23,6 +24,7 @@ function formatDateTime(isoString: string): string {
 }
 
 function ParticipantHome() {
+  const { t } = useTranslation();
   const { profile, loading } = useAuth();
   const userName = profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || 'Usuario';
   const [evaluations, setEvaluations] = useState<any[]>([]);
@@ -69,7 +71,7 @@ function ParticipantHome() {
 
       } catch (err) {
         console.error('Error loading participant data:', err);
-        setError('Error al cargar los datos');
+        setError(t('participant.loadError'));
       } finally {
         setLoadingData(false);
       }
@@ -109,14 +111,14 @@ function ParticipantHome() {
   if (loading || loadingData) {
     return (
       <AppShell>
-        <PageHeader title="Mis Evaluaciones" />
+        <PageHeader title={t('participant.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div
               className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
               style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
             />
-            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>Cargando evaluaciones...</p>
+            <p className="text-[13px]" style={{ color: "var(--muted-foreground)" }}>{t('participant.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -126,11 +128,11 @@ function ParticipantHome() {
   if (error) {
     return (
       <AppShell>
-        <PageHeader title="Mis Evaluaciones" />
+        <PageHeader title={t('participant.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-[13px] mb-4" style={{ color: "var(--destructive)" }}>{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t('participant.retry')}</Button>
           </div>
         </div>
       </AppShell>
@@ -139,7 +141,7 @@ function ParticipantHome() {
 
   return (
     <AppShell>
-      <PageHeader title="Mis Evaluaciones" />
+      <PageHeader title={t('participant.title')} />
       <div className="flex flex-col gap-[28px]">
         {/* Welcome banner */}
         <div
@@ -151,22 +153,21 @@ function ParticipantHome() {
           }}
         >
           <div className="font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
-            Bienvenido de vuelta
+            {t('participant.welcome')}
           </div>
           <h1 className="font-display mt-2 text-[32px] font-medium leading-[1.25] tracking-[-0.01em]" style={{ color: "var(--foreground)" }}>
-            Hola, {userName}.
+            {t('participant.greeting', { name: userName })}
           </h1>
           <p className="mt-[6px] text-[16px] font-normal" style={{ color: "var(--muted-foreground)" }}>
-            Tienes{" "}
             <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
-              {availableEvaluations.length} evaluación{availableEvaluations.length !== 1 ? 'es' : ''} disponible{availableEvaluations.length !== 1 ? 's' : ''}
-            </span>.
+              {t('participant.availableCount', { count: availableEvaluations.length })}
+            </span>
             {completedEvaluations.length > 0 && (
               <>
-                {" "}Has agotado tus intentos en{" "}
+                {" "}
                 <span style={{ color: "var(--foreground)", fontWeight: 600 }}>
-                  {completedEvaluations.length} evaluación{completedEvaluations.length !== 1 ? 'es' : ''}
-                </span>.
+                  {t('participant.exhaustedCount', { count: completedEvaluations.length })}
+                </span>
               </>
             )}
           </p>
@@ -176,7 +177,7 @@ function ParticipantHome() {
         {availableEvaluations.length > 0 && (
           <div>
             <div className="mb-[14px] font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
-              Evaluaciones Disponibles
+              {t('participant.availableSection')}
             </div>
             <div className="grid gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
               {availableEvaluations.map((e) => (
@@ -223,7 +224,7 @@ function ParticipantHome() {
                     )}
                     <div className="mt-[10px] flex flex-wrap items-center gap-3 text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                       <span className="flex items-center gap-1">
-                        <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
+                        <FileQuestion className="size-3.5" /> {t('participant.numQuestions', { count: e.questionCount })}
                       </span>
                       {e.tiempo_limite > 0 && (
                         <span className="flex items-center gap-1">
@@ -232,7 +233,7 @@ function ParticipantHome() {
                       )}
                       {(e.intentos_permitidos ?? 1) > 1 && (
                         <span className="flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-bold" style={{ background: "#EFF6FF", color: "#1E40AF" }}>
-                          Intento {(resultCountByEval[e.id] || 0) + 1} de {e.intentos_permitidos}
+                          {t('participant.attemptOf', { current: (resultCountByEval[e.id] || 0) + 1, max: e.intentos_permitidos })}
                         </span>
                       )}
                     </div>
@@ -240,13 +241,13 @@ function ParticipantHome() {
                       {e.created_at && (
                         <div className="flex items-center gap-1 text-[11px]" style={{ color: "var(--muted-foreground)" }}>
                           <Calendar className="size-3 shrink-0" />
-                          <span>Creada: {formatDateTime(e.created_at)}</span>
+                          <span>{t('evaluations.created')} {formatDateTime(e.created_at)}</span>
                         </div>
                       )}
                       {e.fecha_vencimiento && (
                         <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
                           <CalendarX className="size-3 shrink-0" />
-                          <span>Vence: {formatDateTime(e.fecha_vencimiento)}</span>
+                          <span>{t('evaluations.expires')} {formatDateTime(e.fecha_vencimiento)}</span>
                         </div>
                       )}
                     </div>
@@ -262,9 +263,9 @@ function ParticipantHome() {
                     <Button asChild className="w-full">
                       <Link to="/take/$code" params={{ code: e.id }}>
                         {(resultCountByEval[e.id] || 0) > 0 ? (
-                          <><RefreshCw className="size-4" /> Reintentar</>
+                          <><RefreshCw className="size-4" /> {t('participant.retry')}</>
                         ) : (
-                          <>Comenzar <ArrowRight className="size-4" /></>
+                          <>{t('participant.start')} <ArrowRight className="size-4" /></>
                         )}
                       </Link>
                     </Button>
@@ -279,7 +280,7 @@ function ParticipantHome() {
         {completedEvaluations.length > 0 && (
           <div>
             <div className="mb-[14px] font-mono text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: "var(--text-faint)" }}>
-              Evaluaciones Completadas
+              {t('participant.completedSection')}
             </div>
             <div className="grid gap-[16px] sm:grid-cols-2 lg:grid-cols-3">
               {completedEvaluations.map((e) => {
@@ -314,24 +315,24 @@ function ParticipantHome() {
                       </h3>
                       <div className="mt-[10px] flex flex-wrap items-center gap-3 text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                         <span className="flex items-center gap-1">
-                          <FileQuestion className="size-3.5" /> {e.questionCount} preguntas
+                          <FileQuestion className="size-3.5" /> {t('participant.numQuestions', { count: e.questionCount })}
                         </span>
                         {intentosPermitidos > 1 && (
                           <span className="font-mono text-[10px] font-bold rounded-full px-2 py-0.5" style={{ background: "#F3F4F6", color: "#6B7280" }}>
-                            {intentosUsados}/{intentosPermitidos} intentos
+                            {t('participant.attemptCount', { count: `${intentosUsados}/${intentosPermitidos}` })}
                           </span>
                         )}
                       </div>
                       {bestResult?.completed_at && (
                         <div className="mt-[8px] flex items-center gap-1 text-[11px]" style={{ color: "#059669" }}>
                           <CheckCircle className="size-3 shrink-0" />
-                          <span>{intentosPermitidos > 1 ? 'Mejor resultado:' : 'Presentada:'} {formatDateTime(bestResult.completed_at)}</span>
+                          <span>{intentosPermitidos > 1 ? t('participant.bestResult') : t('participant.submitted')} {formatDateTime(bestResult.completed_at)}</span>
                         </div>
                       )}
                     </div>
                     <Button asChild variant="outline" className="w-full">
                       <Link to="/my-results/$id" params={{ id: bestResult?.id }}>
-                        Ver {intentosPermitidos > 1 ? 'Mejor Resultado' : 'Resultados'}
+                        {intentosPermitidos > 1 ? t('participant.viewBest') : t('participant.viewResults')}
                       </Link>
                     </Button>
                   </div>
@@ -353,7 +354,7 @@ function ParticipantHome() {
           >
             <FileQuestion className="mx-auto mb-3 size-10" style={{ color: "var(--text-faint)" }} />
             <p className="text-[14px]" style={{ color: "var(--muted-foreground)" }}>
-              No hay evaluaciones disponibles en este momento.
+              {t('participant.emptyState')}
             </p>
           </div>
         )}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Download, Users, CheckCircle2, Clock, Trophy, TrendingUp,
   ChevronLeft, ChevronRight, ArrowRight,
@@ -16,7 +17,7 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/results")({
-  head: () => ({ meta: [{ title: "Resultados Globales — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "Resultados Globales — EvalPro" }] }), // static head, translated at runtime in component
   component: ResultsPage,
 });
 
@@ -47,25 +48,13 @@ const SELECT_CLASS =
   "transition-colors hover:border-[var(--border-strong)] focus:border-accent focus:outline-none " +
   "focus:ring-2 focus:ring-accent/20 cursor-pointer";
 
-const KPI_ITEMS = [
-  { label: "Sesiones Totales", icon: Users },
-  { label: "Tasa de Aprobación", icon: CheckCircle2 },
-  { label: "Duración Promedio", icon: Clock },
-  { label: "Mejor Puntaje", icon: Trophy },
-] as const;
+// KPI_ITEMS labels are replaced dynamically in the component using t()
+const KPI_ITEM_ICONS = [Users, CheckCircle2, Clock, Trophy] as const;
 
 const MAX_BAR_H = 140;
 const PT_PAGE_SIZE = 10;
 
-function formatRelativeDate(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  if (days === 0) return "Hoy";
-  if (days === 1) return "Ayer";
-  if (days < 7) return `hace ${days}d`;
-  if (days < 30) return `hace ${Math.floor(days / 7)} sem.`;
-  return new Date(dateStr).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" });
-}
+// formatRelativeDate is now a hook-friendly function defined inside the component to access t()
 
 function ResultsPage() {
   const { pathname } = useLocation();
@@ -74,10 +63,28 @@ function ResultsPage() {
 }
 
 function ResultsPageContent() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
+
+  function formatRelativeDate(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    if (days === 0) return t('common.today');
+    if (days === 1) return t('common.yesterday');
+    if (days < 7) return t('common.days_ago', { days });
+    if (days < 30) return t('common.weeks_ago', { weeks: Math.floor(days / 7) });
+    return new Date(dateStr).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+  const KPI_ITEMS = [
+    { label: t('results.totalSessions'), icon: KPI_ITEM_ICONS[0] },
+    { label: t('results.approvalRate'), icon: KPI_ITEM_ICONS[1] },
+    { label: t('results.avgDuration'), icon: KPI_ITEM_ICONS[2] },
+    { label: t('results.bestScore'), icon: KPI_ITEM_ICONS[3] },
+  ];
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -180,7 +187,7 @@ function ResultsPageContent() {
         setStats({ totalSessions: total, passRate, avgDuration, bestScore });
       } catch (err) {
         console.error("Error loading results:", err);
-        setError("Error al cargar los resultados");
+        setError(t('results.loadError'));
       } finally {
         setLoading(false);
       }
@@ -293,7 +300,10 @@ function ResultsPageContent() {
   }
 
   function exportResultsCsv() {
-    const headers = ["Participante", "Email", "Evaluación", "Área", "Puntaje", "Estado", "Fecha Completado"];
+    const headers = [
+      t('results.csvParticipant'), t('results.csvEmail'), t('results.csvEvaluation'),
+      t('results.csvArea'), t('results.csvScore'), t('results.csvStatus'), t('results.csvDate'),
+    ];
     const rows = allResults.map((r) => {
       const area = areas.find((a) => a.id === r.evaluations?.area_id);
       return [
@@ -302,7 +312,7 @@ function ResultsPageContent() {
         r.evaluations?.title || "",
         area?.name || "",
         String(r.score),
-        r.score >= 60 ? "APROBADO" : "REPROBADO",
+        r.score >= 60 ? t('common.approved') : t('common.failed'),
         new Date(r.completed_at).toLocaleString("es-ES"),
       ];
     });
@@ -312,8 +322,9 @@ function ResultsPageContent() {
 
   function exportParticipantsCsv() {
     const headers = [
-      "Participante", "Email", "Área", "Evaluaciones", "Sesiones",
-      "Promedio", "Mejor Puntaje", "Última Actividad",
+      t('results.csvParticipant'), t('results.csvEmail'), t('results.csvArea'),
+      t('results.colEvals'), t('results.colSessions'),
+      t('results.colAvg'), t('results.colBest'), t('results.colLastActivity'),
     ];
     const rows = filteredParticipants.map((p) => [
       p.name, p.email, p.areaName ?? "",
@@ -339,11 +350,11 @@ function ResultsPageContent() {
   if (loading) {
     return (
       <AppShell>
-        <PageHeader title="Resultados Globales" />
+        <PageHeader title={t('results.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent mx-auto" />
-            <p className="text-sm text-muted-foreground">Cargando resultados...</p>
+            <p className="text-sm text-muted-foreground">{t('results.loading')}</p>
           </div>
         </div>
       </AppShell>
@@ -353,11 +364,11 @@ function ResultsPageContent() {
   if (error) {
     return (
       <AppShell>
-        <PageHeader title="Resultados Globales" />
+        <PageHeader title={t('results.title')} />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
             <p className="text-sm text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+            <Button onClick={() => window.location.reload()}>{t('common.retry')}</Button>
           </div>
         </div>
       </AppShell>
@@ -369,15 +380,15 @@ function ResultsPageContent() {
   return (
     <AppShell>
       <PageHeader
-        title="Resultados Globales"
+        title={t('results.title')}
         actions={
           activeTab === "metrics" ? (
             <Button variant="outline" size="sm" onClick={exportResultsCsv} disabled={allResults.length === 0}>
-              <Download className="size-4" /> Exportar CSV
+              <Download className="size-4" /> {t('common.export_csv')}
             </Button>
           ) : (
             <Button variant="outline" size="sm" onClick={exportParticipantsCsv} disabled={filteredParticipants.length === 0}>
-              <Download className="size-4" /> Exportar CSV
+              <Download className="size-4" /> {t('common.export_csv')}
             </Button>
           )
         }
@@ -395,7 +406,7 @@ function ResultsPageContent() {
                   : "text-muted-foreground hover:text-foreground hover:bg-[var(--surface-2)]"
               }`}
             >
-              {tab === "metrics" ? "Métricas" : "Por Participante"}
+              {tab === "metrics" ? t('results.tabMetrics') : t('results.tabParticipants')}
             </button>
           ))}
         </div>
@@ -422,9 +433,9 @@ function ResultsPageContent() {
             <div className="rounded-xl border border-border bg-card shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-5 pb-4">
                 <div>
-                  <h2 className="text-sm font-semibold text-foreground">Promedio Semanal</h2>
+                  <h2 className="text-sm font-semibold text-foreground">{t('results.weeklyTrend')}</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Promedio de puntaje por semana del año seleccionado.
+                    {t('results.weeklyDesc')}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -442,7 +453,7 @@ function ResultsPageContent() {
                     onChange={(e) => setFilterAreaId(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    <option value="all">Todas las áreas</option>
+                    <option value="all">{t('results.allAreas')}</option>
                     {areas.map((a) => (
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
@@ -452,7 +463,7 @@ function ResultsPageContent() {
                     onChange={(e) => setFilterUserId(e.target.value)}
                     className={SELECT_CLASS}
                   >
-                    <option value="all">Todos los participantes</option>
+                    <option value="all">{t('results.allParticipants')}</option>
                     {participants.map((p) => (
                       <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
                     ))}
@@ -465,7 +476,7 @@ function ResultsPageContent() {
                     <div className="grid size-10 place-items-center rounded-xl bg-[var(--surface-2)]">
                       <TrendingUp className="size-5 text-muted-foreground" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Sin datos para los filtros seleccionados.</p>
+                    <p className="text-sm text-muted-foreground">{t('results.noData')}</p>
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
@@ -516,14 +527,13 @@ function ResultsPageContent() {
             {/* Distribution + Top performers */}
             <div className="grid gap-5 lg:grid-cols-3">
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
-                <h2 className="text-sm font-semibold text-foreground">Distribución de Puntajes</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('results.scoreDistribution')}</h2>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  A lo largo de las {stats.totalSessions}{" "}
-                  {stats.totalSessions === 1 ? "sesión completada" : "sesiones completadas"}.
+                  {t('results.distributionDesc', { count: stats.totalSessions })}
                 </p>
                 {maxDist === 0 ? (
                   <div className="mt-6 flex h-36 items-center justify-center">
-                    <p className="text-sm text-muted-foreground">Sin sesiones completadas aún.</p>
+                    <p className="text-sm text-muted-foreground">{t('results.noSessions')}</p>
                   </div>
                 ) : (
                   <div className="mt-6 flex items-end gap-3">
@@ -553,10 +563,10 @@ function ResultsPageContent() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <h2 className="text-sm font-semibold text-foreground">Mejores Participantes</h2>
+                <h2 className="text-sm font-semibold text-foreground">{t('results.topPerformers')}</h2>
                 {topPerformers.length === 0 ? (
                   <div className="mt-6 flex h-28 items-center justify-center">
-                    <p className="text-sm text-muted-foreground">Sin datos disponibles.</p>
+                    <p className="text-sm text-muted-foreground">{t('results.noTopData')}</p>
                   </div>
                 ) : (
                   <ul className="mt-4 divide-y divide-border">
@@ -600,14 +610,14 @@ function ResultsPageContent() {
             <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Filtros
+                  {t('results.filters')}
                 </span>
                 <select
                   value={ptFilterAreaId}
                   onChange={(e) => setPtFilterAreaId(e.target.value)}
                   className={SELECT_CLASS}
                 >
-                  <option value="all">Todas las áreas</option>
+                  <option value="all">{t('results.allAreas')}</option>
                   {areas.map((a) => (
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
@@ -617,13 +627,13 @@ function ResultsPageContent() {
                   onChange={(e) => setPtFilterUserId(e.target.value)}
                   className={SELECT_CLASS}
                 >
-                  <option value="all">Todos los participantes</option>
+                  <option value="all">{t('results.allParticipants')}</option>
                   {participants.map((p) => (
                     <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
                   ))}
                 </select>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Desde</span>
+                  <span className="text-xs text-muted-foreground">{t('results.from')}</span>
                   <input
                     type="date"
                     value={ptFilterDateFrom}
@@ -632,7 +642,7 @@ function ResultsPageContent() {
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Hasta</span>
+                  <span className="text-xs text-muted-foreground">{t('results.to')}</span>
                   <input
                     type="date"
                     value={ptFilterDateTo}
@@ -650,7 +660,7 @@ function ResultsPageContent() {
                     }}
                     className="text-xs text-accent hover:underline"
                   >
-                    Limpiar filtros
+                    {t('results.clearFilters')}
                   </button>
                 )}
               </div>
@@ -660,14 +670,13 @@ function ResultsPageContent() {
             <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
               <div className="border-b border-border px-6 py-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-foreground">Rendimiento por Participante</h2>
+                  <h2 className="text-sm font-semibold text-foreground">{t('results.participantReport')}</h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Promedio de puntaje sobre todas las evaluaciones realizadas.
+                    {t('results.participantDesc')}
                   </p>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  {filteredParticipants.length}{" "}
-                  {filteredParticipants.length === 1 ? "participante" : "participantes"}
+                  {t('results.participantCount', { count: filteredParticipants.length })}
                 </span>
               </div>
 
@@ -677,7 +686,7 @@ function ResultsPageContent() {
                     <Users className="size-5 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    No se encontraron participantes con los filtros seleccionados.
+                    {t('results.noParticipants')}
                   </p>
                 </div>
               ) : (
@@ -686,32 +695,32 @@ function ResultsPageContent() {
                     <thead>
                       <tr className="border-b border-border bg-[var(--surface-2)]">
                         <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          #
+                          {t('results.colRank')}
                         </th>
                         <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Participante
+                          {t('results.colParticipant')}
                         </th>
                         <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden md:table-cell">
-                          Área
+                          {t('results.colArea')}
                         </th>
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Evals.
+                          {t('results.colEvals')}
                         </th>
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Sesiones
+                          {t('results.colSessions')}
                         </th>
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Promedio
+                          {t('results.colAvg')}
                         </th>
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden lg:table-cell">
-                          Mejor
+                          {t('results.colBest')}
                         </th>
 
                         <th className="px-4 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground hidden xl:table-cell">
-                          Última act.
+                          {t('results.colLastActivity')}
                         </th>
                         <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Acciones
+                          {t('results.colActions')}
                         </th>
                       </tr>
                     </thead>
@@ -783,8 +792,7 @@ function ResultsPageContent() {
               {ptTotalPages > 1 && (
                 <div className="flex items-center justify-between border-t border-border px-6 py-3">
                   <span className="text-xs text-muted-foreground">
-                    Página {ptPage} de {ptTotalPages} ·{" "}
-                    {filteredParticipants.length} participantes
+                    {t('results.page', { current: ptPage, total: ptTotalPages, count: filteredParticipants.length })}
                   </span>
                   <div className="flex items-center gap-1">
                     <button
