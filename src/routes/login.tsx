@@ -14,8 +14,8 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Iniciar sesión — EvalPro" },
-      { name: "description", content: "Inicia sesión en EvalPro, el sistema de evaluación de conocimiento con IA." },
+      { title: "Iniciar sesión — SmartPath Planner" },
+      { name: "description", content: "Inicia sesión en SmartPath Planner, el sistema de roadmap inteligente con IA." },
     ],
   }),
   component: LoginPage,
@@ -114,7 +114,6 @@ function LoginPage() {
     t('login.feature1'),
     t('login.feature2'),
     t('login.feature3'),
-    t('login.feature4'),
   ];
 
   return (
@@ -139,7 +138,7 @@ function LoginPage() {
               </div>
             )}
             <div className="flex flex-col leading-none">
-              <span className="text-base font-bold tracking-tight text-foreground">EvalPro</span>
+              <span className="text-base font-bold tracking-tight text-foreground">SmartPath</span>
               <span className="mt-[3px] font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
                 {t('login.version')}
               </span>
