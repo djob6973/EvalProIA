@@ -290,7 +290,7 @@ function LoginPage() {
             {/* Submit */}
             <Button
               type="submit"
-              className="w-full rounded-full py-4 text-[15px] font-semibold"
+              className="w-full h-12 rounded-full text-[15px] font-normal"
               style={{ background: "#ED5650", color: "#fff" }}
               disabled={isSubmitting}
             >
