@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronsRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { ChevronsRight, Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberDevice, setRememberDevice] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -185,7 +185,7 @@ function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
-                  className="pl-9"
+                  className="h-12 rounded-xl border-transparent bg-white pl-9 shadow-sm"
                 />
               </div>
             </div>
@@ -214,7 +214,7 @@ function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="pl-9 pr-9"
+                  className="h-12 rounded-xl border-transparent bg-white pl-9 pr-9 shadow-sm"
                 />
                 <button
                   type="button"
@@ -232,12 +232,18 @@ function LoginPage() {
             {/* Remember device */}
             {isLogin && (
               <label className="flex cursor-pointer items-center gap-2.5">
-                <input
-                  type="checkbox"
-                  checked={rememberDevice}
-                  onChange={(e) => setRememberDevice(e.target.checked)}
-                  className="h-4 w-4 cursor-pointer rounded accent-[#ED5650]"
-                />
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={rememberDevice}
+                  onClick={() => setRememberDevice((v) => !v)}
+                  className={
+                    "flex size-[18px] shrink-0 items-center justify-center rounded-[6px] transition-colors " +
+                    (rememberDevice ? "bg-[#ED5650]" : "border border-input bg-white")
+                  }
+                >
+                  {rememberDevice && <Check className="size-3 text-white" strokeWidth={3} />}
+                </button>
                 <span className="text-[13px] text-muted-foreground">
                   {t('login.rememberDevice')}
                 </span>
@@ -248,7 +254,7 @@ function LoginPage() {
             <Button
               type="submit"
               className="w-full rounded-full py-5 text-[14px] font-semibold"
-              style={{ background: "#ED5650", color: "#fff" }}
+              style={{ background: "#F09692", color: "#fff" }}
               disabled={isSubmitting}
             >
               {isSubmitting
@@ -264,7 +270,7 @@ function LoginPage() {
             <button
               type="button"
               onClick={() => switchMode(isLogin ? "register" : "login")}
-              className="font-semibold underline underline-offset-4 text-foreground"
+              className="font-semibold text-[#ED5650]"
             >
               {isLogin ? t('login.register') : t('login.loginLink')}
             </button>
