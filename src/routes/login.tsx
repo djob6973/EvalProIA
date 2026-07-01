@@ -322,7 +322,7 @@ function LoginPage() {
 
       {/* ── Right panel ─────────────────────────────────────────── */}
       <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center px-8 pb-6 pt-12 lg:px-12 lg:pb-8"
+        className="relative hidden overflow-hidden lg:flex lg:flex-col px-8 pb-6 pt-12 lg:px-12 lg:pb-8"
         style={{ background: "#1C1C1E", color: "#F1F1F1" }}
       >
         {/* Pattern background */}
@@ -353,42 +353,44 @@ function LoginPage() {
         </div>
 
         {/* Top label */}
-        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-6 lg:mb-10">
+        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40">
           {t('login.systemLabel')}
         </div>
 
-        {/* Hero content */}
-        <div className="relative max-w-[420px] space-y-4 xl:max-w-[560px]">
-          <div
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
-            style={{ background: "rgba(237,86,80,.18)", color: "#ED5650" }}
-          >
-            <span className="size-1.5 rounded-full bg-[#ED5650]" />
-            {t('login.poweredBy')}
+        {/* Hero content — centered vertically */}
+        <div className="relative flex flex-1 items-center">
+          <div className="max-w-[420px] space-y-4 xl:max-w-[560px]">
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
+              style={{ background: "rgba(237,86,80,.18)", color: "#ED5650" }}
+            >
+              <span className="size-1.5 rounded-full bg-[#ED5650]" />
+              {t('login.poweredBy')}
+            </div>
+
+            <h2 className="max-w-full text-[22px] font-bold leading-[1.2] tracking-[-0.02em] text-white xl:max-w-[480px] xl:text-[30px]" style={{ whiteSpace: 'pre-line' }}>
+              {t('login.tagline')}
+            </h2>
+
+            <div className="h-[3px] w-10 rounded-full bg-[#ED5650]" />
+
+            <p className="max-w-full text-[13px] leading-relaxed text-white/55 xl:max-w-[360px]">
+              {t('login.description')}
+            </p>
+
+            <ul className="space-y-3 pt-1">
+              {FEATURES.map((feat, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="mt-0.5 font-bold text-[#ED5650] text-[13px]">{">>"}</span>
+                  <span className="text-[13px] text-white/70">{feat}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-
-          <h2 className="max-w-full text-[22px] font-bold leading-[1.2] tracking-[-0.02em] text-white xl:max-w-[480px] xl:text-[30px]" style={{ whiteSpace: 'pre-line' }}>
-            {t('login.tagline')}
-          </h2>
-
-          <div className="h-[3px] w-10 rounded-full bg-[#ED5650]" />
-
-          <p className="max-w-full text-[13px] leading-relaxed text-white/55 xl:max-w-[360px]">
-            {t('login.description')}
-          </p>
-
-          <ul className="space-y-3 pt-1">
-            {FEATURES.map((feat, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <span className="mt-0.5 font-bold text-[#ED5650] text-[13px]">{">>"}</span>
-                <span className="text-[13px] text-white/70">{feat}</span>
-              </li>
-            ))}
-          </ul>
         </div>
 
         {/* Bottom */}
-        <div className="relative mt-auto font-mono text-[10px] uppercase tracking-widest text-white/30">
+        <div className="relative font-mono text-[10px] uppercase tracking-widest text-white/30">
           {t('login.copyright')}
         </div>
       </div>
