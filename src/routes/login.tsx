@@ -316,7 +316,7 @@ function LoginPage() {
           )}
         </div>
 
-        <p className="text-left font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+        <p className="mt-6 text-left font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
           {t('login.footer')}
         </p>
       </div>
@@ -391,7 +391,7 @@ function LoginPage() {
         </div>
 
         {/* Bottom */}
-        <div className="relative font-mono text-[10px] uppercase tracking-widest text-white/30">
+        <div className="relative mt-6 font-mono text-[10px] uppercase tracking-widest text-white/30">
           {t('login.copyright')}
         </div>
       </div>
