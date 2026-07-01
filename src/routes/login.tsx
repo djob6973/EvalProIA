@@ -157,7 +157,7 @@ function LoginPage() {
         )}
 
         {/* Form area */}
-        <div className="mx-auto w-full max-w-[360px] flex-1 flex flex-col justify-center">
+        <div className="mx-auto w-full max-w-[360px] flex-1 flex flex-col justify-start">
           <h1 className="font-display text-[26px] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-[30px]">
             {isLogin ? t('login.welcome') : t('login.createAccount')}
           </h1>
@@ -185,6 +185,7 @@ function LoginPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={isSubmitting}
+                  className="h-12 rounded-xl border-transparent bg-white shadow-sm"
                 />
               </div>
             )}
@@ -322,7 +323,7 @@ function LoginPage() {
 
       {/* ── Right panel ─────────────────────────────────────────── */}
       <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-8 pt-16 lg:px-12 lg:pb-12 xl:pt-[120px]"
+        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-8 pt-12 lg:px-12 lg:pb-12 xl:pt-20"
         style={{ background: "#1C1C1E", color: "#F1F1F1" }}
       >
         {/* Chevron pattern background */}
