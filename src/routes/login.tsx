@@ -120,10 +120,10 @@ function LoginPage() {
   return (
     <div className="grid min-h-screen w-full animate-in fade-in duration-300 lg:grid-cols-2">
       {/* ── Left panel ─────────────────────────────────────────── */}
-      <div className="flex flex-col bg-[#F5F5F5] dark:bg-background p-6 sm:p-8 md:p-12">
+      <div className="flex flex-col bg-[#F5F5F5] dark:bg-background px-6 pt-6 pb-4 sm:px-8 sm:pt-8 sm:pb-6 md:px-12 md:pt-12 md:pb-8">
         {/* Logo / Back */}
         {isLogin ? (
-          <Link to="/dashboard" className="mb-10 flex items-center gap-2.5 sm:mb-16">
+          <Link to="/dashboard" className="mb-6 flex items-center gap-2.5 sm:mb-10">
             {settings.brand_logo ? (
               <img
                 src={settings.brand_logo}
@@ -149,7 +149,7 @@ function LoginPage() {
           <button
             type="button"
             onClick={() => switchMode("login")}
-            className="mb-10 flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground sm:mb-16"
+            className="mb-6 flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground sm:mb-10"
           >
             <ArrowLeft className="size-4" strokeWidth={1.5} />
             {t('login.back')}
@@ -323,7 +323,7 @@ function LoginPage() {
 
       {/* ── Right panel ─────────────────────────────────────────── */}
       <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-8 pt-12 lg:px-12 lg:pb-12 xl:pt-20"
+        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-6 pt-12 lg:px-12 lg:pb-8 xl:pt-20"
         style={{ background: "#1C1C1E", color: "#F1F1F1" }}
       >
         {/* Chevron pattern background */}
