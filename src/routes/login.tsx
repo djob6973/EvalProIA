@@ -301,16 +301,18 @@ function LoginPage() {
           </form>
 
           {/* Switch mode */}
-          <p className="mt-6 text-center text-[13px] text-muted-foreground">
-            {isLogin ? t('login.noAccount') : t('login.haveAccount')}{" "}
-            <button
-              type="button"
-              onClick={() => switchMode(isLogin ? "register" : "login")}
-              className="font-semibold text-[#ED5650]"
-            >
-              {isLogin ? t('login.register') : t('login.loginLink')}
-            </button>
-          </p>
+          {isLogin && (
+            <p className="mt-6 text-center text-[13px] text-muted-foreground">
+              {t('login.noAccount')}{" "}
+              <button
+                type="button"
+                onClick={() => switchMode("register")}
+                className="font-semibold text-[#ED5650]"
+              >
+                {t('login.register')}
+              </button>
+            </p>
+          )}
         </div>
 
         <p className="text-left font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
