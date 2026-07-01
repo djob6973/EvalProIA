@@ -326,18 +326,28 @@ function LoginPage() {
         className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-6 pt-12 lg:px-12 lg:pb-8 xl:pt-20"
         style={{ background: "#1C1C1E", color: "#F1F1F1" }}
       >
-        {/* Chevron pattern background */}
+        {/* Pattern background */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden select-none" aria-hidden>
           {Array.from({ length: 7 }).map((_, row) => (
-            <div key={row} className="flex" style={{ marginTop: row === 0 ? 80 : 0 }}>
+            <div key={row} className="flex items-center" style={{ marginTop: row === 0 ? 60 : 0 }}>
               {Array.from({ length: 5 }).map((_, col) => (
-                <span
-                  key={col}
-                  className="font-bold text-white/[0.035]"
-                  style={{ fontSize: 120, lineHeight: 1.1, letterSpacing: '-0.02em' }}
-                >
-                  »
-                </span>
+                settings.brand_logo ? (
+                  <img
+                    key={col}
+                    src={settings.brand_logo}
+                    alt=""
+                    className="object-contain opacity-[0.06]"
+                    style={{ width: 120, height: 110, padding: '18px' }}
+                  />
+                ) : (
+                  <span
+                    key={col}
+                    className="font-bold text-white/[0.035]"
+                    style={{ fontSize: 120, lineHeight: 1.1, letterSpacing: '-0.02em' }}
+                  >
+                    »
+                  </span>
+                )
               ))}
             </div>
           ))}
