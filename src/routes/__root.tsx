@@ -62,7 +62,7 @@ function NotFoundComponent() {
             </button>
           </div>
           <p className="mt-10 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            EvalPro · Infraestructura segura de evaluación
+            EvalPro · Evaluaciones Inteligentes
           </p>
         </div>
       </div>
