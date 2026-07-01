@@ -157,7 +157,7 @@ function LoginPage() {
         )}
 
         {/* Form area */}
-        <div className="mx-auto w-full max-w-[360px] flex-1 flex flex-col justify-center">
+        <div className="mx-auto w-full max-w-[360px] flex-1 flex flex-col justify-start md:justify-center">
           <h1 className="font-display text-[22px] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-[26px]">
             {isLogin ? t('login.welcome') : t('login.createAccount')}
           </h1>
