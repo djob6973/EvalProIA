@@ -75,7 +75,8 @@ function AccountPage() {
           }}
         >
           <div
-            className="grid size-[52px] shrink-0 place-items-center rounded-full bg-foreground font-mono text-[16px] font-bold text-background"
+            className="grid size-[52px] shrink-0 place-items-center rounded-full font-mono text-[16px] font-bold"
+            style={{ background: "#FBE6E6", color: "#B43C35" }}
           >
             {userInitials}
           </div>
@@ -138,9 +139,10 @@ function AccountPage() {
                 >
                   {t('account.currentPassword')}
                 </Label>
-                <Input id="current" type="password" placeholder="••••••••"
+                <input id="current" type="password" placeholder="••••••••"
                   value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)}
-                  disabled={isLoading} />
+                  disabled={isLoading}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--ring)] disabled:opacity-50" />
               </div>
               <div className="flex flex-col gap-[6px]">
                 <Label
@@ -150,9 +152,10 @@ function AccountPage() {
                 >
                   {t('account.newPassword')}
                 </Label>
-                <Input id="new" type="password" placeholder="••••••••"
+                <input id="new" type="password" placeholder="••••••••"
                   value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                  disabled={isLoading} />
+                  disabled={isLoading}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--ring)] disabled:opacity-50" />
               </div>
               <div className="flex flex-col gap-[6px]">
                 <Label
@@ -162,9 +165,10 @@ function AccountPage() {
                 >
                   {t('account.confirmPassword')}
                 </Label>
-                <Input id="confirm" type="password" placeholder="••••••••"
+                <input id="confirm" type="password" placeholder="••••••••"
                   value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={isLoading} />
+                  disabled={isLoading}
+                  className="w-full rounded-xl border border-[var(--border)] bg-[var(--secondary)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:ring-2 focus:ring-[var(--ring)] disabled:opacity-50" />
               </div>
               <Button type="submit" disabled={isLoading} className="w-full mt-[6px]">
                 {isLoading ? t('common.saving') : t('account.changeButton')}
