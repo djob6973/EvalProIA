@@ -357,7 +357,7 @@ function LoginPage() {
         <div className="relative flex flex-1 items-center">
           <div className="max-w-[420px] space-y-4 xl:max-w-[560px]">
             {/* System label — above poweredBy badge */}
-            <div className="font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-2">
+            <div className="font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-4">
               {t('login.systemLabel')}
             </div>
             <div
