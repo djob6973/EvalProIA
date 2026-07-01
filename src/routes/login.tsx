@@ -158,14 +158,14 @@ function LoginPage() {
 
         {/* Form area */}
         <div className="mx-auto w-full max-w-[360px] flex-1 flex flex-col justify-start">
-          <h1 className="font-display text-[26px] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-[30px]">
+          <h1 className="font-display text-[22px] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-[26px]">
             {isLogin ? t('login.welcome') : t('login.createAccount')}
           </h1>
-          <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
             {isLogin ? t('login.loginDesc') : t('login.registerDesc')}
           </p>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
+          <form onSubmit={submit} className="mt-6 space-y-3.5">
             {error && (
               <div className="rounded-lg bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
                 {error}
@@ -185,7 +185,7 @@ function LoginPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-12 rounded-xl border-transparent bg-white shadow-sm"
+                  className="h-11 rounded-xl border-transparent bg-white shadow-sm"
                 />
               </div>
             )}
@@ -204,7 +204,7 @@ function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-12 rounded-xl border-transparent bg-white pl-9 shadow-sm"
+                  className="h-11 rounded-xl border-transparent bg-white pl-9 shadow-sm"
                 />
               </div>
             </div>
@@ -233,7 +233,7 @@ function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-12 rounded-xl border-transparent bg-white pl-9 pr-9 shadow-sm"
+                  className="h-11 rounded-xl border-transparent bg-white pl-9 pr-9 shadow-sm"
                 />
                 <button
                   type="button"
@@ -261,7 +261,7 @@ function LoginPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-12 rounded-xl border-transparent bg-white shadow-sm"
+                  className="h-11 rounded-xl border-transparent bg-white shadow-sm"
                 />
               </div>
             )}
@@ -290,7 +290,7 @@ function LoginPage() {
             {/* Submit */}
             <Button
               type="submit"
-              className="w-full rounded-full py-5 text-[14px] font-semibold"
+              className="w-full rounded-full py-3.5 text-[14px] font-semibold"
               style={{ background: "#F09692", color: "#fff" }}
               disabled={isSubmitting}
             >
@@ -349,7 +349,7 @@ function LoginPage() {
         </div>
 
         {/* Hero content */}
-        <div className="relative max-w-[420px] space-y-5 xl:max-w-[650px]">
+        <div className="relative max-w-[420px] space-y-4 xl:max-w-[560px]">
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
             style={{ background: "rgba(237,86,80,.18)", color: "#ED5650" }}
@@ -358,13 +358,13 @@ function LoginPage() {
             {t('login.poweredBy')}
           </div>
 
-          <h2 className="max-w-full text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-white xl:max-w-[540px] xl:text-[38px]" style={{ whiteSpace: 'pre-line' }}>
+          <h2 className="max-w-full text-[22px] font-bold leading-[1.2] tracking-[-0.02em] text-white xl:max-w-[480px] xl:text-[30px]" style={{ whiteSpace: 'pre-line' }}>
             {t('login.tagline')}
           </h2>
 
           <div className="h-[3px] w-10 rounded-full bg-[#ED5650]" />
 
-          <p className="max-w-full text-[14px] leading-relaxed text-white/55 xl:max-w-[380px]">
+          <p className="max-w-full text-[13px] leading-relaxed text-white/55 xl:max-w-[360px]">
             {t('login.description')}
           </p>
 
