@@ -353,14 +353,13 @@ function LoginPage() {
           ))}
         </div>
 
-        {/* Top label */}
-        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40">
-          {t('login.systemLabel')}
-        </div>
-
         {/* Hero content — centered vertically */}
         <div className="relative flex flex-1 items-center">
           <div className="max-w-[420px] space-y-4 xl:max-w-[560px]">
+            {/* System label — above poweredBy badge */}
+            <div className="font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-2">
+              {t('login.systemLabel')}
+            </div>
             <div
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
               style={{ background: "rgba(237,86,80,.18)", color: "#ED5650" }}
