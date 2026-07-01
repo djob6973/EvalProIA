@@ -185,7 +185,7 @@ function LoginPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-11 rounded-xl border-transparent bg-white shadow-sm"
+                  className="h-12 rounded-xl border-transparent bg-white shadow-sm"
                 />
               </div>
             )}
@@ -204,7 +204,7 @@ function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-11 rounded-xl border-transparent bg-white pl-9 shadow-sm"
+                  className="h-12 rounded-xl border-transparent bg-white pl-9 shadow-sm"
                 />
               </div>
             </div>
@@ -233,7 +233,7 @@ function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-11 rounded-xl border-transparent bg-white pl-9 pr-9 shadow-sm"
+                  className="h-12 rounded-xl border-transparent bg-white pl-9 pr-9 shadow-sm"
                 />
                 <button
                   type="button"
@@ -261,7 +261,7 @@ function LoginPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-11 rounded-xl border-transparent bg-white shadow-sm"
+                  className="h-12 rounded-xl border-transparent bg-white shadow-sm"
                 />
               </div>
             )}
@@ -290,8 +290,8 @@ function LoginPage() {
             {/* Submit */}
             <Button
               type="submit"
-              className="w-full rounded-full py-3.5 text-[14px] font-semibold"
-              style={{ background: "#F09692", color: "#fff" }}
+              className="w-full rounded-full py-4 text-[15px] font-semibold"
+              style={{ background: "#ED5650", color: "#fff" }}
               disabled={isSubmitting}
             >
               {isSubmitting
