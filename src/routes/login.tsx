@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronsRight, Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
+import { ChevronsRight, Mail, Lock, Eye, EyeOff, Check, ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberDevice, setRememberDevice] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +51,7 @@ function LoginPage() {
     setEmail("");
     setPassword("");
     setFullName("");
+    setConfirmPassword("");
   }
 
   async function submit(e: React.FormEvent) {
@@ -64,6 +66,11 @@ function LoginPage() {
     }
 
     if (mode === "register") {
+      if (password !== confirmPassword) {
+        setError(t('login.passwordMismatch'));
+        setIsSubmitting(false);
+        return;
+      }
       try {
         const res = await fetch("/api/auth/register", {
           method: "POST",
@@ -113,34 +120,45 @@ function LoginPage() {
   return (
     <div className="grid min-h-screen w-full animate-in fade-in duration-300 lg:grid-cols-2">
       {/* ── Left panel ─────────────────────────────────────────── */}
-      <div className="flex flex-col bg-[#F5F5F5] dark:bg-background p-8 md:p-12">
-        {/* Logo */}
-        <Link to="/dashboard" className="mb-16 flex items-center gap-2.5">
-          {settings.brand_logo ? (
-            <img
-              src={settings.brand_logo}
-              alt="Logo"
-              className="h-9 max-w-[80px] shrink-0 object-contain"
-            />
-          ) : (
-            <div
-              className="flex size-9 items-center justify-center rounded-[10px]"
-              style={{ background: "#1C1C1E", color: "#fff" }}
-            >
-              <ChevronsRight className="size-4" strokeWidth={2.5} />
+      <div className="flex flex-col bg-[#F5F5F5] dark:bg-background p-6 sm:p-8 md:p-12">
+        {/* Logo / Back */}
+        {isLogin ? (
+          <Link to="/dashboard" className="mb-10 flex items-center gap-2.5 sm:mb-16">
+            {settings.brand_logo ? (
+              <img
+                src={settings.brand_logo}
+                alt="Logo"
+                className="h-9 max-w-[80px] shrink-0 object-contain"
+              />
+            ) : (
+              <div
+                className="flex size-9 items-center justify-center rounded-[10px]"
+                style={{ background: "#1C1C1E", color: "#fff" }}
+              >
+                <ChevronsRight className="size-4" strokeWidth={2.5} />
+              </div>
+            )}
+            <div className="flex flex-col leading-none">
+              <span className="text-base font-bold tracking-tight text-foreground">EvalPro</span>
+              <span className="mt-[3px] font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                {t('login.version')}
+              </span>
             </div>
-          )}
-          <div className="flex flex-col leading-none">
-            <span className="text-base font-bold tracking-tight text-foreground">EvalPro</span>
-            <span className="mt-[3px] font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-              {t('login.version')}
-            </span>
-          </div>
-        </Link>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => switchMode("login")}
+            className="mb-10 flex items-center gap-1.5 text-[13px] text-muted-foreground hover:text-foreground sm:mb-16"
+          >
+            <ArrowLeft className="size-4" strokeWidth={1.5} />
+            {t('login.back')}
+          </button>
+        )}
 
         {/* Form area */}
         <div className="mx-auto w-full max-w-[360px] flex-1 flex flex-col justify-center">
-          <h1 className="font-display text-[30px] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground">
+          <h1 className="font-display text-[26px] font-semibold leading-[1.2] tracking-[-0.01em] text-foreground sm:text-[30px]">
             {isLogin ? t('login.welcome') : t('login.createAccount')}
           </h1>
           <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">
@@ -229,16 +247,34 @@ function LoginPage() {
               </div>
             </div>
 
+            {/* Confirm password — register only */}
+            {!isLogin && (
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmPassword" className="text-[10px] font-bold uppercase tracking-[.12em] text-muted-foreground">
+                  {t('login.confirmPassword')}
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t('login.passwordPlaceholder')}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  className="h-12 rounded-xl border-transparent bg-white shadow-sm"
+                />
+              </div>
+            )}
+
             {/* Remember device */}
             {isLogin && (
-              <label className="flex cursor-pointer items-center gap-2.5">
+              <label className="flex cursor-pointer items-start gap-2.5">
                 <button
                   type="button"
                   role="checkbox"
                   aria-checked={rememberDevice}
                   onClick={() => setRememberDevice((v) => !v)}
                   className={
-                    "flex size-[18px] shrink-0 items-center justify-center rounded-[6px] transition-colors " +
+                    "mt-0.5 flex size-[18px] shrink-0 items-center justify-center rounded-[6px] transition-colors " +
                     (rememberDevice ? "bg-[#ED5650]" : "border border-input bg-white")
                   }
                 >
@@ -275,17 +311,17 @@ function LoginPage() {
               {isLogin ? t('login.register') : t('login.loginLink')}
             </button>
           </p>
-
-          <p className="mt-10 text-center font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-            {t('login.footer')}
-          </p>
         </div>
+
+        <p className="text-left font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+          {t('login.footer')}
+        </p>
       </div>
 
       {/* ── Right panel ─────────────────────────────────────────── */}
       <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-12 pb-12"
-        style={{ background: "#1C1C1E", color: "#F1F1F1", paddingTop: '120px' }}
+        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-8 pt-16 lg:px-12 lg:pb-12 xl:pt-[120px]"
+        style={{ background: "#1C1C1E", color: "#F1F1F1" }}
       >
         {/* Chevron pattern background */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden select-none" aria-hidden>
@@ -305,12 +341,12 @@ function LoginPage() {
         </div>
 
         {/* Top label */}
-        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-10">
+        <div className="relative font-mono text-[10px] uppercase tracking-[.2em] text-white/40 mb-6 lg:mb-10">
           {t('login.systemLabel')}
         </div>
 
         {/* Hero content */}
-        <div className="relative max-w-[650px] space-y-5">
+        <div className="relative max-w-[420px] space-y-5 xl:max-w-[650px]">
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider"
             style={{ background: "rgba(237,86,80,.18)", color: "#ED5650" }}
@@ -319,13 +355,13 @@ function LoginPage() {
             {t('login.poweredBy')}
           </div>
 
-          <h2 className="max-w-[540px] text-[38px] font-bold leading-[1.15] tracking-[-0.02em] text-white" style={{ whiteSpace: 'pre-line' }}>
+          <h2 className="max-w-full text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-white xl:max-w-[540px] xl:text-[38px]" style={{ whiteSpace: 'pre-line' }}>
             {t('login.tagline')}
           </h2>
 
           <div className="h-[3px] w-10 rounded-full bg-[#ED5650]" />
 
-          <p className="max-w-[380px] text-[14px] leading-relaxed text-white/55">
+          <p className="max-w-full text-[14px] leading-relaxed text-white/55 xl:max-w-[380px]">
             {t('login.description')}
           </p>
 
