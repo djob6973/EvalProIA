@@ -114,6 +114,7 @@ function LoginPage() {
     t('login.feature1'),
     t('login.feature2'),
     t('login.feature3'),
+    t('login.feature4'),
   ];
 
   return (
