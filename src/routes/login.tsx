@@ -322,7 +322,7 @@ function LoginPage() {
 
       {/* ── Right panel ─────────────────────────────────────────── */}
       <div
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-start px-8 pb-6 pt-12 lg:px-12 lg:pb-8 xl:pt-20"
+        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-center px-8 pb-6 pt-12 lg:px-12 lg:pb-8"
         style={{ background: "#1C1C1E", color: "#F1F1F1" }}
       >
         {/* Pattern background */}
