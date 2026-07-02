@@ -49,6 +49,20 @@ export function UsersTab() {
   const canDelete         = isAdmin || hasCapability("delete_users");
   const canChangePassword = isAdmin || hasCapability("change_password");
 
+  // Hierarchy: which target roles the current user is allowed to act on
+  const EDITABLE_ROLES: Record<string, string[]> = {
+    super_admin: ["super_admin", "admin", "supervisor", "leader", "participant", "both"],
+    both:        ["super_admin", "admin", "supervisor", "leader", "participant", "both"],
+    admin:       ["admin", "supervisor", "leader", "participant", "both"],
+    supervisor:  ["leader", "participant"],
+    leader:      ["leader", "participant"],
+    participant: [],
+  };
+  function canActOn(targetRole: string): boolean {
+    const myRole = profile?.role ?? "participant";
+    return (EDITABLE_ROLES[myRole] ?? []).includes(targetRole);
+  }
+
   const [users,   setUsers]   = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
@@ -288,7 +302,7 @@ export function UsersTab() {
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {(canEdit || canChangePassword || canDelete) && (
+                      {(canEdit || canChangePassword || canDelete) && canActOn(u.role) && (
                         <div className="flex items-center gap-1">
                           {canEdit && (
                             <button onClick={() => openEdit(u)} title={t('users.tooltipEdit')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
