@@ -3,14 +3,17 @@ import { useAuth } from './useAuth';
 
 type PermissionLevel = 'none' | 'ver' | 'editar' | 'full';
 type PermissionsMatrix = Record<string, Record<string, string>>;
+type CapabilitiesMap   = Record<string, Record<string, boolean>>;
 
 // Module-level cache — one fetch per page load across all component instances
-let _cache: PermissionsMatrix | null = null;
+let _cache:    PermissionsMatrix | null = null;
+let _capCache: CapabilitiesMap   | null = null;
 let _promise: Promise<void> | null = null;
 
 export function useRolePermissions() {
   const { profile, loading: authLoading } = useAuth();
   const [matrix, setMatrix] = useState<PermissionsMatrix>(_cache ?? {});
+  const [caps,   setCaps]   = useState<CapabilitiesMap>(_capCache ?? {});
   const [permLoading, setPermLoading] = useState(!_cache);
 
   // loading is true until BOTH auth AND permissions are resolved.
@@ -26,12 +29,13 @@ export function useRolePermissions() {
     }
     if (!_promise) {
       _promise = fetch('/api/data/role-permissions')
-        .then((r) => (r.ok ? r.json() : { matrix: {} }))
-        .then((data) => { _cache = data.matrix ?? {}; })
-        .catch(() => { _cache = {}; });
+        .then((r) => (r.ok ? r.json() : { matrix: {}, capabilities: {} }))
+        .then((data) => { _cache = data.matrix ?? {}; _capCache = data.capabilities ?? {}; })
+        .catch(() => { _cache = {}; _capCache = {}; });
     }
     _promise.then(() => {
       setMatrix(_cache!);
+      setCaps(_capCache!);
       setPermLoading(false);
     });
   }, []);
@@ -57,5 +61,15 @@ export function useRolePermissions() {
     [profile?.role, matrix],
   );
 
-  return { canAccess, getLevel, loading, permLoading };
+  const hasCapability = useCallback(
+    (cap: string): boolean => {
+      if (!profile) return false;
+      const role = profile.role === 'both' ? 'admin' : profile.role;
+      if (role === 'super_admin') return true;
+      return caps[role]?.[cap] ?? false;
+    },
+    [profile?.role, caps],
+  );
+
+  return { canAccess, getLevel, hasCapability, loading, permLoading };
 }

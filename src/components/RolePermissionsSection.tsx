@@ -33,6 +33,7 @@ const MODULES = [
 
 const CAPABILITIES = [
   { key: "create_users",   label: "Crear usuarios"         },
+  { key: "edit_users",     label: "Editar usuarios"        },
   { key: "delete_users",   label: "Eliminar usuarios"      },
   { key: "manage_areas",   label: "Gestionar áreas"        },
   { key: "export_results", label: "Exportar resultados"    },

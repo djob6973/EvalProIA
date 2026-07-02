@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { areasService, Area } from "@/lib/services/evaluations";
 
 interface UserProfile {
@@ -41,7 +42,11 @@ const ROLE_OPTIONS: Array<{ value: string }> = [
 export function UsersTab() {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { hasCapability } = useRolePermissions();
   const isAdmin = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "both";
+  const canCreate = isAdmin || hasCapability("create_users");
+  const canEdit   = isAdmin || hasCapability("edit_users");
+  const canDelete = isAdmin || hasCapability("delete_users");
 
   const [users,   setUsers]   = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,7 +233,7 @@ export function UsersTab() {
           >
             <RefreshCw className="size-[14px]" strokeWidth={1.5} />
           </button>
-          {isAdmin && (
+          {canCreate && (
             <Button onClick={openInvite}>
               <UserPlus className="size-4" strokeWidth={1.5} />
               {t('users.newUser')}
@@ -282,15 +287,19 @@ export function UsersTab() {
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {isAdmin && (
+                      {(canEdit || canDelete) && (
                         <div className="flex items-center gap-1">
-                          <button onClick={() => openEdit(u)} title={t('users.tooltipEdit')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
-                            <Edit2 className="size-3.5" strokeWidth={1.5} />
-                          </button>
-                          <button onClick={() => openPassword(u)} title={t('users.tooltipPassword')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
-                            <KeyRound className="size-3.5" strokeWidth={1.5} />
-                          </button>
-                          {u.id !== profile?.id && (
+                          {canEdit && (
+                            <button onClick={() => openEdit(u)} title={t('users.tooltipEdit')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
+                              <Edit2 className="size-3.5" strokeWidth={1.5} />
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button onClick={() => openPassword(u)} title={t('users.tooltipPassword')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
+                              <KeyRound className="size-3.5" strokeWidth={1.5} />
+                            </button>
+                          )}
+                          {canDelete && u.id !== profile?.id && (
                             <button onClick={() => openDelete(u)} title={t('users.tooltipDelete')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-destructive/10 hover:text-destructive transition">
                               <Trash2 className="size-3.5" strokeWidth={1.5} />
                             </button>
