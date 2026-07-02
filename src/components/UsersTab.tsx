@@ -44,9 +44,10 @@ export function UsersTab() {
   const { profile } = useAuth();
   const { hasCapability } = useRolePermissions();
   const isAdmin = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "both";
-  const canCreate = isAdmin || hasCapability("create_users");
-  const canEdit   = isAdmin || hasCapability("edit_users");
-  const canDelete = isAdmin || hasCapability("delete_users");
+  const canCreate         = isAdmin || hasCapability("create_users");
+  const canEdit           = isAdmin || hasCapability("edit_users");
+  const canDelete         = isAdmin || hasCapability("delete_users");
+  const canChangePassword = isAdmin || hasCapability("change_password");
 
   const [users,   setUsers]   = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -287,14 +288,14 @@ export function UsersTab() {
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {(canEdit || canDelete) && (
+                      {(canEdit || canChangePassword || canDelete) && (
                         <div className="flex items-center gap-1">
                           {canEdit && (
                             <button onClick={() => openEdit(u)} title={t('users.tooltipEdit')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
                               <Edit2 className="size-3.5" strokeWidth={1.5} />
                             </button>
                           )}
-                          {canEdit && (
+                          {canChangePassword && (
                             <button onClick={() => openPassword(u)} title={t('users.tooltipPassword')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
                               <KeyRound className="size-3.5" strokeWidth={1.5} />
                             </button>
