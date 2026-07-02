@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { Paginator } from "@/components/Paginator";
 import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService } from "@/lib/services/evaluations";
 
 export const Route = createFileRoute("/evaluations")({
@@ -1131,6 +1132,8 @@ function EvaluationsPage() {
   const [filterCategoria, setFilterCategoria] = useState<string>("todas");
   const [filterEstado, setFilterEstado] = useState<"todos" | "activa" | "inactiva">("todos");
   const [filterArea, setFilterArea] = useState<string>("todas");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Evaluation | null>(null);
   const [assigningEval, setAssigningEval] = useState<Evaluation | null>(null);
@@ -1177,6 +1180,11 @@ function EvaluationsPage() {
       }),
     [items, debouncedQuery, filterCategoria, filterEstado, filterArea],
   );
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1); }, [debouncedQuery, filterCategoria, filterEstado, filterArea]);
+
+  const pagedItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const totalDist = form.config.dist_unica + form.config.dist_multiple + form.config.dist_vf;
   
@@ -1521,19 +1529,22 @@ function EvaluationsPage() {
             </p>
           </div>
         ) : (
-          <GroupedCards
-            items={filtered}
-            areas={areas}
-            groupBy={groupBy}
-            duplicatingId={duplicatingId}
-            resultCounts={resultCounts}
-            onPreview={openPreview}
-            onAssign={setAssigningEval}
-            onDuplicate={handleDuplicate}
-            onEdit={openEdit}
-            onDelete={handleDelete}
-            onShare={setShareEval}
-          />
+          <>
+            <GroupedCards
+              items={pagedItems}
+              areas={areas}
+              groupBy={groupBy}
+              duplicatingId={duplicatingId}
+              resultCounts={resultCounts}
+              onPreview={openPreview}
+              onAssign={setAssigningEval}
+              onDuplicate={handleDuplicate}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onShare={setShareEval}
+            />
+            <Paginator page={page} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
+          </>
         )}
       </div>
 

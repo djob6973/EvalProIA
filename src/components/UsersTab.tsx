@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Paginator } from "@/components/Paginator";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { areasService, Area } from "@/lib/services/evaluations";
@@ -67,6 +68,8 @@ export function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
   const [areas,   setAreas]   = useState<Area[]>([]);
+  const [page,    setPage]    = useState(1);
+  const PAGE_SIZE = 10;
 
   // ── Invite ─────────────────────────────────────────────────────────────────
   const [showInvite,    setShowInvite]    = useState(false);
@@ -126,6 +129,7 @@ export function UsersTab() {
       u.email.toLowerCase().includes(search.toLowerCase()) ||
       (u.full_name ?? "").toLowerCase().includes(search.toLowerCase())
   );
+  const pagedUsers = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // ── Invite handlers ────────────────────────────────────────────────────────
   function openInvite() {
@@ -235,7 +239,7 @@ export function UsersTab() {
             placeholder={t('users.searchPlaceholder')}
             className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] py-2 pl-9 pr-3 text-sm outline-none focus:border-[var(--sidebar-primary)]"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
         <div className="ml-auto flex items-center gap-3">
@@ -274,7 +278,7 @@ export function UsersTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((u, i) => (
+                {pagedUsers.map((u, i) => (
                   <tr key={u.id} className={`border-b border-[var(--border)]/50 last:border-0 hover:bg-[var(--secondary)]/40 transition-colors ${i % 2 !== 0 ? "bg-[var(--secondary)]/20" : ""}`}>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
@@ -332,6 +336,7 @@ export function UsersTab() {
           </div>
         </div>
       )}
+      <Paginator page={page} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
 
       {/* ── Invite modal ───────────────────────────────────────────────────── */}
       {showInvite && (
