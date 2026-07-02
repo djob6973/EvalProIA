@@ -25,14 +25,26 @@ function ConfigPage() {
   const { canAccess, loading: permLoading } = useRolePermissions();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<TabKey>("users");
+  const [activeTab, setActiveTab] = useState<TabKey | null>(null);
 
-  const TABS = [
-    { key: "users" as const,  label: t('config.tabUsers'),  icon: Users     },
-    { key: "roles" as const,  label: t('config.tabRoles'),  icon: Shield    },
-    { key: "org"   as const,  label: t('config.tabOrg'),    icon: Building2 },
-    { key: "brand" as const,  label: t('config.tabBrand'),  icon: Paintbrush},
+  const ALL_TABS = [
+    { key: "users" as const, label: t('config.tabUsers'), icon: Users,      perm: "config.users"  },
+    { key: "roles" as const, label: t('config.tabRoles'), icon: Shield,     perm: "config.roles"  },
+    { key: "org"   as const, label: t('config.tabOrg'),   icon: Building2,  perm: "config.org"    },
+    { key: "brand" as const, label: t('config.tabBrand'), icon: Paintbrush, perm: "config.brand"  },
   ];
+
+  // A tab is visible if the user can access its sub-module OR has full config access
+  const { getLevel } = useRolePermissions();
+  const visibleTabs = ALL_TABS.filter(tab => {
+    if (!profile) return false;
+    const role = profile.role;
+    if (role === 'super_admin' || role === 'admin' || role === 'both') return true;
+    // sub-module level takes precedence; fall back to parent 'config' level
+    const subLevel = getLevel(tab.perm);
+    if (subLevel !== 'none') return true;
+    return false;
+  });
 
   useEffect(() => {
     if (!profile) return;
@@ -40,13 +52,20 @@ function ConfigPage() {
     if (!permLoading && !canAccess('config')) navigate({ to: "/dashboard" });
   }, [profile, isAdmin, permLoading, canAccess, navigate]);
 
+  // Auto-select first visible tab once permissions load
+  useEffect(() => {
+    if (!permLoading && visibleTabs.length > 0 && activeTab === null) {
+      setActiveTab(visibleTabs[0].key);
+    }
+  }, [permLoading, visibleTabs.length]);
+
   return (
     <AppShell>
       <PageHeader title={t('config.title')} subtitle={t('config.subtitle')} />
 
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
       <div className="mb-6 flex gap-1 border-b border-[var(--border)]">
-        {TABS.map((tab) => {
+        {visibleTabs.map((tab) => {
           const active = activeTab === tab.key;
           return (
             <button

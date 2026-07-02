@@ -17,7 +17,7 @@ const ROLES = [
 
 type RoleKey = typeof ROLES[number]["key"];
 
-const MODULES = [
+const MODULES: Array<{ key: string; label: string; sub?: boolean }> = [
   { key: "dashboard",     label: "Dashboard"          },
   { key: "users",         label: "Usuarios"           },
   { key: "areas",         label: "Áreas"              },
@@ -27,9 +27,13 @@ const MODULES = [
   { key: "results",       label: "Resultados Globales"},
   { key: "settings",      label: "Prompts IA"         },
   { key: "config",        label: "Configuración"      },
+  { key: "config.users",  label: "Usuarios",          sub: true },
+  { key: "config.roles",  label: "Roles y permisos",  sub: true },
+  { key: "config.org",    label: "Organización",      sub: true },
+  { key: "config.brand",  label: "Marca",             sub: true },
   { key: "participant",   label: "Panel Participante" },
   { key: "my_history",    label: "Mi Historial"       },
-] as const;
+];
 
 const CAPABILITIES = [
   { key: "create_users",   label: "Crear usuarios"         },
@@ -266,8 +270,8 @@ export function RolePermissionsSection() {
             <tbody>
               {MODULES.map((mod, i) => (
                 <tr key={mod.key} className={i % 2 !== 0 ? "bg-[var(--secondary)]/25" : ""}>
-                  <td className="px-6 py-2.5 text-sm font-medium text-[var(--foreground)]">
-                    {mod.label}
+                  <td className={`py-2.5 text-sm text-[var(--foreground)] ${mod.sub ? "pl-10 pr-6 text-[var(--muted-foreground)]" : "px-6 font-medium"}`}>
+                    {mod.sub ? <span className="flex items-center gap-1.5"><span className="text-[var(--border)] select-none">└</span>{mod.label}</span> : mod.label}
                   </td>
                   {ROLES.map(role => (
                     <td key={role.key} className="px-3 py-2.5 text-center">

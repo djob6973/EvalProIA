@@ -156,7 +156,7 @@ export async function runMigrations(): Promise<void> {
 
   // Always ensure super_admin has full access to every module (idempotent upsert)
   {
-    const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','participant','my_history'];
+    const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','config.users','config.roles','config.org','config.brand','participant','my_history'];
     const caps    = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
     for (const m of allMods) {
       await db`INSERT INTO role_permissions (role, module, level) VALUES ('super_admin', ${m}, 'full')
@@ -165,6 +165,22 @@ export async function runMigrations(): Promise<void> {
     for (const c of caps) {
       await db`INSERT INTO role_capabilities (role, capability, enabled) VALUES ('super_admin', ${c}, true)
                ON CONFLICT (role, capability) DO UPDATE SET enabled = true`;
+    }
+  }
+
+  // Always ensure config sub-modules exist for all roles (idempotent — DO NOTHING preserves manual overrides)
+  {
+    const configSubMods = ['config.users','config.roles','config.org','config.brand'];
+    const subDefaults = [
+      { role: 'admin',       level: 'full' },
+      { role: 'supervisor',  level: 'none' },
+      { role: 'leader',      level: 'none' },
+      { role: 'participant', level: 'none' },
+    ];
+    for (const m of configSubMods) {
+      for (const r of subDefaults) {
+        await db`INSERT INTO role_permissions (role, module, level) VALUES (${r.role}, ${m}, ${r.level}) ON CONFLICT DO NOTHING`;
+      }
     }
   }
 
