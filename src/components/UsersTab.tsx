@@ -64,11 +64,13 @@ export function UsersTab() {
     return (EDITABLE_ROLES[myRole] ?? []).includes(targetRole);
   }
 
-  const [users,   setUsers]   = useState<UserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search,  setSearch]  = useState("");
-  const [areas,   setAreas]   = useState<Area[]>([]);
-  const [page,    setPage]    = useState(1);
+  const [users,        setUsers]        = useState<UserProfile[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [search,       setSearch]       = useState("");
+  const [filterArea,   setFilterArea]   = useState("todas");
+  const [filterStatus, setFilterStatus] = useState("todos");
+  const [areas,        setAreas]        = useState<Area[]>([]);
+  const [page,         setPage]         = useState(1);
   const PAGE_SIZE = 10;
 
   // ── Invite ─────────────────────────────────────────────────────────────────
@@ -124,11 +126,18 @@ export function UsersTab() {
     areasService.getAll().then(setAreas).catch(console.error);
   }, []);
 
-  const filtered = users.filter(
-    (u) =>
+  const filtered = users.filter((u) => {
+    const matchSearch =
       u.email.toLowerCase().includes(search.toLowerCase()) ||
-      (u.full_name ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+      (u.full_name ?? "").toLowerCase().includes(search.toLowerCase());
+    const matchArea =
+      filterArea === "todas" ||
+      (filterArea === "sin_area" ? !u.area_id : u.area_id === filterArea);
+    const matchStatus =
+      filterStatus === "todos" ||
+      (filterStatus === "activo" ? u.is_active !== false : u.is_active === false);
+    return matchSearch && matchArea && matchStatus;
+  });
   const pagedUsers = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   // ── Invite handlers ────────────────────────────────────────────────────────
@@ -237,11 +246,34 @@ export function UsersTab() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--muted-foreground)]" strokeWidth={1.5} />
           <input
             placeholder={t('users.searchPlaceholder')}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] py-2 pl-9 pr-3 text-sm outline-none focus:border-[var(--sidebar-primary)]"
+            className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+            style={{ borderColor: "var(--border)", background: "var(--card)" }}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </div>
+        <select
+          value={filterArea}
+          onChange={(e) => { setFilterArea(e.target.value); setPage(1); }}
+          className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
+          style={{ borderColor: "var(--border)", background: "var(--card)" }}
+        >
+          <option value="todas">Todas las áreas</option>
+          <option value="sin_area">Sin área</option>
+          {areas.map((a) => (
+            <option key={a.id} value={a.id}>{a.name}</option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+          className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
+          style={{ borderColor: "var(--border)", background: "var(--card)" }}
+        >
+          <option value="todos">Todos los estados</option>
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
         <div className="ml-auto flex items-center gap-3">
           <span className="text-sm text-[var(--muted-foreground)]">
             <span className="font-semibold text-[var(--foreground)]">{users.filter(u => u.is_active !== false).length}</span> {t('users.activeUsers')}
