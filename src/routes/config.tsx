@@ -110,7 +110,7 @@ function OrgTab() {
         <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-5">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
-            style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+            style={{ background: "#ED5650" }}
           >
             <Building2 className="size-[16px]" strokeWidth={1.5} />
           </div>
@@ -188,7 +188,7 @@ function BrandTab() {
         <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-5">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
-            style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+            style={{ background: "#ED5650" }}
           >
             <Paintbrush className="size-[16px]" strokeWidth={1.5} />
           </div>

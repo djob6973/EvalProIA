@@ -219,7 +219,7 @@ export function RolePermissionsSection() {
       <div className="flex items-center gap-3">
         <div
           className="flex h-9 w-9 items-center justify-center rounded-xl text-white"
-          style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+          style={{ background: "#ED5650" }}
         >
           <Shield className="size-[16px]" strokeWidth={1.5} />
         </div>
@@ -305,8 +305,7 @@ export function RolePermissionsSection() {
               type="button"
               onClick={save}
               disabled={!hasPendingChanges || saving}
-              className="rounded-xl px-4 py-2 text-sm font-medium text-white transition disabled:opacity-40"
-              style={{ background: "linear-gradient(180deg, rgba(237,86,80,0.95), #B43C35)" }}
+              className="rounded-xl bg-[#ED5650] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#d94d47] disabled:opacity-40"
             >
               {saving ? "Guardando…" : "✓ Guardar cambios"}
             </button>
