@@ -42,7 +42,8 @@ const CAPABILITIES = [
   { key: "manage_areas",   label: "Gestionar áreas"        },
   { key: "export_results", label: "Exportar resultados"    },
   { key: "generate_ai",    label: "Generar con IA"         },
-  { key: "manage_config",  label: "Gestionar configuración"},
+  { key: "manage_config",    label: "Gestionar configuración" },
+  { key: "change_password",  label: "Cambiar contraseña"      },
 ] as const;
 
 const LEVELS = ["none", "ver", "editar", "full"] as const;

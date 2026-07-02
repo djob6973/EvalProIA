@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
+import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -17,6 +18,9 @@ export const Route = createFileRoute("/account")({
 function AccountPage() {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { hasCapability } = useRolePermissions();
+  const isAdmin = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "both";
+  const canChangePassword = isAdmin || hasCapability("change_password");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -97,7 +101,7 @@ function AccountPage() {
         </div>
 
         {/* Password form card */}
-        <div
+        {canChangePassword && <div
           className="overflow-hidden rounded-[20px]"
           style={{
             background: "var(--surface)",
@@ -175,7 +179,7 @@ function AccountPage() {
               </Button>
             </form>
           </div>
-        </div>
+        </div>}
       </div>
     </AppShell>
   );

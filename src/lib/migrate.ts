@@ -157,7 +157,7 @@ export async function runMigrations(): Promise<void> {
   // Always ensure super_admin has full access to every module (idempotent upsert)
   {
     const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','config.users','config.roles','config.org','config.brand','participant','my_history'];
-    const caps    = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
+    const caps    = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config','change_password'];
     for (const m of allMods) {
       await db`INSERT INTO role_permissions (role, module, level) VALUES ('super_admin', ${m}, 'full')
                ON CONFLICT (role, module) DO UPDATE SET level = 'full'`;
@@ -205,7 +205,7 @@ export async function runMigrations(): Promise<void> {
       await db`INSERT INTO role_permissions (role, module, level) VALUES (${s.role}, ${s.module}, ${s.level}) ON CONFLICT DO NOTHING`;
     }
 
-    const caps = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
+    const caps = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config','change_password'];
     const capSeeds: Array<{ role: string; capability: string; enabled: boolean }> = [
       ...caps.map(c => ({ role: 'admin',       capability: c, enabled: true  })),
       ...caps.map(c => ({ role: 'supervisor',  capability: c, enabled: c === 'export_results' })),
