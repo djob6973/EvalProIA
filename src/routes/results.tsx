@@ -96,11 +96,10 @@ function ResultsPageContent() {
   >([]);
   // Metrics tab filters
   const currentYear = new Date().getFullYear();
-  const [filterYear, setFilterYear] = useState<number>(currentYear);
   const [mtFilterAreaId, setMtFilterAreaId] = useState<string>("all");
   const [mtFilterUserId, setMtFilterUserId] = useState<string>("all");
-  const [mtFilterDateFrom, setMtFilterDateFrom] = useState("");
-  const [mtFilterDateTo, setMtFilterDateTo] = useState("");
+  const [mtFilterDateFrom, setMtFilterDateFrom] = useState(`${currentYear}-01-01`);
+  const [mtFilterDateTo, setMtFilterDateTo] = useState(`${currentYear}-12-31`);
 
   // Active tab
   const [activeTab, setActiveTab] = useState<"metrics" | "participants">("metrics");
@@ -150,12 +149,6 @@ function ResultsPageContent() {
     }
     loadResults();
   }, [isAdmin]);
-
-  const availableYears = useMemo(() => {
-    const years = new Set(allResults.map((r) => new Date(r.completed_at).getFullYear()));
-    years.add(currentYear);
-    return Array.from(years).sort((a, b) => b - a);
-  }, [allResults, currentYear]);
 
   // Metrics tab: results filtered by the shared filter bar
   const metricsFiltered = useMemo(() => {
@@ -208,11 +201,7 @@ function ResultsPageContent() {
   }, [metricsFiltered]);
 
   const weeklyData = useMemo<WeekPoint[]>(() => {
-    const filtered = metricsFiltered.filter((r) => {
-      const date = new Date(r.completed_at);
-      if (date.getFullYear() !== filterYear) return false;
-      return true;
-    });
+    const filtered = metricsFiltered;
     const map = new Map<string, { total: number; count: number }>();
     for (const r of filtered) {
       const label = getISOWeekLabel(new Date(r.completed_at));
@@ -229,7 +218,7 @@ function ResultsPageContent() {
         promedio: Math.round((total / count) * 10) / 10,
         count,
       }));
-  }, [metricsFiltered, filterYear]);
+  }, [metricsFiltered]);
 
   // ── Participant report data ────────────────────────────────────────────────
 
@@ -442,7 +431,7 @@ function ResultsPageContent() {
                 </div>
                 {(mtFilterAreaId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
                   <button
-                    onClick={() => { setMtFilterAreaId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(""); setMtFilterDateTo(""); }}
+                    onClick={() => { setMtFilterAreaId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
                     className="text-xs text-accent hover:underline"
                   >
                     {t('results.clearFilters')}
@@ -468,22 +457,11 @@ function ResultsPageContent() {
 
             {/* Weekly trend chart */}
             <div className="rounded-xl border border-border bg-card shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-4 px-6 pt-5 pb-4">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">{t('results.weeklyTrend')}</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {t('results.weeklyDesc')}
-                  </p>
-                </div>
-                <select
-                  value={filterYear}
-                  onChange={(e) => setFilterYear(Number(e.target.value))}
-                  className={SELECT_CLASS}
-                >
-                  {availableYears.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+              <div className="px-6 pt-5 pb-4">
+                <h2 className="text-sm font-semibold text-foreground">{t('results.weeklyTrend')}</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t('results.weeklyDesc')}
+                </p>
               </div>
               <div className="h-64 px-2 pb-4">
                 {weeklyData.length === 0 ? (
