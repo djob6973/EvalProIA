@@ -20,7 +20,6 @@ import appCss from "../styles.css?url";
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      {/* Header with branding */}
       <header className="flex items-center gap-2.5 border-b border-border px-8 py-5">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="flex size-8 items-center justify-center rounded-md" style={{ background: "#333333", color: "#fff" }}>
@@ -35,7 +34,6 @@ function NotFoundComponent() {
         </Link>
       </header>
 
-      {/* Content */}
       <div className="flex flex-1 items-center justify-center px-4">
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-sm text-center">
           <div className="mb-6 inline-block rounded-md bg-accent/10 px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest text-accent">
@@ -105,33 +103,39 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const PUBLIC_PATHS = ["/login", "/setup"];
-
 // Module-level cache — avoids an /api/me round-trip on every navigation.
-let profileCache: { userId: string; expiresAt: number } | null = null;
+let profileCache: { userId: string; role: string; expiresAt: number } | null = null;
 const PROFILE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
-    // Only runs in the browser — server-side the platform already handles auth.
+    // Only runs in the browser — server-side the platform handles auth at the perimeter.
     if (typeof window === "undefined") return;
-    if (PUBLIC_PATHS.some((p) => location.pathname.startsWith(p))) return;
+    // The pending page handles its own state.
+    if (location.pathname === "/pending") return;
 
-    // Use cache to avoid hitting the server on every navigation
     const now = Date.now();
-    if (profileCache && now < profileCache.expiresAt) return;
+    if (profileCache && now < profileCache.expiresAt) {
+      if (profileCache.role === "Pendiente") {
+        throw redirect({ to: "/pending" });
+      }
+      return;
+    }
 
     const r = await fetch("/api/me");
     if (!r.ok) {
       profileCache = null;
-      throw redirect({
-        to: "/login",
-        search: { redirect: location.pathname + location.searchStr },
-      });
+      // In dev without DEV_USER_EMAIL the SSO header is absent — show pending
+      // screen rather than crashing; in prod the oauth2-proxy always injects it.
+      return;
     }
 
     const profile = await r.json();
-    profileCache = { userId: profile.id, expiresAt: now + PROFILE_CACHE_TTL };
+    profileCache = { userId: profile.id, role: profile.role, expiresAt: now + PROFILE_CACHE_TTL };
+
+    if (profile.role === "Pendiente") {
+      throw redirect({ to: "/pending" });
+    }
   },
   head: () => ({
     meta: [

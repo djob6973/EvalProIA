@@ -14,9 +14,9 @@ import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as QuestionBankRouteImport } from './routes/question-bank'
+import { Route as PendingRouteImport } from './routes/pending'
 import { Route as ParticipantRouteImport } from './routes/participant'
 import { Route as MyHistoryRouteImport } from './routes/my-history'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as GenerateRouteImport } from './routes/generate'
 import { Route as EvaluationsRouteImport } from './routes/evaluations'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -56,6 +56,11 @@ const QuestionBankRoute = QuestionBankRouteImport.update({
   path: '/question-bank',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PendingRoute = PendingRouteImport.update({
+  id: '/pending',
+  path: '/pending',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ParticipantRoute = ParticipantRouteImport.update({
   id: '/participant',
   path: '/participant',
@@ -64,11 +69,6 @@ const ParticipantRoute = ParticipantRouteImport.update({
 const MyHistoryRoute = MyHistoryRouteImport.update({
   id: '/my-history',
   path: '/my-history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GenerateRoute = GenerateRouteImport.update({
@@ -147,9 +147,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
-  '/login': typeof LoginRoute
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
+  '/pending': typeof PendingRoute
   '/question-bank': typeof QuestionBankRoute
   '/results': typeof ResultsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -170,9 +170,9 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
-  '/login': typeof LoginRoute
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
+  '/pending': typeof PendingRoute
   '/question-bank': typeof QuestionBankRoute
   '/results': typeof ResultsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -194,9 +194,9 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
   '/generate': typeof GenerateRoute
-  '/login': typeof LoginRoute
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
+  '/pending': typeof PendingRoute
   '/question-bank': typeof QuestionBankRoute
   '/results': typeof ResultsRouteWithChildren
   '/settings': typeof SettingsRoute
@@ -219,9 +219,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/evaluations'
     | '/generate'
-    | '/login'
     | '/my-history'
     | '/participant'
+    | '/pending'
     | '/question-bank'
     | '/results'
     | '/settings'
@@ -242,9 +242,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/evaluations'
     | '/generate'
-    | '/login'
     | '/my-history'
     | '/participant'
+    | '/pending'
     | '/question-bank'
     | '/results'
     | '/settings'
@@ -265,9 +265,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/evaluations'
     | '/generate'
-    | '/login'
     | '/my-history'
     | '/participant'
+    | '/pending'
     | '/question-bank'
     | '/results'
     | '/settings'
@@ -289,9 +289,9 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   EvaluationsRoute: typeof EvaluationsRouteWithChildren
   GenerateRoute: typeof GenerateRoute
-  LoginRoute: typeof LoginRoute
   MyHistoryRoute: typeof MyHistoryRoute
   ParticipantRoute: typeof ParticipantRoute
+  PendingRoute: typeof PendingRoute
   QuestionBankRoute: typeof QuestionBankRoute
   ResultsRoute: typeof ResultsRouteWithChildren
   SettingsRoute: typeof SettingsRoute
@@ -339,6 +339,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QuestionBankRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pending': {
+      id: '/pending'
+      path: '/pending'
+      fullPath: '/pending'
+      preLoaderRoute: typeof PendingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/participant': {
       id: '/participant'
       path: '/participant'
@@ -351,13 +358,6 @@ declare module '@tanstack/react-router' {
       path: '/my-history'
       fullPath: '/my-history'
       preLoaderRoute: typeof MyHistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/generate': {
@@ -486,9 +486,9 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   EvaluationsRoute: EvaluationsRouteWithChildren,
   GenerateRoute: GenerateRoute,
-  LoginRoute: LoginRoute,
   MyHistoryRoute: MyHistoryRoute,
   ParticipantRoute: ParticipantRoute,
+  PendingRoute: PendingRoute,
   QuestionBankRoute: QuestionBankRoute,
   ResultsRoute: ResultsRouteWithChildren,
   SettingsRoute: SettingsRoute,

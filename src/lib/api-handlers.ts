@@ -1,5 +1,4 @@
 import { db } from "./db";
-import { hashPassword, verifyPassword } from "./password";
 import { getAuthContext, AuthUser } from "./server-auth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,7 +23,7 @@ async function requireAuth(request: Request): Promise<AuthUser | Response> {
 async function requireAdmin(request: Request): Promise<AuthUser | Response> {
   const user = await requireAuth(request);
   if (user instanceof Response) return user;
-  if (user.role === "participant")
+  if (user.role === "participant" || user.role === "Pendiente")
     return json({ error: "Se requieren permisos de administrador" }, 403);
   return user;
 }
@@ -55,11 +54,16 @@ async function route(
 
   const [, sub, res, id, sub2] = p;
 
+  // ── Identity (SSO — header-based) ────────────────────────────────────────
+  if (sub === "me" && m === "GET") {
+    const user = await auth(request);
+    if (!user) return json({ error: "No autenticado" }, 401);
+    return json(user);
+  }
+
   // ── User management ──────────────────────────────────────────────────────
   if (sub === "create-user" && m === "POST") return createUser(request);
   if (sub === "delete-user" && m === "POST") return deleteUser(request);
-  if (sub === "change-password" && m === "POST") return changeUserPassword(request);
-  if (sub === "change-own-password" && m === "POST") return changeOwnPassword(request);
 
   if (sub !== "data") return null;
 
@@ -990,14 +994,18 @@ async function createUser(request: Request): Promise<Response> {
   const adminOrErr = await requireAdmin(request);
   if (adminOrErr instanceof Response) return adminOrErr;
 
-  const { email, password, fullName, role, areaId } = await request.json();
-  if (!email || !password || !fullName || !role)
+  const { email, fullName, role, areaId } = await request.json();
+  if (!email || !fullName || !role)
     return json({ error: "Campos requeridos faltantes" }, 400);
 
-  const password_hash = hashPassword(password);
   const [profile] = await db`
-    INSERT INTO profiles (email, full_name, role, area_id, password_hash)
-    VALUES (${email}, ${fullName}, ${role}, ${areaId ?? null}, ${password_hash})
+    INSERT INTO profiles (email, full_name, role, area_id)
+    VALUES (${email}, ${fullName}, ${role}, ${areaId ?? null})
+    ON CONFLICT (email) DO UPDATE SET
+      full_name  = EXCLUDED.full_name,
+      role       = EXCLUDED.role,
+      area_id    = EXCLUDED.area_id,
+      updated_at = now()
     RETURNING id, email, full_name, role, area_id, created_at, updated_at
   `;
   return json({ id: profile.id, email: profile.email }, 201);
@@ -1016,47 +1024,6 @@ async function deleteUser(request: Request): Promise<Response> {
   return json({ success: true });
 }
 
-async function changeUserPassword(request: Request): Promise<Response> {
-  const adminOrErr = await requireAdmin(request);
-  if (adminOrErr instanceof Response) return adminOrErr;
-
-  const { userId, newPassword } = await request.json();
-  if (!userId || !newPassword)
-    return json({ error: "Campos requeridos faltantes" }, 400);
-
-  const password_hash = hashPassword(newPassword);
-  await db`
-    UPDATE profiles SET password_hash = ${password_hash}, updated_at = now()
-    WHERE id = ${userId}
-  `;
-  return json({ success: true });
-}
-
-async function changeOwnPassword(request: Request): Promise<Response> {
-  const userOrErr = await requireAuth(request);
-  if (userOrErr instanceof Response) return userOrErr;
-  const caller = userOrErr as AuthUser;
-
-  const { currentPassword, newPassword } = await request.json();
-  if (!currentPassword || !newPassword)
-    return json({ error: "Campos requeridos faltantes" }, 400);
-  if (newPassword.length < 6)
-    return json({ error: "La contraseña debe tener al menos 6 caracteres" }, 400);
-
-  const [user] = await db`SELECT password_hash FROM profiles WHERE id = ${caller.id}`;
-  if (!user?.password_hash)
-    return json({ error: "Este usuario no tiene contraseña local configurada" }, 400);
-
-  if (!verifyPassword(currentPassword, user.password_hash))
-    return json({ error: "La contraseña actual es incorrecta" }, 401);
-
-  const password_hash = hashPassword(newPassword);
-  await db`
-    UPDATE profiles SET password_hash = ${password_hash}, updated_at = now()
-    WHERE id = ${caller.id}
-  `;
-  return json({ success: true });
-}
 
 // ── System settings ───────────────────────────────────────────────────────────
 

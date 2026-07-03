@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState, createContext, useContext } from "react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
+import { Brain } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -13,24 +14,60 @@ export const useLayout = () => useContext(LayoutContext);
 
 interface AppShellProps {
   children: ReactNode;
-  // Legacy props accepted but no longer rendered — use PageHeader inside children instead
   breadcrumb?: { label: string; href?: string }[];
   actions?: ReactNode;
   showHeader?: boolean;
 }
 
+function SplashScreen() {
+  return (
+    <div
+      className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
+      style={{ background: "var(--background)" }}
+    >
+      {/* Logo */}
+      <div
+        className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
+        style={{ background: "#ED5650" }}
+      >
+        <Brain className="size-8 text-white" strokeWidth={1.5} />
+      </div>
+
+      {/* Brand */}
+      <div className="mb-1 text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+        EvalPro
+      </div>
+      <div
+        className="mb-8 font-mono text-[10px] uppercase tracking-widest"
+        style={{ color: "var(--muted-foreground)" }}
+      >
+        Sistema de Evaluación
+      </div>
+
+      {/* Marketing tagline */}
+      <p
+        className="max-w-sm text-[15px] leading-relaxed"
+        style={{ color: "var(--muted-foreground)" }}
+      >
+        Convierte tus documentos en evaluaciones inteligentes para capacitar y medir el conocimiento de tu equipo.
+      </p>
+
+      {/* Spinner */}
+      <div className="mt-10">
+        <div
+          className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+          style={{ borderColor: "#ED5650", borderTopColor: "transparent" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [isDark, setIsDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate({ to: "/login" });
-    }
-  }, [user, loading, navigate]);
 
   useEffect(() => {
     const stored = localStorage.getItem("ep-theme");
@@ -47,17 +84,11 @@ export function AppShell({ children }: AppShellProps) {
     localStorage.setItem("ep-theme", next ? "dark" : "light");
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center" style={{ background: "var(--background)" }}>
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"
-          style={{ borderColor: "var(--accent)", borderTopColor: "transparent" }}
-        />
-      </div>
-    );
-  }
+  if (loading) return <SplashScreen />;
 
+  // In production the oauth2-proxy guarantees a user is always present.
+  // In local dev without DEV_USER_EMAIL the user will be null — render nothing
+  // so the beforeLoad redirect to /pending can handle navigation.
   if (!user) return null;
 
   return (

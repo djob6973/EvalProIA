@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search, UserPlus, RefreshCw, Edit2, KeyRound, Trash2, X, ChevronDown } from "lucide-react";
+import { Search, UserPlus, RefreshCw, Edit2, Trash2, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,10 +45,9 @@ export function UsersTab() {
   const { profile } = useAuth();
   const { hasCapability } = useRolePermissions();
   const isAdmin = profile?.role === "super_admin" || profile?.role === "admin" || profile?.role === "both";
-  const canCreate         = isAdmin || hasCapability("create_users");
-  const canEdit           = isAdmin || hasCapability("edit_users");
-  const canDelete         = isAdmin || hasCapability("delete_users");
-  const canChangePassword = isAdmin || hasCapability("change_password");
+  const canCreate = isAdmin || hasCapability("create_users");
+  const canEdit   = isAdmin || hasCapability("edit_users");
+  const canDelete = isAdmin || hasCapability("delete_users");
 
   // Hierarchy: which target roles the current user is allowed to act on
   const EDITABLE_ROLES: Record<string, string[]> = {
@@ -77,7 +76,6 @@ export function UsersTab() {
   const [showInvite,    setShowInvite]    = useState(false);
   const [inviteEmail,   setInviteEmail]   = useState("");
   const [inviteFullName,setInviteFullName]= useState("");
-  const [invitePassword,setInvitePassword]= useState("");
   const [inviteRole,    setInviteRole]    = useState("participant");
   const [inviteAreaId,  setInviteAreaId]  = useState("");
   const [inviting,      setInviting]      = useState(false);
@@ -95,15 +93,6 @@ export function UsersTab() {
   const [updating,      setUpdating]      = useState(false);
   const [editError,     setEditError]     = useState<string | null>(null);
   const [confirmEdit,   setConfirmEdit]   = useState(false);
-
-  // ── Password ───────────────────────────────────────────────────────────────
-  const [showPassword,  setShowPassword]  = useState(false);
-  const [pwUser,        setPwUser]        = useState<UserProfile | null>(null);
-  const [newPw,         setNewPw]         = useState("");
-  const [confirmPw,     setConfirmPw]     = useState("");
-  const [changingPw,    setChangingPw]    = useState(false);
-  const [pwError,       setPwError]       = useState<string | null>(null);
-  const [pwSuccess,     setPwSuccess]     = useState(false);
 
   // ── Delete ─────────────────────────────────────────────────────────────────
   const [showDelete,    setShowDelete]    = useState(false);
@@ -142,7 +131,7 @@ export function UsersTab() {
 
   // ── Invite handlers ────────────────────────────────────────────────────────
   function openInvite() {
-    setInviteEmail(""); setInviteFullName(""); setInvitePassword("");
+    setInviteEmail(""); setInviteFullName("");
     setInviteRole("participant"); setInviteAreaId("");
     setInviteError(null); setInviteSuccess(false);
     setShowInvite(true);
@@ -154,7 +143,7 @@ export function UsersTab() {
       const res = await fetch("/api/create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: inviteEmail, password: invitePassword, fullName: inviteFullName, role: inviteRole, areaId: inviteAreaId || null }),
+        body: JSON.stringify({ email: inviteEmail, fullName: inviteFullName, role: inviteRole, areaId: inviteAreaId || null }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
       setConfirmInvite(false);
@@ -189,30 +178,6 @@ export function UsersTab() {
     } catch (e: any) {
       setEditError(e.message || t('users.updateError'));
     } finally { setUpdating(false); }
-  }
-
-  // ── Password handlers ──────────────────────────────────────────────────────
-  function openPassword(u: UserProfile) {
-    setPwUser(u); setNewPw(""); setConfirmPw("");
-    setPwError(null); setPwSuccess(false); setShowPassword(true);
-  }
-
-  async function executeChangePassword(e: React.FormEvent) {
-    e.preventDefault();
-    if (newPw.length < 6) { setPwError(t('users.minChars')); return; }
-    if (newPw !== confirmPw) { setPwError(t('users.passwordMismatch')); return; }
-    setChangingPw(true);
-    try {
-      const res = await fetch("/api/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: pwUser!.id, newPassword: newPw }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
-      setPwSuccess(true); setNewPw(""); setConfirmPw("");
-    } catch (e: any) {
-      setPwError(e.message || t('users.changePasswordError'));
-    } finally { setChangingPw(false); }
   }
 
   // ── Delete handlers ────────────────────────────────────────────────────────
@@ -338,16 +303,11 @@ export function UsersTab() {
                       {formatDate(u.created_at)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {(canEdit || canChangePassword || canDelete) && canActOn(u.role) && (
+                      {(canEdit || canDelete) && canActOn(u.role) && (
                         <div className="flex items-center gap-1">
                           {canEdit && (
                             <button onClick={() => openEdit(u)} title={t('users.tooltipEdit')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
                               <Edit2 className="size-3.5" strokeWidth={1.5} />
-                            </button>
-                          )}
-                          {canChangePassword && (
-                            <button onClick={() => openPassword(u)} title={t('users.tooltipPassword')} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition">
-                              <KeyRound className="size-3.5" strokeWidth={1.5} />
                             </button>
                           )}
                           {canDelete && u.id !== profile?.id && (
@@ -387,7 +347,7 @@ export function UsersTab() {
                 <Button onClick={() => setShowInvite(false)} className="w-full">{t('common.close')}</Button>
               </div>
             ) : (
-              <form onSubmit={(e) => { e.preventDefault(); if (!inviteEmail || !inviteFullName || !invitePassword) { setInviteError(t('users.fillFields')); return; } setConfirmInvite(true); }} className="space-y-4">
+              <form onSubmit={(e) => { e.preventDefault(); if (!inviteEmail || !inviteFullName) { setInviteError(t('users.fillFields')); return; } setConfirmInvite(true); }} className="space-y-4">
                 {inviteError && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{inviteError}</div>}
 
                 <Field label={t('users.nameLabel')}>
@@ -395,9 +355,6 @@ export function UsersTab() {
                 </Field>
                 <Field label={t('users.emailLabel')}>
                   <Input type="email" placeholder={t('users.emailPlaceholder')} value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} disabled={inviting} />
-                </Field>
-                <Field label={t('users.passwordLabel')}>
-                  <Input type="password" placeholder={t('users.passwordPlaceholder')} value={invitePassword} onChange={(e) => setInvitePassword(e.target.value)} disabled={inviting} />
                 </Field>
                 <Field label={t('users.roleLabel')}>
                   <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={inviting} className="w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">
@@ -487,39 +444,6 @@ export function UsersTab() {
               </div>
               <ConfirmDialog open={confirmEdit} title="¿Guardar cambios?" description={t('users.confirmEdit', { email: editUser.email })} confirmLabel="Guardar" loading={updating} onConfirm={executeEdit} onCancel={() => setConfirmEdit(false)} />
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Password modal ─────────────────────────────────────────────────── */}
-      {showPassword && pwUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-2xl bg-[var(--card)] p-6 shadow-2xl border border-[var(--border)]">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">{t('users.changePasswordTitle')}</h3>
-                <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{pwUser.email}</p>
-              </div>
-              <button onClick={() => setShowPassword(false)} className="grid h-8 w-8 place-items-center rounded-lg text-[var(--muted-foreground)] hover:bg-[var(--secondary)]">
-                <X className="size-4" strokeWidth={1.5} />
-              </button>
-            </div>
-            {pwSuccess ? (
-              <div className="space-y-4">
-                <div className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-600">{t('users.passwordUpdated')}</div>
-                <Button onClick={() => setShowPassword(false)} className="w-full">{t('common.close')}</Button>
-              </div>
-            ) : (
-              <form onSubmit={executeChangePassword} className="space-y-4">
-                {pwError && <div className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">{pwError}</div>}
-                <Field label={t('users.newPassword')}><Input type="password" placeholder={t('users.passwordPlaceholder')} value={newPw} onChange={(e) => setNewPw(e.target.value)} disabled={changingPw} /></Field>
-                <Field label={t('users.confirmPassword')}><Input type="password" placeholder={t('users.passwordPlaceholder')} value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} disabled={changingPw} /></Field>
-                <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setShowPassword(false)} disabled={changingPw} className="flex-1">{t('common.cancel')}</Button>
-                  <Button type="submit" disabled={changingPw} className="flex-1">{changingPw ? t('common.saving') : t('users.change')}</Button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}

@@ -1,5 +1,4 @@
 import { db } from "./db";
-import { hashPassword } from "./password";
 
 let done = false;
 
@@ -21,9 +20,8 @@ export async function runMigrations(): Promise<void> {
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       email         TEXT UNIQUE NOT NULL,
       full_name     TEXT,
-      role          TEXT NOT NULL DEFAULT 'participant',
+      role          TEXT NOT NULL DEFAULT 'Pendiente',
       area_id       UUID REFERENCES areas(id) ON DELETE SET NULL,
-      password_hash TEXT,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
     )
@@ -43,19 +41,9 @@ export async function runMigrations(): Promise<void> {
         EXECUTE 'ALTER TABLE profiles DROP CONSTRAINT ' || quote_ident(r.conname);
       END LOOP;
       ALTER TABLE profiles ADD CONSTRAINT profiles_role_check
-        CHECK (role IN ('super_admin','admin','supervisor','leader','participant','both'));
+        CHECK (role IN ('super_admin','admin','supervisor','leader','participant','both','Pendiente'));
     EXCEPTION WHEN duplicate_object THEN NULL;
     END $$
-  `;
-
-  await db`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-      token      TEXT UNIQUE NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      expires_at TIMESTAMPTZ NOT NULL
-    )
   `;
 
   await db`
@@ -157,7 +145,7 @@ export async function runMigrations(): Promise<void> {
   // Always ensure super_admin has full access to every module (idempotent upsert)
   {
     const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','config.users','config.roles','config.org','config.brand','participant','my_history'];
-    const caps    = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config','change_password'];
+    const caps    = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
     for (const m of allMods) {
       await db`INSERT INTO role_permissions (role, module, level) VALUES ('super_admin', ${m}, 'full')
                ON CONFLICT (role, module) DO UPDATE SET level = 'full'`;
@@ -189,7 +177,6 @@ export async function runMigrations(): Promise<void> {
   if (parseInt(permCount) === 0) {
     const adminMods   = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config'];
     const partMods    = ['participant','my_history'];
-    const allMods     = [...adminMods, ...partMods];
     const permSeeds: Array<{ role: string; module: string; level: string }> = [
       ...adminMods.map(m => ({ role: 'admin',       module: m, level: 'editar' })),
       ...partMods.map(m  => ({ role: 'admin',       module: m, level: 'ver'    })),
@@ -205,7 +192,7 @@ export async function runMigrations(): Promise<void> {
       await db`INSERT INTO role_permissions (role, module, level) VALUES (${s.role}, ${s.module}, ${s.level}) ON CONFLICT DO NOTHING`;
     }
 
-    const caps = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config','change_password'];
+    const caps = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
     const capSeeds: Array<{ role: string; capability: string; enabled: boolean }> = [
       ...caps.map(c => ({ role: 'admin',       capability: c, enabled: true  })),
       ...caps.map(c => ({ role: 'supervisor',  capability: c, enabled: c === 'export_results' })),
@@ -215,27 +202,6 @@ export async function runMigrations(): Promise<void> {
     for (const s of capSeeds) {
       await db`INSERT INTO role_capabilities (role, capability, enabled) VALUES (${s.role}, ${s.capability}, ${s.enabled}) ON CONFLICT DO NOTHING`;
     }
-  }
-
-  // Seed admin user from env vars (set SEED_ADMIN_EMAIL + SEED_ADMIN_PASSWORD on server)
-  const seedEmail = process.env.SEED_ADMIN_EMAIL;
-  const seedPassword = process.env.SEED_ADMIN_PASSWORD;
-  if (seedEmail && seedPassword) {
-    const ph = hashPassword(seedPassword);
-    await db`
-      INSERT INTO profiles (email, full_name, role, password_hash)
-      VALUES (
-        ${seedEmail},
-        ${seedEmail.split("@")[0].replace(/[._-]+/g, " ")},
-        'admin',
-        ${ph}
-      )
-      ON CONFLICT (email) DO UPDATE
-        SET role         = 'admin',
-            password_hash = ${ph},
-            updated_at   = now()
-    `;
-    console.log("[setup] Admin user configured:", seedEmail);
   }
 
   await db`
@@ -254,20 +220,6 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_notifications_user
     ON notifications(user_id, read, created_at DESC)
   `;
-
-  // TEMPORARY — remove after first successful login
-  {
-    const ph = hashPassword("Ivanna082019***");
-    await db`
-      INSERT INTO profiles (email, full_name, role, password_hash)
-      VALUES ('david.ortega@dataico.com', 'David Ortega', 'super_admin', ${ph})
-      ON CONFLICT (email) DO UPDATE
-        SET role          = 'super_admin',
-            password_hash = ${ph},
-            updated_at    = now()
-    `;
-    console.log("[setup] david.ortega@dataico.com configured as super_admin");
-  }
 
   done = true;
 }

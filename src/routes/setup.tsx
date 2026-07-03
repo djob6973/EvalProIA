@@ -132,7 +132,7 @@ function SetupPage() {
                 </p>
               </div>
               <a
-                href="/login"
+                href="/dashboard"
                 className="mt-2 inline-flex items-center justify-center rounded-[10px] px-5 py-2.5 text-sm font-medium transition-colors"
                 style={{ background: "#333333", color: "#fff" }}
               >

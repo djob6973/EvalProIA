@@ -1,4 +1,4 @@
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -9,9 +9,8 @@ import {
   Brain,
   History,
   Home,
-  LogOut,
   Layers,
-  KeyRound,
+  User,
   X,
   SlidersHorizontal,
   Sun,
@@ -52,8 +51,7 @@ type AppSidebarProps = {
 
 export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: AppSidebarProps) {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const navigate = useNavigate();
-  const { signOut, profile } = useAuth();
+  const { profile } = useAuth();
   const isMobile = useIsMobile();
   const { settings } = useSystemSettings();
   const { t, i18n } = useTranslation();
@@ -83,13 +81,6 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';
   const roleLabel = profile?.role ? t(`roles.${profile.role}`) : t('roles.user');
-
-  const handleLogout = async () => {
-    const { error } = await signOut();
-    if (!error) {
-      navigate({ to: "/login" });
-    }
-  };
 
   const renderNavItem = (item: typeof adminNav[number]) => {
     const active = path === item.url;
@@ -205,19 +196,12 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
         </button>
         <Link
           to="/account"
-          title={t('nav.changePassword')}
+          title={t('account.title')}
           className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
           onClick={() => isMobile && setMobileOpen(false)}
         >
-          <KeyRound className="size-[16px]" strokeWidth={1.5} />
+          <User className="size-[16px]" strokeWidth={1.5} />
         </Link>
-        <button
-          onClick={handleLogout}
-          title={t('nav.logout')}
-          className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--coral-soft)] hover:text-[var(--coral-text)]"
-        >
-          <LogOut className="size-[16px]" strokeWidth={1.5} />
-        </button>
       </div>
 
       {/* Profile block → Mi Cuenta */}
