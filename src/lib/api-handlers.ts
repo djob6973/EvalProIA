@@ -62,6 +62,7 @@ async function route(
   }
 
   // ── User management ──────────────────────────────────────────────────────
+  if (sub === "self-activate" && m === "POST") return selfActivate(request);
   if (sub === "create-user" && m === "POST") return createUser(request);
   if (sub === "delete-user" && m === "POST") return deleteUser(request);
 
@@ -989,6 +990,20 @@ async function updateProfileById(request: Request, id: string): Promise<Response
 }
 
 // ── User management ───────────────────────────────────────────────────────────
+
+async function selfActivate(request: Request): Promise<Response> {
+  const user = await auth(request);
+  if (!user) return json({ error: "No autenticado" }, 401);
+  if (user.role !== "Pendiente")
+    return json({ error: "Tu cuenta ya tiene un rol asignado" }, 400);
+
+  const [updated] = await db`
+    UPDATE profiles SET role = 'participant', updated_at = now()
+    WHERE id = ${user.id} AND role = 'Pendiente'
+    RETURNING id, email, full_name, role, area_id, created_at, updated_at
+  `;
+  return json(updated);
+}
 
 async function createUser(request: Request): Promise<Response> {
   const adminOrErr = await requireAdmin(request);
