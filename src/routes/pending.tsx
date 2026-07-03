@@ -32,7 +32,9 @@ function PendingPage() {
         const e = await res.json();
         throw new Error(e.error || "Error al activar cuenta");
       }
-      navigate({ to: "/dashboard" });
+      // Full page reload clears all module-level auth caches so beforeLoad
+      // re-fetches /api/me and sees the new "participant" role.
+      window.location.href = "/dashboard";
     } catch (e: any) {
       setError(e.message);
       setActivating(false);

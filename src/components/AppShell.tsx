@@ -114,10 +114,9 @@ export function AppShell({ children }: AppShellProps) {
 
   if (loading) return <SplashScreen />;
 
-  // In production the oauth2-proxy guarantees a user is always present.
-  // In local dev without DEV_USER_EMAIL the user will be null — render nothing
-  // so the beforeLoad redirect to /pending can handle navigation.
-  if (!user) return null;
+  // Pendiente users are redirected to /pending by beforeLoad.
+  // Return null here to avoid flashing the app shell during that redirect.
+  if (!user || profile?.role === 'Pendiente') return null;
 
   return (
     <LayoutContext.Provider value={{ setMobileOpen }}>
