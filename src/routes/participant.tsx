@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { evaluationsService, resultsService, evaluationParticipantsService } from "@/lib/services/evaluations";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 export const Route = createFileRoute("/participant")({
   head: () => ({ meta: [{ title: "Mis Evaluaciones — EvalPro" }] }),
@@ -26,7 +27,7 @@ function formatDateTime(isoString: string): string {
 function ParticipantHome() {
   const { t } = useTranslation();
   const { profile, loading } = useAuth();
-  const userName = profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || 'Usuario';
+  const userName = toTitleCase(profile?.full_name)?.split(' ')[0] || profile?.email?.split('@')[0] || 'Usuario';
   const [evaluations, setEvaluations] = useState<any[]>([]);
   const [userResults, setUserResults] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);

@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { toTitleCase } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -322,7 +323,7 @@ function ParticipantDetailPage() {
   }, [isAdmin, userId]);
 
   const participantName =
-    participantProfile?.full_name || participantProfile?.email || "Participante";
+    toTitleCase(participantProfile?.full_name) || participantProfile?.email || "Participante";
 
   if (loading) {
     return (

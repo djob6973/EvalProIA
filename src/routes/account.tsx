@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 
 
 export const Route = createFileRoute("/account")({
@@ -14,7 +15,7 @@ function AccountPage() {
   const { t } = useTranslation();
   const { profile } = useAuth();
 
-  const displayName = profile?.full_name || profile?.email?.split('@')[0] || 'Usuario';
+  const displayName = toTitleCase(profile?.full_name) || profile?.email?.split('@')[0] || 'Usuario';
   const userInitials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';

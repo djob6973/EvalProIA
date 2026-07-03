@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { toTitleCase } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -183,7 +184,7 @@ function EvaluationResultsPage() {
                   {results.map((result: any) => (
                     <tr key={result.id} className="border-b border-border/50 last:border-0 hover:bg-secondary/40">
                       <td className="px-6 py-4 font-medium">
-                        {result.profiles?.full_name || 'Sin nombre'}
+                        {toTitleCase(result.profiles?.full_name) || 'Sin nombre'}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">
                         {result.profiles?.email || 'N/A'}

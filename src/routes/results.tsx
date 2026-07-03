@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toTitleCase } from "@/lib/utils";
 import {
   Download, Users, CheckCircle2, Clock, Trophy, TrendingUp,
   ChevronLeft, ChevronRight, ArrowRight,
@@ -160,7 +161,7 @@ function ResultsPageContent() {
         const sorted = [...rawResults].sort((a: any, b: any) => b.score - a.score).slice(0, 4);
         setTopPerformers(
           sorted.map((res: any) => ({
-            name: res.profiles?.full_name || res.profiles?.email || "Usuario",
+            name: toTitleCase(res.profiles?.full_name) || res.profiles?.email || "Usuario",
             score: res.score,
             eval: res.evaluations?.title || "Evaluación",
           }))
@@ -239,7 +240,7 @@ function ResultsPageContent() {
     return Array.from(byUser.entries())
       .map(([userId, userResults]) => {
         const p = participants.find((x) => x.id === userId);
-        const name = p?.full_name || userResults[0]?.profiles?.full_name || "Usuario";
+        const name = toTitleCase(p?.full_name || userResults[0]?.profiles?.full_name) || "Usuario";
         const email = p?.email || userResults[0]?.profiles?.email || "";
         const areaId = p?.area_id ?? null;
         const areaName = areaId ? (areas.find((a) => a.id === areaId)?.name ?? null) : null;

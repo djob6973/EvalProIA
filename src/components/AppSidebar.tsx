@@ -25,6 +25,7 @@ import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { toTitleCase } from "@/lib/utils";
 
 const adminNavDef = [
   { titleKey: "nav.dashboard",      url: "/dashboard",     icon: LayoutDashboard,   groupKey: "nav.management", module: "dashboard"     },
@@ -76,7 +77,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   const isParticipantPath = isOnParticipantPath;
   const groups = Array.from(new Set(nav.map((n) => n.group)));
 
-  const displayName = profile?.full_name || profile?.email?.split('@')[0] || t('roles.user');
+  const displayName = toTitleCase(profile?.full_name) || profile?.email?.split('@')[0] || t('roles.user');
   const userInitials = profile?.full_name
     ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : profile?.email?.split('@')[0]?.toUpperCase().slice(0, 2) || 'US';

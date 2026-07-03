@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Paginator } from "@/components/Paginator";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { toTitleCase } from "@/lib/utils";
 import { areasService, Area } from "@/lib/services/evaluations";
 
 interface UserProfile {
@@ -286,7 +287,7 @@ export function UsersTab() {
                           {avatarInitials(u)}
                         </div>
                         <div>
-                          <div className="text-sm font-semibold text-[var(--foreground)]">{u.full_name || u.email}</div>
+                          <div className="text-sm font-semibold text-[var(--foreground)]">{toTitleCase(u.full_name) || u.email}</div>
                           <div className="text-xs text-[var(--muted-foreground)]">{u.email}</div>
                         </div>
                       </div>

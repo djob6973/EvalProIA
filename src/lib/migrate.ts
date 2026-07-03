@@ -221,5 +221,13 @@ export async function runMigrations(): Promise<void> {
     ON notifications(user_id, read, created_at DESC)
   `;
 
+  // One-time fix: capitalize existing names that were stored in lowercase
+  await db`
+    UPDATE profiles
+    SET full_name = initcap(full_name)
+    WHERE full_name IS NOT NULL
+      AND full_name != initcap(full_name)
+  `;
+
   done = true;
 }

@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { toTitleCase } from "@/lib/utils";
 import { Paginator } from "@/components/Paginator";
 import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService } from "@/lib/services/evaluations";
 
@@ -621,7 +622,7 @@ function AssignParticipantsModal({ evaluation, areas, onClose }: AssignModalProp
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium transition-colors duration-300" style={{ color: isAssigned ? "var(--coral-text)" : "var(--foreground)" }}>{p.full_name || p.email}</div>
+                      <div className="truncate text-sm font-medium transition-colors duration-300" style={{ color: isAssigned ? "var(--coral-text)" : "var(--foreground)" }}>{toTitleCase(p.full_name) || p.email}</div>
                       <div className="flex items-center gap-2 truncate text-xs transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                         <span>{p.email}</span>
                         {areaName && (
