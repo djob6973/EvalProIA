@@ -458,7 +458,7 @@ function QuestionBankPage() {
             <div className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors duration-300" style={{ color: "var(--accent)" }}>
               {t('questionBank.categories')}
             </div>
-            {categories.length > 6 && (
+            {categories.length > 0 && (
               <div className="relative mb-3">
                 <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
                 <input
