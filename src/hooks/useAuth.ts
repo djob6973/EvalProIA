@@ -10,17 +10,30 @@ export interface Profile {
   area_id: string | null
 }
 
+// Module-level cache — survives component unmount/remount on navigation.
+// Cleared when the fetch fails so a hard reload always re-validates.
+let _cachedProfile: Profile | null = null;
+let _hasLoaded = false;
+
 export function useAuth() {
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile] = useState<Profile | null>(_cachedProfile)
+  const [loading, setLoading] = useState(!_hasLoaded)
 
   useEffect(() => {
+    if (_hasLoaded) return; // already fetched — skip to avoid re-flash
     fetch('/api/me')
       .then(async (r) => {
-        if (r.ok) setProfile(await r.json())
+        if (r.ok) {
+          const p = await r.json();
+          _cachedProfile = p;
+          setProfile(p);
+        }
       })
       .catch(() => {})
-      .finally(() => setLoading(false))
+      .finally(() => {
+        _hasLoaded = true;
+        setLoading(false);
+      })
   }, [])
 
   // Expose a synthetic "user" so existing code that reads user.id or user.email continues to work.
