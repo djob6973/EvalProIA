@@ -34,7 +34,9 @@ export async function getAuthContext(request: Request): Promise<AuthUser | null>
 
   if (!email) return null;
 
-  const displayName = email.split("@")[0].replace(/[._-]+/g, " ");
+  const displayName = email.split("@")[0]
+    .replace(/[._-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
   const isAdmin = ADMIN_EMAILS.includes(email.toLowerCase());
 
   const [user] = await db`
