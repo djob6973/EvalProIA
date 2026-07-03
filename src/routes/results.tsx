@@ -107,8 +107,8 @@ function ResultsPageContent() {
   // Participant report filters
   const [ptFilterAreaId, setPtFilterAreaId] = useState("all");
   const [ptFilterUserId, setPtFilterUserId] = useState("all");
-  const [ptFilterDateFrom, setPtFilterDateFrom] = useState("");
-  const [ptFilterDateTo, setPtFilterDateTo] = useState("");
+  const [ptFilterDateFrom, setPtFilterDateFrom] = useState(`${currentYear}-01-01`);
+  const [ptFilterDateTo, setPtFilterDateTo] = useState(`${currentYear}-12-31`);
   const [ptPage, setPtPage] = useState(1);
 
   useEffect(() => { setPtPage(1); }, [ptFilterAreaId, ptFilterUserId, ptFilterDateFrom, ptFilterDateTo]);
@@ -648,8 +648,8 @@ function ResultsPageContent() {
                     onClick={() => {
                       setPtFilterAreaId("all");
                       setPtFilterUserId("all");
-                      setPtFilterDateFrom("");
-                      setPtFilterDateTo("");
+                      setPtFilterDateFrom(`${currentYear}-01-01`);
+                      setPtFilterDateTo(`${currentYear}-12-31`);
                     }}
                     className="text-xs text-accent hover:underline"
                   >
