@@ -203,6 +203,7 @@ function QuestionBankPage() {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 250);
   const [filterCat, setFilterCat] = useState<string>("todas");
+  const [catSearch, setCatSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState<"todos" | Status>("activa");
   const [filterTipo, setFilterTipo] = useState<"todos" | QType>("todos");
   const [page, setPage] = useState(1);
@@ -454,38 +455,68 @@ function QuestionBankPage() {
       <div className="grid gap-6 lg:grid-cols-4">
         <aside className="space-y-4 lg:col-span-1">
           <div className="rounded-lg border border-border bg-card p-5 transition-all duration-300" style={{ boxShadow: "var(--shadow-sm)" }}>
-            <div className="mb-4 font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors duration-300" style={{ color: "var(--accent)" }}>
+            <div className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors duration-300" style={{ color: "var(--accent)" }}>
               {t('questionBank.categories')}
             </div>
-            <ul className="space-y-1">
-              <li>
-                <button
-                  onClick={() => setFilterCat("todas")}
-                  className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
-                    filterCat === "todas"
-                      ? "bg-coral-soft text-coral-text"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  <span>{t('questionBank.all')}</span>
-                  <span className="font-mono text-[10px] font-bold">{counts.Todas}</span>
-                </button>
-              </li>
-              {categories.map((c: string, idx: number) => (
-                <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
+            {categories.length > 6 && (
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
+                <input
+                  value={catSearch}
+                  onChange={(e) => setCatSearch(e.target.value)}
+                  placeholder="Buscar categoría..."
+                  className="w-full rounded-lg border py-2 pl-8 pr-3 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                  style={{ borderColor: "var(--border)", background: "var(--background)", color: "var(--foreground)" }}
+                />
+                {catSearch && (
                   <button
-                    onClick={() => setFilterCat(c)}
+                    onClick={() => setCatSearch("")}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            )}
+            <ul className="space-y-1">
+              {!catSearch && (
+                <li>
+                  <button
+                    onClick={() => setFilterCat("todas")}
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
-                      filterCat === c
+                      filterCat === "todas"
                         ? "bg-coral-soft text-coral-text"
                         : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                     }`}
                   >
-                    <span>{c}</span>
-                    <span className="font-mono text-[10px] font-bold">{counts[c] ?? 0}</span>
+                    <span>{t('questionBank.all')}</span>
+                    <span className="font-mono text-[10px] font-bold">{counts.Todas}</span>
                   </button>
                 </li>
-              ))}
+              )}
+              {categories
+                .filter((c) => c.toLowerCase().includes(catSearch.toLowerCase()))
+                .map((c: string, idx: number) => (
+                  <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
+                    <button
+                      onClick={() => { setFilterCat(c); setCatSearch(""); }}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
+                        filterCat === c
+                          ? "bg-coral-soft text-coral-text"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      }`}
+                    >
+                      <span className="truncate pr-2">{c}</span>
+                      <span className="font-mono text-[10px] font-bold shrink-0">{counts[c] ?? 0}</span>
+                    </button>
+                  </li>
+                ))}
+              {catSearch && categories.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase())).length === 0 && (
+                <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  Sin resultados
+                </li>
+              )}
             </ul>
           </div>
         </aside>
