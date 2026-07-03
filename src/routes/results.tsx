@@ -94,15 +94,13 @@ function ResultsPageContent() {
   const [participants, setParticipants] = useState<
     { id: string; full_name: string | null; email: string; area_id: string | null }[]
   >([]);
-  const [distribution, setDistribution] = useState<Array<{ range: string; count: number }>>([]);
-  const [topPerformers, setTopPerformers] = useState<Array<{ name: string; score: number; eval: string }>>([]);
-  const [stats, setStats] = useState({ totalSessions: 0, passRate: 0, avgDuration: 0, bestScore: 0 });
-
   // Metrics tab filters
   const currentYear = new Date().getFullYear();
   const [filterYear, setFilterYear] = useState<number>(currentYear);
-  const [filterAreaId, setFilterAreaId] = useState<string>("all");
-  const [filterUserId, setFilterUserId] = useState<string>("all");
+  const [mtFilterAreaId, setMtFilterAreaId] = useState<string>("all");
+  const [mtFilterUserId, setMtFilterUserId] = useState<string>("all");
+  const [mtFilterDateFrom, setMtFilterDateFrom] = useState("");
+  const [mtFilterDateTo, setMtFilterDateTo] = useState("");
 
   // Active tab
   const [activeTab, setActiveTab] = useState<"metrics" | "participants">("metrics");
@@ -143,49 +141,6 @@ function ResultsPageContent() {
             area_id: p.area_id,
           }))
         );
-
-        const ranges = [
-          { range: "0-20", min: 0, max: 20 },
-          { range: "21-40", min: 21, max: 40 },
-          { range: "41-60", min: 41, max: 60 },
-          { range: "61-80", min: 61, max: 80 },
-          { range: "81-100", min: 81, max: 100 },
-        ];
-        setDistribution(
-          ranges.map((r) => ({
-            range: r.range,
-            count: rawResults.filter((res: any) => res.score >= r.min && res.score <= r.max).length,
-          }))
-        );
-
-        const sorted = [...rawResults].sort((a: any, b: any) => b.score - a.score).slice(0, 4);
-        setTopPerformers(
-          sorted.map((res: any) => ({
-            name: toTitleCase(res.profiles?.full_name) || res.profiles?.email || "Usuario",
-            score: res.score,
-            eval: res.evaluations?.title || "Evaluación",
-          }))
-        );
-
-        const total = rawResults.length;
-        const passRate =
-          total > 0
-            ? Math.round((rawResults.filter((r: any) => r.score >= 60).length / total) * 100)
-            : 0;
-        const bestScore = total > 0 ? Math.max(...rawResults.map((r: any) => r.score)) : 0;
-        const durations = rawResults
-          .filter((r: any) => r.started_at && r.completed_at)
-          .map((r: any) => {
-            const start = new Date(r.started_at).getTime();
-            const end = new Date(r.completed_at).getTime();
-            return (end - start) / (1000 * 60);
-          })
-          .filter((d: number) => d > 0 && d < 240);
-        const avgDuration =
-          durations.length > 0
-            ? Math.round((durations.reduce((s: number, d: number) => s + d, 0) / durations.length) * 10) / 10
-            : 0;
-        setStats({ totalSessions: total, passRate, avgDuration, bestScore });
       } catch (err) {
         console.error("Error loading results:", err);
         setError(t('results.loadError'));
@@ -202,12 +157,60 @@ function ResultsPageContent() {
     return Array.from(years).sort((a, b) => b - a);
   }, [allResults, currentYear]);
 
+  // Metrics tab: results filtered by the shared filter bar
+  const metricsFiltered = useMemo(() => {
+    return allResults.filter((r) => {
+      if (mtFilterAreaId !== "all" && r.evaluations?.area_id !== mtFilterAreaId) return false;
+      if (mtFilterUserId !== "all" && r.user_id !== mtFilterUserId) return false;
+      if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
+      if (mtFilterDateTo && new Date(r.completed_at) > new Date(mtFilterDateTo + "T23:59:59")) return false;
+      return true;
+    });
+  }, [allResults, mtFilterAreaId, mtFilterUserId, mtFilterDateFrom, mtFilterDateTo]);
+
+  const stats = useMemo(() => {
+    const total = metricsFiltered.length;
+    const passRate = total > 0 ? Math.round((metricsFiltered.filter((r) => r.score >= 60).length / total) * 100) : 0;
+    const bestScore = total > 0 ? Math.max(...metricsFiltered.map((r) => r.score)) : 0;
+    const durations = metricsFiltered
+      .filter((r) => r.started_at && r.completed_at)
+      .map((r) => (new Date(r.completed_at).getTime() - new Date(r.started_at).getTime()) / 60000)
+      .filter((d) => d > 0 && d < 240);
+    const avgDuration = durations.length > 0
+      ? Math.round((durations.reduce((s, d) => s + d, 0) / durations.length) * 10) / 10
+      : 0;
+    return { totalSessions: total, passRate, avgDuration, bestScore };
+  }, [metricsFiltered]);
+
+  const distribution = useMemo(() => {
+    const ranges = [
+      { range: "0-20", min: 0, max: 20 },
+      { range: "21-40", min: 21, max: 40 },
+      { range: "41-60", min: 41, max: 60 },
+      { range: "61-80", min: 61, max: 80 },
+      { range: "81-100", min: 81, max: 100 },
+    ];
+    return ranges.map((r) => ({
+      range: r.range,
+      count: metricsFiltered.filter((res) => res.score >= r.min && res.score <= r.max).length,
+    }));
+  }, [metricsFiltered]);
+
+  const topPerformers = useMemo(() => {
+    return [...metricsFiltered]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((res) => ({
+        name: toTitleCase(res.profiles?.full_name) || res.profiles?.email || "Usuario",
+        score: res.score,
+        eval: res.evaluations?.title || "Evaluación",
+      }));
+  }, [metricsFiltered]);
+
   const weeklyData = useMemo<WeekPoint[]>(() => {
-    const filtered = allResults.filter((r) => {
+    const filtered = metricsFiltered.filter((r) => {
       const date = new Date(r.completed_at);
       if (date.getFullYear() !== filterYear) return false;
-      if (filterAreaId !== "all" && r.evaluations?.area_id !== filterAreaId) return false;
-      if (filterUserId !== "all" && r.user_id !== filterUserId) return false;
       return true;
     });
     const map = new Map<string, { total: number; count: number }>();
@@ -226,7 +229,7 @@ function ResultsPageContent() {
         promedio: Math.round((total / count) * 10) / 10,
         count,
       }));
-  }, [allResults, filterYear, filterAreaId, filterUserId]);
+  }, [metricsFiltered, filterYear]);
 
   // ── Participant report data ────────────────────────────────────────────────
 
@@ -415,6 +418,39 @@ function ResultsPageContent() {
         {/* ── MÉTRICAS TAB ─────────────────────────────────────────────────── */}
         {activeTab === "metrics" && (
           <>
+            {/* Filters */}
+            <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t('results.filters')}
+                </span>
+                <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={SELECT_CLASS}>
+                  <option value="all">{t('results.allAreas')}</option>
+                  {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                <select value={mtFilterUserId} onChange={(e) => setMtFilterUserId(e.target.value)} className={SELECT_CLASS}>
+                  <option value="all">{t('results.allParticipants')}</option>
+                  {participants.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
+                </select>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t('results.from')}</span>
+                  <input type="date" value={mtFilterDateFrom} onChange={(e) => setMtFilterDateFrom(e.target.value)} className={SELECT_CLASS} />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t('results.to')}</span>
+                  <input type="date" value={mtFilterDateTo} onChange={(e) => setMtFilterDateTo(e.target.value)} className={SELECT_CLASS} />
+                </div>
+                {(mtFilterAreaId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
+                  <button
+                    onClick={() => { setMtFilterAreaId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(""); setMtFilterDateTo(""); }}
+                    className="text-xs text-accent hover:underline"
+                  >
+                    {t('results.clearFilters')}
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* KPI cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {KPI_ITEMS.map((k, i) => (
@@ -439,37 +475,15 @@ function ResultsPageContent() {
                     {t('results.weeklyDesc')}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <select
-                    value={filterYear}
-                    onChange={(e) => setFilterYear(Number(e.target.value))}
-                    className={SELECT_CLASS}
-                  >
-                    {availableYears.map((y) => (
-                      <option key={y} value={y}>{y}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={filterAreaId}
-                    onChange={(e) => setFilterAreaId(e.target.value)}
-                    className={SELECT_CLASS}
-                  >
-                    <option value="all">{t('results.allAreas')}</option>
-                    {areas.map((a) => (
-                      <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={filterUserId}
-                    onChange={(e) => setFilterUserId(e.target.value)}
-                    className={SELECT_CLASS}
-                  >
-                    <option value="all">{t('results.allParticipants')}</option>
-                    {participants.map((p) => (
-                      <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(Number(e.target.value))}
+                  className={SELECT_CLASS}
+                >
+                  {availableYears.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
               <div className="h-64 px-2 pb-4">
                 {weeklyData.length === 0 ? (
