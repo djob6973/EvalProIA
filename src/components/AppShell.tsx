@@ -3,6 +3,7 @@ import { useRouterState } from "@tanstack/react-router";
 import { Brain } from "lucide-react";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 
 interface LayoutContextValue {
@@ -23,6 +24,9 @@ const SPLASH_COLS = 9;
 const SPLASH_ROWS = 7;
 
 function SplashScreen() {
+  const { settings } = useSystemSettings();
+  const brandLogo = settings.brand_logo ?? null;
+
   return (
     <div
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
@@ -46,13 +50,15 @@ function SplashScreen() {
 
       {/* Centered content */}
       <div className="relative z-10 flex flex-col items-center">
-        {/* Logo icon + wordmark */}
+        {/* Logo + wordmark */}
         <div className="mb-5 flex items-center gap-3">
           <div
-            className="flex h-10 w-10 items-center justify-center rounded-xl"
-            style={{ background: "#ED5650" }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+            style={brandLogo ? { background: "transparent" } : { background: "#ED5650" }}
           >
-            <Brain className="size-5 text-white" strokeWidth={1.5} />
+            {brandLogo
+              ? <img src={brandLogo} alt="Logo" className="h-10 w-10 object-contain" />
+              : <Brain className="size-5 text-white" strokeWidth={1.5} />}
           </div>
           <div className="text-left">
             <div className="text-lg font-bold leading-none text-white">EvalPro</div>
