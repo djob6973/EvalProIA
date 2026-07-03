@@ -19,45 +19,67 @@ interface AppShellProps {
   showHeader?: boolean;
 }
 
+const SPLASH_COLS = 9;
+const SPLASH_ROWS = 7;
+
 function SplashScreen() {
   return (
     <div
-      className="flex min-h-screen flex-col items-center justify-center px-6 text-center"
-      style={{ background: "var(--background)" }}
+      className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 text-center"
+      style={{ background: "#111111" }}
     >
-      {/* Logo */}
+      {/* Tiled Brain icon background */}
       <div
-        className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
-        style={{ background: "#ED5650" }}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${SPLASH_COLS}, 1fr)`,
+          gridTemplateRows: `repeat(${SPLASH_ROWS}, 1fr)`,
+        }}
       >
-        <Brain className="size-8 text-white" strokeWidth={1.5} />
+        {Array.from({ length: SPLASH_COLS * SPLASH_ROWS }).map((_, i) => (
+          <div key={i} className="flex items-center justify-center">
+            <Brain className="size-10 text-[#ED5650]" strokeWidth={1} style={{ opacity: 0.18 }} />
+          </div>
+        ))}
       </div>
 
-      {/* Brand */}
-      <div className="mb-1 text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-        EvalPro
-      </div>
-      <div
-        className="mb-8 font-mono text-[10px] uppercase tracking-widest"
-        style={{ color: "var(--muted-foreground)" }}
-      >
-        Sistema de Evaluación
-      </div>
+      {/* Centered content */}
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Logo icon + wordmark */}
+        <div className="mb-5 flex items-center gap-3">
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-xl"
+            style={{ background: "#ED5650" }}
+          >
+            <Brain className="size-5 text-white" strokeWidth={1.5} />
+          </div>
+          <div className="text-left">
+            <div className="text-lg font-bold leading-none text-white">EvalPro</div>
+            <div className="mt-0.5 font-mono text-[9px] uppercase tracking-widest text-white/40">
+              Sistema de Evaluación
+            </div>
+          </div>
+        </div>
 
-      {/* Marketing tagline */}
-      <p
-        className="max-w-sm text-[15px] leading-relaxed"
-        style={{ color: "var(--muted-foreground)" }}
-      >
-        Convierte tus documentos en evaluaciones inteligentes para capacitar y medir el conocimiento de tu equipo.
-      </p>
+        {/* Tagline */}
+        <p className="max-w-[340px] text-[22px] font-bold leading-snug text-white">
+          Convierte tus documentos en evaluaciones inteligentes para capacitar y medir el conocimiento de tu equipo.
+        </p>
 
-      {/* Spinner */}
-      <div className="mt-10">
+        {/* Accent divider */}
         <div
-          className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
-          style={{ borderColor: "#ED5650", borderTopColor: "transparent" }}
+          className="mt-6 h-[3px] w-16 rounded-full"
+          style={{ background: "#ED5650" }}
         />
+
+        {/* Spinner */}
+        <div className="mt-8">
+          <div
+            className="h-5 w-5 animate-spin rounded-full border-2"
+            style={{ borderColor: "rgba(237,86,80,0.3)", borderTopColor: "#ED5650" }}
+          />
+        </div>
       </div>
     </div>
   );
