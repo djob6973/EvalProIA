@@ -524,7 +524,7 @@ function GeneratePage() {
                             className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
                             style={{ color: "var(--accent)" }}
                           >
-                            + {t('generate.createCategory')}
+                            {t('generate.createCategory')}
                           </button>
                         </div>
                       </div>
