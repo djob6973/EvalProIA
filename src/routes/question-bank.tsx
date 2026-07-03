@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
@@ -213,6 +213,9 @@ function QuestionBankPage() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [catComboSearch, setCatComboSearch] = useState("");
+  const [catComboOpen, setCatComboOpen] = useState(false);
+  const catComboRef = useRef<HTMLDivElement>(null);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -230,6 +233,17 @@ function QuestionBankPage() {
 
   // Resetear página al cambiar cualquier filtro o búsqueda
   useEffect(() => { setPage(1); }, [debouncedQuery, filterCat, filterEstado, filterTipo]);
+
+  // Close category combobox on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (catComboRef.current && !catComboRef.current.contains(e.target as Node)) {
+        setCatComboOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   const counts = useMemo(() => {
     const source = filterEstado === 'todos' ? items : items.filter(q => q.estado === filterEstado);
@@ -254,6 +268,8 @@ function QuestionBankPage() {
     setForm(emptyQuestion());
     setIsCreatingCategory(false);
     setNewCategoryName("");
+    setCatComboSearch("");
+    setCatComboOpen(false);
     setShowModal(true);
   };
 
@@ -262,6 +278,8 @@ function QuestionBankPage() {
     setForm({ ...q, opciones: [...q.opciones], correctas: [...q.correctas] });
     setIsCreatingCategory(false);
     setNewCategoryName("");
+    setCatComboSearch("");
+    setCatComboOpen(false);
     setShowModal(true);
   };
 
@@ -760,27 +778,65 @@ function QuestionBankPage() {
                   <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
                     {t('questionBank.categoryLabel')}
                   </label>
-                  <select
-                    value={isCreatingCategory ? "nueva" : form.categoria}
-                    onChange={(e) => {
-                      if (e.target.value === "nueva") {
-                        setIsCreatingCategory(true);
-                        setNewCategoryName("");
-                      } else {
-                        setIsCreatingCategory(false);
-                        setForm({ ...form, categoria: e.target.value });
-                      }
-                    }}
-                    className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
-                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
-                  >
-                    {categories.map((c: string) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                    <option value="nueva">{t('questionBank.createCategory')}</option>
-                  </select>
+                  <div className="relative" ref={catComboRef}>
+                    <input
+                      type="text"
+                      value={catComboOpen ? catComboSearch : (isCreatingCategory ? t('questionBank.createCategory') : form.categoria)}
+                      onFocus={() => { setCatComboOpen(true); setCatComboSearch(""); }}
+                      onChange={(e) => { setCatComboSearch(e.target.value); setCatComboOpen(true); }}
+                      placeholder={t('questionBank.categoryLabel')}
+                      className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                      style={{ borderColor: "var(--border)", background: "var(--background)" }}
+                    />
+                    {catComboOpen && (
+                      <div
+                        className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg overflow-hidden"
+                        style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                      >
+                        <div className="max-h-48 overflow-y-auto">
+                          {categories
+                            .filter((c) => c.toLowerCase().includes(catComboSearch.toLowerCase()))
+                            .map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => {
+                                  setForm({ ...form, categoria: c });
+                                  setIsCreatingCategory(false);
+                                  setCatComboOpen(false);
+                                  setCatComboSearch("");
+                                }}
+                                className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                                style={{ color: form.categoria === c && !isCreatingCategory ? "var(--accent)" : "var(--foreground)" }}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          {categories.filter((c) => c.toLowerCase().includes(catComboSearch.toLowerCase())).length === 0 && (
+                            <div className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                              {t('questionBank.emptyFilters')}
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t" style={{ borderColor: "var(--border)" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCreatingCategory(true);
+                              setNewCategoryName("");
+                              setForm({ ...form, categoria: "" });
+                              setCatComboOpen(false);
+                              setCatComboSearch("");
+                            }}
+                            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: "var(--accent)" }}
+                          >
+                            + {t('questionBank.createCategory')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {isCreatingCategory && (
                     <input
                       type="text"
@@ -790,6 +846,7 @@ function QuestionBankPage() {
                         setForm({ ...form, categoria: e.target.value });
                       }}
                       placeholder={t('questionBank.newCategoryName')}
+                      autoFocus
                       className="mt-2 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                       style={{ borderColor: "var(--border)", background: "var(--background)" }}
                     />
