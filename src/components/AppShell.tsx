@@ -92,7 +92,7 @@ function SplashScreen() {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [isDark, setIsDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
