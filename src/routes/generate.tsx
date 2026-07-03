@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -81,6 +81,9 @@ function GeneratePage() {
   const [idioma, setIdioma] = useState("Español");
   const [categorias, setCategorias] = useState<string[]>([]);
   const [nuevaCategoria, setNuevaCategoria] = useState(false);
+  const [catComboSearch, setCatComboSearch] = useState("");
+  const [catComboOpen, setCatComboOpen] = useState(false);
+  const catComboRef = useRef<HTMLDivElement>(null);
   const [distribucion, setDistribucion] = useState<Record<QuestionType, number>>({
     seleccion_unica: 33,
     seleccion_multiple: 33,
@@ -103,6 +106,16 @@ function GeneratePage() {
   
   useEffect(() => {
     getUniqueCategories().then(setCategorias).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (catComboRef.current && !catComboRef.current.contains(e.target as Node)) {
+        setCatComboOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
 
@@ -462,25 +475,61 @@ function GeneratePage() {
                   </select>
                 </Field>
                 <Field label={t('generate.category')}>
-                  <select
-                    value={nuevaCategoria ? "__new__" : categoria}
-                    onChange={(e) => {
-                      if (e.target.value === "__new__") {
-                        setNuevaCategoria(true);
-                        setCategoria("");
-                      } else {
-                        setNuevaCategoria(false);
-                        setCategoria(e.target.value);
-                      }
-                    }}
-                    className="field-base"
-                  >
-                    <option value="">{t('generate.noCategory')}</option>
-                    {categorias.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                    <option value="__new__">{t('generate.createCategory')}</option>
-                  </select>
+                  <div className="relative" ref={catComboRef}>
+                    <input
+                      type="text"
+                      value={catComboOpen ? catComboSearch : (nuevaCategoria ? t('generate.createCategory') : (categoria || t('generate.noCategory')))}
+                      onFocus={() => { setCatComboOpen(true); setCatComboSearch(""); }}
+                      onChange={(e) => { setCatComboSearch(e.target.value); setCatComboOpen(true); }}
+                      placeholder={t('generate.noCategory')}
+                      className="field-base"
+                    />
+                    {catComboOpen && (
+                      <div
+                        className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg overflow-hidden"
+                        style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                      >
+                        <div className="max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => { setCategoria(""); setNuevaCategoria(false); setCatComboOpen(false); setCatComboSearch(""); }}
+                            className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: !categoria && !nuevaCategoria ? "var(--accent)" : "var(--foreground)" }}
+                          >
+                            {t('generate.noCategory')}
+                          </button>
+                          {categorias
+                            .filter((c) => c.toLowerCase().includes(catComboSearch.toLowerCase()))
+                            .map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => { setCategoria(c); setNuevaCategoria(false); setCatComboOpen(false); setCatComboSearch(""); }}
+                                className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                                style={{ color: categoria === c && !nuevaCategoria ? "var(--accent)" : "var(--foreground)" }}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          {categorias.filter((c) => c.toLowerCase().includes(catComboSearch.toLowerCase())).length === 0 && catComboSearch && (
+                            <div className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                              Sin resultados
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t" style={{ borderColor: "var(--border)" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setNuevaCategoria(true); setCategoria(""); setCatComboOpen(false); setCatComboSearch(""); }}
+                            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: "var(--accent)" }}
+                          >
+                            + {t('generate.createCategory')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {nuevaCategoria && (
                     <input
                       type="text"
