@@ -433,21 +433,12 @@ function TakeEvaluationRoute() {
                 )}
               </div>
               {existingProgress ? (
-                <div className="flex gap-[10px]">
-                  <Button
-                    variant="outline"
-                    onClick={() => handleStart(true)}
-                    disabled={questions.length === 0}
-                  >
-                    <RefreshCw className="size-4" /> {t('take.resume')}
-                  </Button>
-                  <Button
-                    onClick={() => handleStart(false)}
-                    disabled={questions.length === 0}
-                  >
-                    <Play className="size-4" /> {t('take.restart')}
-                  </Button>
-                </div>
+                <Button
+                  onClick={() => handleStart(true)}
+                  disabled={questions.length === 0}
+                >
+                  <RefreshCw className="size-4" /> {t('take.resume')}
+                </Button>
               ) : (
                 <Button onClick={() => handleStart()} disabled={questions.length === 0}>
                   <Play className="size-4" /> {t('take.start')}
