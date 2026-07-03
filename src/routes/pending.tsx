@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Brain, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/pending")({
@@ -11,6 +12,8 @@ export const Route = createFileRoute("/pending")({
 function PendingPage() {
   const { profile, loading } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSystemSettings();
+  const brandLogo = settings.brand_logo ?? null;
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,10 +46,12 @@ function PendingPage() {
     >
       {/* Logo */}
       <div
-        className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
-        style={{ background: "#ED5650" }}
+        className="mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl shadow-lg"
+        style={brandLogo ? { background: "transparent" } : { background: "#ED5650" }}
       >
-        <Brain className="size-8 text-white" strokeWidth={1.5} />
+        {brandLogo
+          ? <img src={brandLogo} alt="Logo" className="h-16 w-16 object-contain" />
+          : <Brain className="size-8 text-white" strokeWidth={1.5} />}
       </div>
 
       {/* Brand */}
