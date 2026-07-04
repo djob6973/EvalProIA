@@ -59,9 +59,9 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   const [langOpen, setLangOpen] = useState(false);
 
   const LANGUAGES = [
-    { code: "es", label: "Español",   flag: "🇪🇸" },
-    { code: "en", label: "Inglés",    flag: "🇺🇸" },
-    { code: "pt", label: "Portugués", flag: "🇧🇷" },
+    { code: "es", label: "Español",   flag: "ES" },
+    { code: "en", label: "Inglés",    flag: "US" },
+    { code: "pt", label: "Portugués", flag: "BR" },
   ];
 
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -171,13 +171,11 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
           </button>
           {langOpen && (
             <div
-              className="absolute bottom-12 left-0 z-50 w-[200px] overflow-hidden py-1 shadow-2xl"
+              className="absolute bottom-12 left-0 z-50 w-[180px] overflow-hidden py-1 shadow-xl"
               style={{
-                background: "rgba(40,40,42,0.96)",
+                background: "#1c1c1e",
                 border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: "16px",
-                backdropFilter: "blur(20px)",
-                WebkitBackdropFilter: "blur(20px)",
+                borderRadius: "12px",
               }}
             >
               {LANGUAGES.map((lang, idx) => {
@@ -186,16 +184,21 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
                   <button
                     key={lang.code}
                     onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
-                    className="flex w-full items-center gap-3 px-4 py-[9px] transition-colors hover:bg-white/[0.07]"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.06]"
                     style={{
                       borderRadius: 0,
                       borderTop: idx > 0 ? "1px solid rgba(255,255,255,0.07)" : "none",
                     }}
                   >
-                    <span className="text-[16px] leading-none shrink-0">{lang.flag}</span>
                     <span
-                      className="flex-1 text-left text-[13px] leading-none"
-                      style={{ color: active ? "#fff" : "rgba(255,255,255,0.55)", fontWeight: active ? 500 : 400 }}
+                      className="w-7 shrink-0 font-mono text-[10px] font-bold tracking-wider"
+                      style={{ color: "rgba(255,255,255,0.35)" }}
+                    >
+                      {lang.flag}
+                    </span>
+                    <span
+                      className="flex-1 text-left text-[13px]"
+                      style={{ color: active ? "#fff" : "rgba(255,255,255,0.55)", fontWeight: active ? 600 : 400 }}
                     >
                       {lang.label}
                     </span>
