@@ -59,9 +59,9 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
   const [langOpen, setLangOpen] = useState(false);
 
   const LANGUAGES = [
-    { code: "es", label: "Español" },
-    { code: "en", label: "English" },
-    { code: "pt", label: "Português" },
+    { code: "es", label: "Español",   flag: "ES" },
+    { code: "en", label: "Inglés",    flag: "US" },
+    { code: "pt", label: "Portugués", flag: "BR" },
   ];
 
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -170,19 +170,39 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
             <Languages className="size-[16px]" strokeWidth={1.5} />
           </button>
           {langOpen && (
-            <div className="absolute bottom-10 left-0 z-50 min-w-[120px] rounded-[12px] border border-[var(--border)] bg-[var(--sidebar)] py-1 shadow-lg">
-              {LANGUAGES.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
-                  className={
-                    "w-full px-3 py-1.5 text-left text-[13px] transition-colors hover:bg-[var(--sidebar-accent)] " +
-                    (i18n.language === lang.code ? "font-semibold text-[var(--sidebar-primary)]" : "text-[var(--sidebar-foreground)]")
-                  }
-                >
-                  {lang.label}
-                </button>
-              ))}
+            <div
+              className="absolute bottom-12 left-0 z-50 w-[180px] overflow-hidden rounded-[14px] py-1 shadow-xl"
+              style={{ background: "#1c1c1e", border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              {LANGUAGES.map((lang, idx) => {
+                const active = i18n.language === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/5"
+                    style={{ borderTop: idx > 0 ? "1px solid rgba(255,255,255,0.06)" : "none" }}
+                  >
+                    <span
+                      className="w-7 shrink-0 font-mono text-[10px] font-bold tracking-wider"
+                      style={{ color: "rgba(255,255,255,0.35)" }}
+                    >
+                      {lang.flag}
+                    </span>
+                    <span
+                      className="flex-1 text-left text-[13px]"
+                      style={{ color: active ? "#fff" : "rgba(255,255,255,0.6)", fontWeight: active ? 600 : 400 }}
+                    >
+                      {lang.label}
+                    </span>
+                    {active && (
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                        <path d="M2.5 7L5.5 10L11.5 4" stroke="#ED5650" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
