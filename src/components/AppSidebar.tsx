@@ -166,7 +166,10 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
             onClick={() => setLangOpen((v) => !v)}
             title={t('language.selector')}
             className="grid h-9 w-9 place-items-center rounded-full bg-transparent transition-all duration-150"
-            style={{ border: "1.5px solid rgba(255,255,255,0.22)", color: "var(--muted-foreground)" }}
+            style={{
+              border: `1.5px solid ${isDark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.18)"}`,
+              color: "var(--muted-foreground)",
+            }}
           >
             <Languages className="size-[15px]" strokeWidth={1.5} />
           </button>
@@ -174,7 +177,8 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
             <div
               className="absolute bottom-12 left-0 z-50 w-[178px] shadow-2xl"
               style={{
-                background: "#111113",
+                background: isDark ? "#111113" : "#ffffff",
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.10)"}`,
                 borderRadius: "14px",
                 padding: "5px",
               }}
@@ -187,14 +191,14 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
                     onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
                     className="flex w-full items-center gap-2.5 px-2.5 py-[9px] transition-colors"
                     style={{ borderRadius: "9px" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+                    onMouseEnter={e => (e.currentTarget.style.background = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.05)")}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
                     <span
                       className="shrink-0 font-mono text-[9px] font-bold tracking-widest px-[5px] py-[3px]"
                       style={{
-                        background: "rgba(255,255,255,0.10)",
-                        color: "rgba(255,255,255,0.65)",
+                        background: isDark ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.07)",
+                        color: isDark ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.45)",
                         borderRadius: "4px",
                         minWidth: "26px",
                         textAlign: "center",
@@ -204,7 +208,12 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
                     </span>
                     <span
                       className="flex-1 text-left text-[13px]"
-                      style={{ color: active ? "#fff" : "rgba(255,255,255,0.45)", fontWeight: active ? 600 : 400 }}
+                      style={{
+                        color: active
+                          ? (isDark ? "#fff" : "#000")
+                          : (isDark ? "rgba(255,255,255,0.45)" : "rgba(0,0,0,0.45)"),
+                        fontWeight: active ? 600 : 400,
+                      }}
                     >
                       {lang.label}
                     </span>
