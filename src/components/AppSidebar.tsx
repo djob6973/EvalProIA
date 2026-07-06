@@ -165,40 +165,46 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
           <button
             onClick={() => setLangOpen((v) => !v)}
             title={t('language.selector')}
-            className="grid h-9 w-9 place-items-center rounded-[12px] bg-transparent text-[var(--muted-foreground)] transition-all duration-150 hover:bg-[var(--sidebar-accent)] hover:text-[var(--foreground)]"
+            className="grid h-9 w-9 place-items-center rounded-full bg-transparent transition-all duration-150"
+            style={{ border: "1.5px solid rgba(255,255,255,0.22)", color: "var(--muted-foreground)" }}
           >
-            <Languages className="size-[16px]" strokeWidth={1.5} />
+            <Languages className="size-[15px]" strokeWidth={1.5} />
           </button>
           {langOpen && (
             <div
-              className="absolute bottom-12 left-0 z-50 w-[180px] overflow-hidden py-1 shadow-xl"
+              className="absolute bottom-12 left-0 z-50 w-[178px] shadow-2xl"
               style={{
-                background: "#1c1c1e",
-                border: "1px solid rgba(255,255,255,0.10)",
-                borderRadius: "12px",
+                background: "#111113",
+                borderRadius: "14px",
+                padding: "5px",
               }}
             >
-              {LANGUAGES.map((lang, idx) => {
+              {LANGUAGES.map((lang) => {
                 const active = i18n.language === lang.code;
                 return (
                   <button
                     key={lang.code}
                     onClick={() => { i18n.changeLanguage(lang.code); setLangOpen(false); }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 transition-colors hover:bg-white/[0.06]"
-                    style={{
-                      borderRadius: 0,
-                      borderTop: idx > 0 ? "1px solid rgba(255,255,255,0.07)" : "none",
-                    }}
+                    className="flex w-full items-center gap-2.5 px-2.5 py-[9px] transition-colors"
+                    style={{ borderRadius: "9px" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.07)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
                     <span
-                      className="w-7 shrink-0 font-mono text-[10px] font-bold tracking-wider"
-                      style={{ color: "rgba(255,255,255,0.35)" }}
+                      className="shrink-0 font-mono text-[9px] font-bold tracking-widest px-[5px] py-[3px]"
+                      style={{
+                        background: "rgba(255,255,255,0.10)",
+                        color: "rgba(255,255,255,0.65)",
+                        borderRadius: "4px",
+                        minWidth: "26px",
+                        textAlign: "center",
+                      }}
                     >
                       {lang.flag}
                     </span>
                     <span
                       className="flex-1 text-left text-[13px]"
-                      style={{ color: active ? "#fff" : "rgba(255,255,255,0.55)", fontWeight: active ? 600 : 400 }}
+                      style={{ color: active ? "#fff" : "rgba(255,255,255,0.45)", fontWeight: active ? 600 : 400 }}
                     >
                       {lang.label}
                     </span>
