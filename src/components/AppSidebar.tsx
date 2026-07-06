@@ -166,10 +166,7 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
             onClick={() => setLangOpen((v) => !v)}
             title={t('language.selector')}
             className="grid h-9 w-9 place-items-center rounded-full bg-transparent transition-all duration-150"
-            style={{
-              border: `1.5px solid ${isDark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.18)"}`,
-              color: "var(--muted-foreground)",
-            }}
+            style={{ color: "var(--muted-foreground)" }}
           >
             <Languages className="size-[15px]" strokeWidth={1.5} />
           </button>
@@ -177,8 +174,8 @@ export function AppSidebar({ mobileOpen, setMobileOpen, isDark, toggleTheme }: A
             <div
               className="absolute bottom-12 left-0 z-50 w-[178px] shadow-2xl"
               style={{
-                background: isDark ? "#111113" : "#ffffff",
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.10)"}`,
+                background: isDark ? "#2c2c2e" : "#ffffff",
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.14)" : "rgba(0,0,0,0.10)"}`,
                 borderRadius: "14px",
                 padding: "5px",
               }}
