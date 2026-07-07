@@ -150,6 +150,31 @@ async function route(
     if (id && sub2 && m === "GET") return getProgress(id, sub2);
   }
 
+  // ── Temporary diagnostic endpoint (remove after use) ─────────────────────
+  if (sub === "diag" && m === "GET") {
+    const key = url.searchParams.get("key");
+    if (key !== "DATAICO_DIAG_2026") return json({ error: "Forbidden" }, 403);
+    const evalId = url.searchParams.get("eval");
+    if (!evalId) return json({ error: "eval param required" }, 400);
+    const results = await db`
+      SELECT r.id, r.score, r.answers, r.completed_at,
+             p.full_name, p.email,
+             (SELECT COUNT(*) FROM jsonb_object_keys(r.answers)) AS answered_count
+      FROM results r
+      LEFT JOIN profiles p ON p.id = r.user_id
+      WHERE r.evaluation_id = ${evalId}
+      ORDER BY r.score DESC
+    `;
+    const questions = await db`
+      SELECT q.id, q.question_text, q.correct_answer, q.type,
+             array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count
+      FROM questions q
+      WHERE q.evaluation_id = ${evalId}
+      ORDER BY q.created_at
+    `;
+    return json({ results, questions });
+  }
+
   // ── System settings ──────────────────────────────────────────────────────
   if (res === "settings") {
     if (!id && m === "GET") return getSettings();
