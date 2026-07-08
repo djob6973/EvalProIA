@@ -80,13 +80,19 @@ async function route(
       WHERE r.evaluation_id = ${evalId}
       ORDER BY r.score DESC
     `;
-    const questions = await db`
-      SELECT q.id, q.question_text, q.correct_answer,
-             array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count
+    // Collect all question IDs from all results
+    const allQIds = new Set<string>();
+    for (const r of results) {
+      if (r.answers) Object.keys(r.answers).forEach((id: string) => allQIds.add(id));
+    }
+    const qIdArr = [...allQIds];
+    const questions = qIdArr.length > 0 ? await db`
+      SELECT q.id, q.correct_answer,
+             array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count,
+             array_length(q.options::jsonb::text[], 1) AS options_count
       FROM questions q
-      WHERE q.evaluation_id = ${evalId}
-      ORDER BY q.created_at
-    `;
+      WHERE q.id = ANY(${qIdArr}::uuid[])
+    ` : [];
     return json({ results, questions });
   }
 
