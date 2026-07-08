@@ -87,9 +87,9 @@ async function route(
     }
     const qIdArr = [...allQIds];
     const questions = qIdArr.length > 0 ? await db`
-      SELECT q.id, q.correct_answer,
+      SELECT q.id, q.correct_answer, q.options,
              array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count,
-             array_length(q.options::jsonb::text[], 1) AS options_count
+             jsonb_array_length(q.options::jsonb) AS options_count
       FROM questions q
       WHERE q.id = ANY(${qIdArr}::uuid[])
     ` : [];
