@@ -288,28 +288,25 @@ export function getAnswerStatus(
   userAnswer: string | string[]
 ): AnswerStatus {
   const correctAnswers = question.correct_answer.split(",").map((a) => a.trim());
+  // Properly handle both array (multi-select from DB) and string (single-select) answers
   const userAnswers = Array.isArray(userAnswer)
     ? userAnswer.map((a) => String(a).trim())
-    : [String(userAnswer).trim()];
+    : String(userAnswer ?? "").split(",").map((a) => a.trim()).filter(Boolean);
 
   const correctCount = correctAnswers.length;
   const userSelectedCount = userAnswers.length;
 
-  // Anti-gaming checks (must match calculateQuestionScore exactly)
-  if (userSelectedCount === question.options.length && correctCount !== question.options.length)
-    return "incorrect";
+  if (userSelectedCount === 0) return "incorrect";
+
+  // Anti-gaming: selected more than the number of correct answers → no credit
   if (userSelectedCount > correctCount) return "incorrect";
 
   const hasIncorrectAnswer = userAnswers.some((a) => !correctAnswers.includes(a));
   if (hasIncorrectAnswer) return "incorrect";
 
-  const allSelectedAreCorrect = userAnswers.every((a) => correctAnswers.includes(a));
-  if (allSelectedAreCorrect) {
-    if (userSelectedCount === correctCount) return "correct";
-    return "partial";
-  }
-
-  return "incorrect";
+  // All selected answers are correct
+  if (userSelectedCount === correctCount) return "correct";
+  return "partial";
 }
 
 export function calculateQuestionScore(
