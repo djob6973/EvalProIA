@@ -91,6 +91,39 @@ async function route(
       FROM questions q
       WHERE q.id = ANY(${qIdArr}::uuid[])
     ` : [];
+
+    // ?recalc=true → recalculate and update all scores for this evaluation
+    if (url.searchParams.get("recalc") === "true") {
+      const qMap: Record<string, { correct_answer: string; options: any }> = {};
+      for (const q of questions) qMap[q.id] = q;
+      const updated: { id: string; name: string; old: number; new: number }[] = [];
+      for (const r of results) {
+        if (!r.answers) continue;
+        const answeredIds = Object.keys(r.answers);
+        const w = 100 / answeredIds.length;
+        let total = 0;
+        for (const qId of answeredIds) {
+          const q = qMap[qId];
+          if (!q) continue;
+          const correctAnswers = q.correct_answer.split(",").map((a: string) => a.trim());
+          const rawAns = r.answers[qId];
+          const userAnswers: string[] = Array.isArray(rawAns)
+            ? rawAns.map((a: string) => String(a).trim())
+            : String(rawAns ?? "").split(",").map((a: string) => a.trim()).filter(Boolean);
+          if (!userAnswers.length) continue;
+          if (userAnswers.length > correctAnswers.length) continue;
+          if (userAnswers.some((a: string) => !correctAnswers.includes(a))) continue;
+          total += (userAnswers.length / correctAnswers.length) * w;
+        }
+        const newScore = Math.round(total);
+        if (newScore !== r.score) {
+          await db`UPDATE results SET score = ${newScore} WHERE id = ${r.id}`;
+          updated.push({ id: r.id, name: r.full_name, old: r.score, new: newScore });
+        }
+      }
+      return json({ updated, message: `${updated.length} scores updated` });
+    }
+
     return json({ results, questions });
   }
 
@@ -493,7 +526,56 @@ async function updateQuestion(request: Request, id: string): Promise<Response> {
     UPDATE questions SET ${db(patch)} WHERE id = ${id} RETURNING *
   `;
   if (!row) return json({ error: "No encontrado" }, 404);
+
+  // If correct_answer changed, recalculate scores for all results that include this question
+  if ("correct_answer" in patch) {
+    await recalcScoresForQuestion(id);
+  }
+
   return json(parseQuestion(row));
+}
+
+async function recalcScoresForQuestion(questionId: string): Promise<void> {
+  // Find all results that contain this question in their answers
+  const affected = await db`
+    SELECT r.id, r.answers, r.evaluation_id
+    FROM results r
+    WHERE r.answers ? ${questionId}
+  `;
+  if (!affected.length) return;
+
+  // Load all questions needed for recalculation (union of all answered question IDs)
+  const allQIds = new Set<string>();
+  for (const r of affected) {
+    if (r.answers) Object.keys(r.answers).forEach((qId: string) => allQIds.add(qId));
+  }
+  const questions = await db`
+    SELECT id, correct_answer FROM questions WHERE id = ANY(${[...allQIds]}::uuid[])
+  `;
+  const qMap: Record<string, string> = {};
+  for (const q of questions) qMap[q.id] = q.correct_answer;
+
+  for (const r of affected) {
+    if (!r.answers) continue;
+    const answeredIds = Object.keys(r.answers);
+    const w = 100 / answeredIds.length;
+    let total = 0;
+    for (const qId of answeredIds) {
+      const correctAnswer = qMap[qId];
+      if (!correctAnswer) continue;
+      const correctAnswers = correctAnswer.split(",").map((a: string) => a.trim());
+      const rawAns = r.answers[qId];
+      const userAnswers: string[] = Array.isArray(rawAns)
+        ? rawAns.map((a: string) => String(a).trim())
+        : String(rawAns ?? "").split(",").map((a: string) => a.trim()).filter(Boolean);
+      if (!userAnswers.length) continue;
+      if (userAnswers.length > correctAnswers.length) continue;
+      if (userAnswers.some((a: string) => !correctAnswers.includes(a))) continue;
+      total += (userAnswers.length / correctAnswers.length) * w;
+    }
+    const newScore = Math.round(total);
+    await db`UPDATE results SET score = ${newScore} WHERE id = ${r.id}`;
+  }
 }
 
 async function deleteQuestion(request: Request, id: string): Promise<Response> {
