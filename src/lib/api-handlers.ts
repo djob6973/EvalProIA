@@ -81,7 +81,7 @@ async function route(
       ORDER BY r.score DESC
     `;
     const questions = await db`
-      SELECT q.id, q.question_text, q.correct_answer, q.type,
+      SELECT q.id, q.question_text, q.correct_answer,
              array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count
       FROM questions q
       WHERE q.evaluation_id = ${evalId}
@@ -190,7 +190,7 @@ async function route(
       ORDER BY r.score DESC
     `;
     const questions = await db`
-      SELECT q.id, q.question_text, q.correct_answer, q.type,
+      SELECT q.id, q.question_text, q.correct_answer,
              array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count
       FROM questions q
       WHERE q.evaluation_id = ${evalId}
