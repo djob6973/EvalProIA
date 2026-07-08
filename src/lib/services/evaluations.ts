@@ -277,6 +277,41 @@ export async function getUniqueCategories(): Promise<string[]> {
 
 // ── Scoring logic (pure, no network calls needed) ────────────────────────────
 
+export type AnswerStatus = "correct" | "partial" | "incorrect";
+
+/**
+ * Determines the display status of a single answer using the same logic as
+ * calculateQuestionScore so that UI counts always match the stored score.
+ */
+export function getAnswerStatus(
+  question: Question,
+  userAnswer: string | string[]
+): AnswerStatus {
+  const correctAnswers = question.correct_answer.split(",").map((a) => a.trim());
+  const userAnswers = Array.isArray(userAnswer)
+    ? userAnswer.map((a) => String(a).trim())
+    : [String(userAnswer).trim()];
+
+  const correctCount = correctAnswers.length;
+  const userSelectedCount = userAnswers.length;
+
+  // Anti-gaming checks (must match calculateQuestionScore exactly)
+  if (userSelectedCount === question.options.length && correctCount !== question.options.length)
+    return "incorrect";
+  if (userSelectedCount > correctCount) return "incorrect";
+
+  const hasIncorrectAnswer = userAnswers.some((a) => !correctAnswers.includes(a));
+  if (hasIncorrectAnswer) return "incorrect";
+
+  const allSelectedAreCorrect = userAnswers.every((a) => correctAnswers.includes(a));
+  if (allSelectedAreCorrect) {
+    if (userSelectedCount === correctCount) return "correct";
+    return "partial";
+  }
+
+  return "incorrect";
+}
+
 export function calculateQuestionScore(
   question: Question,
   userAnswer: string | string[],

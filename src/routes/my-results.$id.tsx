@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import React from "react";
-import { resultsService, evaluationsService, questionsService } from "@/lib/services/evaluations";
+import { resultsService, evaluationsService, questionsService, getAnswerStatus } from "@/lib/services/evaluations";
 import type { Evaluation } from "@/lib/services/evaluations";
 import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -119,32 +119,10 @@ function MyResultPage() {
     Object.keys(result.answers).forEach((questionId) => {
       const question = questionsMap[questionId];
       if (!question) return;
-
-      const userAnswer = result.answers[questionId];
-      const userAnswers = userAnswer ? String(userAnswer).split(',').map((a: string) => a.trim()) : [];
-      const correctAnswers = question.correct_answer.split(',').map((a: string) => a.trim());
-
-      // Verificar si todas las respuestas del usuario son correctas
-      const allCorrect = userAnswers.length > 0 &&
-        userAnswers.every((ans: string) => correctAnswers.includes(ans));
-      // Verificar si el usuario seleccionó todas las respuestas correctas
-      const allSelected = correctAnswers.every((ans: string) => userAnswers.includes(ans));
-      const isCorrect = allCorrect && allSelected;
-
-      // Verificar si es parcial: algunas correctas, ninguna incorrecta, pero no todas seleccionadas
-      // (aplica regla anti-gaming: si hay alguna incorrecta → no es parcial, es incorrecto)
-      const hasSomeCorrect = userAnswers.length > 0 &&
-        userAnswers.some((ans: string) => correctAnswers.includes(ans));
-      const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
-      const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
-
-      if (isCorrect) {
-        correctCount++;
-      } else if (isPartial) {
-        partialCount++;
-      } else {
-        incorrectCount++;
-      }
+      const status = getAnswerStatus(question, result.answers[questionId]);
+      if (status === "correct") correctCount++;
+      else if (status === "partial") partialCount++;
+      else incorrectCount++;
     });
   }
 
@@ -276,17 +254,9 @@ function MyResultPage() {
                   if (!question) return null;
 
                   const userAnswer = result.answers[questionId];
-                  const userAnswers = userAnswer ? String(userAnswer).split(',').map((a: string) => a.trim()) : [];
-                  const correctAnswers = question.correct_answer.split(',').map((a: string) => a.trim());
-
-                  const allCorrect = userAnswers.length > 0 &&
-                    userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                  const allSelected = correctAnswers.every((ans: string) => userAnswers.includes(ans));
-                  const isCorrect = allCorrect && allSelected;
-                  const hasSomeCorrect = userAnswers.length > 0 &&
-                    userAnswers.some((ans: string) => correctAnswers.includes(ans));
-                  const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                  const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
+                  const status = getAnswerStatus(question, userAnswer ?? "");
+                  const isCorrect = status === "correct";
+                  const isPartial = status === "partial";
 
                   const statusConfig = isCorrect
                     ? { label: t('myResults.correctBadge'), icon: <CheckCircle className="size-3" />, card: "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40", badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" }

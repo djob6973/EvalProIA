@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useEffect, useState, useMemo } from "react";
 import React from "react";
-import { resultsService, evaluationsService, questionsService, areasService } from "@/lib/services/evaluations";
+import { resultsService, evaluationsService, questionsService, areasService, getAnswerStatus } from "@/lib/services/evaluations";
 import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff, ImageDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -1040,29 +1040,9 @@ function EvaluationResultsPage() {
                       Object.keys(result.answers).forEach((questionId) => {
                         const question = questionsMap[questionId];
                         if (!question) return;
-                        const userAnswer = result.answers[questionId];
-                        const userAnswers = userAnswer
-                          ? String(userAnswer)
-                              .split(",")
-                              .map((a: string) => a.trim())
-                          : [];
-                        const correctAnswers = question.correct_answer
-                          .split(",")
-                          .map((a: string) => a.trim());
-                        const allCorrect =
-                          userAnswers.length > 0 &&
-                          userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                        const allSelected = correctAnswers.every((ans: string) =>
-                          userAnswers.includes(ans)
-                        );
-                        const isCorrect = allCorrect && allSelected;
-                        const hasSomeCorrect =
-                          userAnswers.length > 0 &&
-                          userAnswers.some((ans: string) => correctAnswers.includes(ans));
-                        const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                        const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
-                        if (isCorrect) correctCount++;
-                        else if (isPartial) partialCount++;
+                        const status = getAnswerStatus(question, result.answers[questionId]);
+                        if (status === "correct") correctCount++;
+                        else if (status === "partial") partialCount++;
                         else incorrectCount++;
                       });
                     }
@@ -1149,27 +1129,18 @@ function EvaluationResultsPage() {
                                     if (!question) return null;
 
                                     const userAnswer = result.answers[questionId];
-                                    const userAnswers = userAnswer
-                                      ? String(userAnswer)
-                                          .split(",")
-                                          .map((a: string) => a.trim())
-                                      : [];
+                                    const userAnswers = Array.isArray(userAnswer)
+                                      ? userAnswer.map((a: string) => String(a).trim())
+                                      : userAnswer
+                                        ? [String(userAnswer).trim()]
+                                        : [];
                                     const correctAnswers = question.correct_answer
                                       .split(",")
                                       .map((a: string) => a.trim());
 
-                                    const allCorrect =
-                                      userAnswers.length > 0 &&
-                                      userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                                    const allSelected = correctAnswers.every((ans: string) =>
-                                      userAnswers.includes(ans)
-                                    );
-                                    const isCorrect = allCorrect && allSelected;
-                                    const hasSomeCorrect =
-                                      userAnswers.length > 0 &&
-                                      userAnswers.some((ans: string) => correctAnswers.includes(ans));
-                                    const hasNoIncorrect = userAnswers.every((ans: string) => correctAnswers.includes(ans));
-                                    const isPartial = hasSomeCorrect && hasNoIncorrect && !isCorrect;
+                                    const status = getAnswerStatus(question, userAnswer ?? "");
+                                    const isCorrect = status === "correct";
+                                    const isPartial = status === "partial";
 
                                     const selectedCorrectCount = userAnswers.filter((a: string) =>
                                       correctAnswers.includes(a)
