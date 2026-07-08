@@ -66,67 +66,6 @@ async function route(
   if (sub === "create-user" && m === "POST") return createUser(request);
   if (sub === "delete-user" && m === "POST") return deleteUser(request);
 
-  // ── Temporary diagnostic endpoint (remove after use) ─────────────────────
-  if (sub === "diag" && m === "GET") {
-    const key = url.searchParams.get("key");
-    if (key !== "DATAICO_DIAG_2026") return json({ error: "Forbidden" }, 403);
-    const evalId = url.searchParams.get("eval");
-    if (!evalId) return json({ error: "eval param required" }, 400);
-    const results = await db`
-      SELECT r.id, r.score, r.answers, r.completed_at,
-             p.full_name, p.email
-      FROM results r
-      LEFT JOIN profiles p ON p.id = r.user_id
-      WHERE r.evaluation_id = ${evalId}
-      ORDER BY r.score DESC
-    `;
-    // Collect all question IDs from all results
-    const allQIds = new Set<string>();
-    for (const r of results) {
-      if (r.answers) Object.keys(r.answers).forEach((id: string) => allQIds.add(id));
-    }
-    const qIdArr = [...allQIds];
-    const questions = qIdArr.length > 0 ? await db`
-      SELECT q.id, q.correct_answer, q.options
-      FROM questions q
-      WHERE q.id = ANY(${qIdArr}::uuid[])
-    ` : [];
-
-    // ?recalc=true → recalculate and update all scores for this evaluation
-    if (url.searchParams.get("recalc") === "true") {
-      const qMap: Record<string, { correct_answer: string; options: any }> = {};
-      for (const q of questions) qMap[q.id] = q;
-      const updated: { id: string; name: string; old: number; new: number }[] = [];
-      for (const r of results) {
-        if (!r.answers) continue;
-        const answeredIds = Object.keys(r.answers);
-        const w = 100 / answeredIds.length;
-        let total = 0;
-        for (const qId of answeredIds) {
-          const q = qMap[qId];
-          if (!q) continue;
-          const correctAnswers = q.correct_answer.split(",").map((a: string) => a.trim());
-          const rawAns = r.answers[qId];
-          const userAnswers: string[] = Array.isArray(rawAns)
-            ? rawAns.map((a: string) => String(a).trim())
-            : String(rawAns ?? "").split(",").map((a: string) => a.trim()).filter(Boolean);
-          if (!userAnswers.length) continue;
-          if (userAnswers.length > correctAnswers.length) continue;
-          if (userAnswers.some((a: string) => !correctAnswers.includes(a))) continue;
-          total += (userAnswers.length / correctAnswers.length) * w;
-        }
-        const newScore = Math.round(total);
-        if (newScore !== r.score) {
-          await db`UPDATE results SET score = ${newScore} WHERE id = ${r.id}`;
-          updated.push({ id: r.id, name: r.full_name, old: r.score, new: newScore });
-        }
-      }
-      return json({ updated, message: `${updated.length} scores updated` });
-    }
-
-    return json({ results, questions });
-  }
-
   if (sub !== "data") return null;
 
   // ── Evaluations ──────────────────────────────────────────────────────────

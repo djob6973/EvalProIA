@@ -10,9 +10,6 @@ try { process.loadEnvFile(); } catch {}
 
 const handler = (await import('./dist/server/server.js')).default;
 
-// Temporary diagnostic DB connection (remove after use)
-import postgres from 'postgres';
-const _diagDb = process.env.DATABASE_URL ? postgres(process.env.DATABASE_URL, { ssl: { rejectUnauthorized: false } }) : null;
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 const port = process.env.PORT || 3000;
@@ -41,33 +38,6 @@ const server = createServer(async (req, res) => {
 
     // ── Health check (must come before HTTPS redirect so Dokku can probe it) ─
     if (url.pathname === '/health') {
-      const diagKey = url.searchParams.get('key');
-      const diagEval = url.searchParams.get('eval');
-      if (diagKey === 'DATAICO_DIAG_2026' && diagEval && _diagDb) {
-        try {
-          const results = await _diagDb`
-            SELECT r.id, r.score, r.answers, r.completed_at,
-                   p.full_name, p.email
-            FROM results r
-            LEFT JOIN profiles p ON p.id = r.user_id
-            WHERE r.evaluation_id = ${diagEval}
-            ORDER BY r.score DESC
-          `;
-          const questions = await _diagDb`
-            SELECT q.id, q.question_text, q.correct_answer, q.type,
-                   array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count
-            FROM questions q
-            WHERE q.evaluation_id = ${diagEval}
-            ORDER BY q.created_at
-          `;
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ results, questions }));
-        } catch(e) {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: String(e) }));
-        }
-        return;
-      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok' }));
       return;
