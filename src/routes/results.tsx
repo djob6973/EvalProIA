@@ -684,7 +684,7 @@ function ResultsPageContent() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium text-foreground">{p.name}</div>
-                          <div className="truncate text-xs text-muted-foreground">{p.eval}</div>
+                          <div className="text-xs text-muted-foreground break-words" title={p.eval}>{p.eval}</div>
                         </div>
                         <div
                           className={`shrink-0 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
