@@ -8,11 +8,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
 import {
-  Download, Users, CheckCircle2, Clock, Trophy, TrendingUp,
+  Download, Users, CheckCircle2, Clock, Trophy, TrendingUp, ClipboardList,
   ChevronLeft, ChevronRight, ArrowRight,
 } from "lucide-react";
-import { resultsService, areasService, getAllParticipants } from "@/lib/services/evaluations";
-import type { Area } from "@/lib/services/evaluations";
+import { resultsService, areasService, evaluationsService, getAllParticipants } from "@/lib/services/evaluations";
+import type { Area, Evaluation } from "@/lib/services/evaluations";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -50,7 +50,7 @@ const SELECT_CLASS =
   "focus:ring-2 focus:ring-accent/20 cursor-pointer";
 
 // KPI_ITEMS labels are replaced dynamically in the component using t()
-const KPI_ITEM_ICONS = [Users, CheckCircle2, Clock, Trophy] as const;
+const KPI_ITEM_ICONS = [ClipboardList, Users, CheckCircle2, Clock, Trophy] as const;
 
 const MAX_BAR_H = 140;
 const PT_PAGE_SIZE = 10;
@@ -81,16 +81,18 @@ function ResultsPageContent() {
 }
 
   const KPI_ITEMS = [
-    { label: t('results.totalSessions'), icon: KPI_ITEM_ICONS[0] },
-    { label: t('results.approvalRate'), icon: KPI_ITEM_ICONS[1] },
-    { label: t('results.avgDuration'), icon: KPI_ITEM_ICONS[2] },
-    { label: t('results.bestScore'), icon: KPI_ITEM_ICONS[3] },
+    { label: t('results.totalEvaluations'), icon: KPI_ITEM_ICONS[0] },
+    { label: t('results.totalSessions'), icon: KPI_ITEM_ICONS[1] },
+    { label: t('results.approvalRate'), icon: KPI_ITEM_ICONS[2] },
+    { label: t('results.avgDuration'), icon: KPI_ITEM_ICONS[3] },
+    { label: t('results.bestScore'), icon: KPI_ITEM_ICONS[4] },
   ];
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allResults, setAllResults] = useState<RawResult[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [participants, setParticipants] = useState<
     { id: string; full_name: string | null; email: string; area_id: string | null }[]
   >([]);
@@ -98,6 +100,7 @@ function ResultsPageContent() {
   const currentYear = new Date().getFullYear();
   const [mtFilterAreaId, setMtFilterAreaId] = useState<string>("all");
   const [mtFilterParticipantAreaId, setMtFilterParticipantAreaId] = useState<string>("all");
+  const [mtFilterEvaluationId, setMtFilterEvaluationId] = useState<string>("all");
   const [mtFilterUserId, setMtFilterUserId] = useState<string>("all");
   const [mtFilterDateFrom, setMtFilterDateFrom] = useState(`${currentYear}-01-01`);
   const [mtFilterDateTo, setMtFilterDateTo] = useState(`${currentYear}-12-31`);
@@ -125,14 +128,16 @@ function ResultsPageContent() {
       if (!isAdmin) return;
       try {
         setLoading(true);
-        const [rawResults, rawAreas, rawParticipants] = await Promise.all([
+        const [rawResults, rawAreas, rawEvaluations, rawParticipants] = await Promise.all([
           resultsService.getAll(),
           areasService.getAll(),
+          evaluationsService.getAll(),
           getAllParticipants(),
         ]);
 
         setAllResults(rawResults as RawResult[]);
         setAreas(rawAreas);
+        setEvaluations(rawEvaluations);
         setParticipants(
           rawParticipants.map((p) => ({
             id: p.id,
@@ -157,25 +162,31 @@ function ResultsPageContent() {
     return map;
   }, [participants]);
 
+  // "none" is a sentinel for evaluations with no area assigned (area_id is null)
+  const matchesMtEvalArea = (evalAreaId: string | null | undefined) =>
+    mtFilterAreaId === "all" ? true : mtFilterAreaId === "none" ? !evalAreaId : evalAreaId === mtFilterAreaId;
+
   // Metrics tab: results filtered by the shared filter bar
   const metricsFiltered = useMemo(() => {
     return allResults.filter((r) => {
-      if (mtFilterAreaId !== "all" && r.evaluations?.area_id !== mtFilterAreaId) return false;
+      if (!matchesMtEvalArea(r.evaluations?.area_id)) return false;
       if (mtFilterParticipantAreaId !== "all" && participantsById.get(r.user_id)?.area_id !== mtFilterParticipantAreaId) return false;
+      if (mtFilterEvaluationId !== "all" && r.evaluation_id !== mtFilterEvaluationId) return false;
       if (mtFilterUserId !== "all" && r.user_id !== mtFilterUserId) return false;
       if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
       if (mtFilterDateTo && new Date(r.completed_at) > new Date(mtFilterDateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [allResults, participantsById, mtFilterAreaId, mtFilterParticipantAreaId, mtFilterUserId, mtFilterDateFrom, mtFilterDateTo]);
+  }, [allResults, participantsById, mtFilterAreaId, mtFilterParticipantAreaId, mtFilterEvaluationId, mtFilterUserId, mtFilterDateFrom, mtFilterDateTo]);
 
-  // Metrics tab: participant select only lists participants who actually have results under the current area/date filters
+  // Metrics tab: participant select only lists participants who actually have results under the current area/evaluation/date filters
   const mtParticipantOptions = useMemo(() => {
     const relevantUserIds = new Set(
       allResults
         .filter((r) => {
-          if (mtFilterAreaId !== "all" && r.evaluations?.area_id !== mtFilterAreaId) return false;
+          if (!matchesMtEvalArea(r.evaluations?.area_id)) return false;
           if (mtFilterParticipantAreaId !== "all" && participantsById.get(r.user_id)?.area_id !== mtFilterParticipantAreaId) return false;
+          if (mtFilterEvaluationId !== "all" && r.evaluation_id !== mtFilterEvaluationId) return false;
           if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
           if (mtFilterDateTo && new Date(r.completed_at) > new Date(mtFilterDateTo + "T23:59:59")) return false;
           return true;
@@ -183,7 +194,7 @@ function ResultsPageContent() {
         .map((r) => r.user_id)
     );
     return participants.filter((p) => relevantUserIds.has(p.id));
-  }, [allResults, participants, participantsById, mtFilterAreaId, mtFilterParticipantAreaId, mtFilterDateFrom, mtFilterDateTo]);
+  }, [allResults, participants, participantsById, mtFilterAreaId, mtFilterParticipantAreaId, mtFilterEvaluationId, mtFilterDateFrom, mtFilterDateTo]);
 
   // If the selected participant falls out of the available options (area filters changed), reset it
   useEffect(() => {
@@ -194,6 +205,7 @@ function ResultsPageContent() {
 
   const stats = useMemo(() => {
     const total = metricsFiltered.length;
+    const totalEvaluations = new Set(metricsFiltered.map((r) => r.evaluation_id)).size;
     const passRate = total > 0 ? Math.round((metricsFiltered.filter((r) => r.score >= 60).length / total) * 100) : 0;
     const bestScore = total > 0 ? Math.max(...metricsFiltered.map((r) => r.score)) : 0;
     const durations = metricsFiltered
@@ -203,7 +215,7 @@ function ResultsPageContent() {
     const avgDuration = durations.length > 0
       ? Math.round((durations.reduce((s, d) => s + d, 0) / durations.length) * 10) / 10
       : 0;
-    return { totalSessions: total, passRate, avgDuration, bestScore };
+    return { totalEvaluations, totalSessions: total, passRate, avgDuration, bestScore };
   }, [metricsFiltered]);
 
   const distribution = useMemo(() => {
@@ -379,6 +391,7 @@ function ResultsPageContent() {
   const maxDist = distribution.length > 0 ? Math.max(...distribution.map((d) => d.count)) : 0;
 
   const kpiValues = [
+    String(stats.totalEvaluations),
     String(stats.totalSessions),
     `${stats.passRate}%`,
     stats.avgDuration > 0 ? `${stats.avgDuration}m` : "—",
@@ -465,6 +478,7 @@ function ResultsPageContent() {
                   <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={SELECT_CLASS}>
                     <option value="all">{t('results.allAreas')}</option>
                     {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    <option value="none">{t('results.noArea')}</option>
                   </select>
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -474,6 +488,10 @@ function ResultsPageContent() {
                     {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
+                <select value={mtFilterEvaluationId} onChange={(e) => setMtFilterEvaluationId(e.target.value)} className={SELECT_CLASS}>
+                  <option value="all">{t('results.allEvaluations')}</option>
+                  {evaluations.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                </select>
                 <select value={mtFilterUserId} onChange={(e) => setMtFilterUserId(e.target.value)} className={SELECT_CLASS}>
                   <option value="all">{t('results.allParticipants')}</option>
                   {mtParticipantOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
@@ -486,9 +504,9 @@ function ResultsPageContent() {
                   <span className="text-xs text-muted-foreground">{t('results.to')}</span>
                   <input type="date" value={mtFilterDateTo} onChange={(e) => setMtFilterDateTo(e.target.value)} className={SELECT_CLASS} />
                 </div>
-                {(mtFilterAreaId !== "all" || mtFilterParticipantAreaId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
+                {(mtFilterAreaId !== "all" || mtFilterParticipantAreaId !== "all" || mtFilterEvaluationId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
                   <button
-                    onClick={() => { setMtFilterAreaId("all"); setMtFilterParticipantAreaId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
+                    onClick={() => { setMtFilterAreaId("all"); setMtFilterParticipantAreaId("all"); setMtFilterEvaluationId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
                     className="text-xs text-accent hover:underline"
                   >
                     {t('results.clearFilters')}
@@ -498,7 +516,7 @@ function ResultsPageContent() {
             </div>
 
             {/* KPI cards */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {KPI_ITEMS.map((k, i) => (
                 <div key={k.label} className="dash-card p-[22px]">
                   <div className="flex items-center gap-1.5">
