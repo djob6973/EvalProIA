@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { toTitleCase } from "@/lib/utils";
 import {
   Download, Users, CheckCircle2, Clock, Trophy, TrendingUp, ClipboardList,
-  ChevronLeft, ChevronRight, ArrowRight,
+  ChevronLeft, ChevronRight, ArrowRight, Filter,
 } from "lucide-react";
 import { resultsService, areasService, evaluationsService, getAllParticipants } from "@/lib/services/evaluations";
 import type { Area, Evaluation } from "@/lib/services/evaluations";
@@ -489,9 +489,10 @@ function ResultsPageContent() {
             {/* Filters */}
             <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('results.filters')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <Filter className="size-4 text-accent" strokeWidth={2.5} />
+                  <span className="text-sm font-semibold text-foreground">{t('results.filters')}</span>
+                </div>
                 {(mtFilterAreaId !== "all" || mtFilterParticipantAreaId !== "all" || mtFilterEvaluationId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
                   <button
                     onClick={() => { setMtFilterAreaId("all"); setMtFilterParticipantAreaId("all"); setMtFilterEvaluationId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
@@ -722,47 +723,10 @@ function ResultsPageContent() {
           <div className="space-y-4">
             {/* Filters */}
             <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {t('results.filters')}
-                </span>
-                <select
-                  value={ptFilterAreaId}
-                  onChange={(e) => setPtFilterAreaId(e.target.value)}
-                  className={SELECT_CLASS}
-                >
-                  <option value="all">{t('results.allAreas')}</option>
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
-                <select
-                  value={ptFilterUserId}
-                  onChange={(e) => setPtFilterUserId(e.target.value)}
-                  className={SELECT_CLASS}
-                >
-                  <option value="all">{t('results.allParticipants')}</option>
-                  {ptParticipantOptions.map((p) => (
-                    <option key={p.userId} value={p.userId}>{p.name || p.email}</option>
-                  ))}
-                </select>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('results.from')}</span>
-                  <input
-                    type="date"
-                    value={ptFilterDateFrom}
-                    onChange={(e) => setPtFilterDateFrom(e.target.value)}
-                    className={SELECT_CLASS}
-                  />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('results.to')}</span>
-                  <input
-                    type="date"
-                    value={ptFilterDateTo}
-                    onChange={(e) => setPtFilterDateTo(e.target.value)}
-                    className={SELECT_CLASS}
-                  />
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="size-4 text-accent" strokeWidth={2.5} />
+                  <span className="text-sm font-semibold text-foreground">{t('results.filters')}</span>
                 </div>
                 {(ptFilterAreaId !== "all" || ptFilterUserId !== "all" || ptFilterDateFrom || ptFilterDateTo) && (
                   <button
@@ -777,6 +741,52 @@ function ResultsPageContent() {
                     {t('results.clearFilters')}
                   </button>
                 )}
+              </div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.areaParticipantLabel')}</label>
+                  <select
+                    value={ptFilterAreaId}
+                    onChange={(e) => setPtFilterAreaId(e.target.value)}
+                    className={`${SELECT_CLASS} w-full`}
+                  >
+                    <option value="all">{t('results.allAreas')}</option>
+                    {areas.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.participantLabel')}</label>
+                  <select
+                    value={ptFilterUserId}
+                    onChange={(e) => setPtFilterUserId(e.target.value)}
+                    className={`${SELECT_CLASS} w-full`}
+                  >
+                    <option value="all">{t('results.allParticipants')}</option>
+                    {ptParticipantOptions.map((p) => (
+                      <option key={p.userId} value={p.userId}>{p.name || p.email}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.from')}</label>
+                  <input
+                    type="date"
+                    value={ptFilterDateFrom}
+                    onChange={(e) => setPtFilterDateFrom(e.target.value)}
+                    className={`${SELECT_CLASS} w-full`}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.to')}</label>
+                  <input
+                    type="date"
+                    value={ptFilterDateTo}
+                    onChange={(e) => setPtFilterDateTo(e.target.value)}
+                    className={`${SELECT_CLASS} w-full`}
+                  />
+                </div>
               </div>
             </div>
 
