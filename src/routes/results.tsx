@@ -45,6 +45,13 @@ function getISOWeekInfo(date: Date): { year: number; week: number; label: string
   return { year: d.getFullYear(), week, label: `S${week}` };
 }
 
+// "none" is a sentinel meaning "no area assigned" (area_id is null)
+function matchesAreaFilter(areaId: string | null | undefined, filterValue: string): boolean {
+  if (filterValue === "all") return true;
+  if (filterValue === "none") return !areaId;
+  return areaId === filterValue;
+}
+
 function getTrendBucket(date: Date, view: TrendView, locale: string): { sortKey: string; label: string } {
   if (view === "week") {
     const { year, week, label } = getISOWeekInfo(date);
@@ -185,15 +192,11 @@ function ResultsPageContent() {
     return map;
   }, [participants]);
 
-  // "none" is a sentinel for evaluations with no area assigned (area_id is null)
-  const matchesMtEvalArea = (evalAreaId: string | null | undefined) =>
-    mtFilterAreaId === "all" ? true : mtFilterAreaId === "none" ? !evalAreaId : evalAreaId === mtFilterAreaId;
-
   // Metrics tab: results filtered by the shared filter bar
   const metricsFiltered = useMemo(() => {
     return allResults.filter((r) => {
-      if (!matchesMtEvalArea(r.evaluations?.area_id)) return false;
-      if (mtFilterParticipantAreaId !== "all" && participantsById.get(r.user_id)?.area_id !== mtFilterParticipantAreaId) return false;
+      if (!matchesAreaFilter(r.evaluations?.area_id, mtFilterAreaId)) return false;
+      if (!matchesAreaFilter(participantsById.get(r.user_id)?.area_id, mtFilterParticipantAreaId)) return false;
       if (mtFilterEvaluationId !== "all" && r.evaluation_id !== mtFilterEvaluationId) return false;
       if (mtFilterUserId !== "all" && r.user_id !== mtFilterUserId) return false;
       if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
@@ -207,8 +210,8 @@ function ResultsPageContent() {
     const relevantUserIds = new Set(
       allResults
         .filter((r) => {
-          if (!matchesMtEvalArea(r.evaluations?.area_id)) return false;
-          if (mtFilterParticipantAreaId !== "all" && participantsById.get(r.user_id)?.area_id !== mtFilterParticipantAreaId) return false;
+          if (!matchesAreaFilter(r.evaluations?.area_id, mtFilterAreaId)) return false;
+          if (!matchesAreaFilter(participantsById.get(r.user_id)?.area_id, mtFilterParticipantAreaId)) return false;
           if (mtFilterEvaluationId !== "all" && r.evaluation_id !== mtFilterEvaluationId) return false;
           if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
           if (mtFilterDateTo && new Date(r.completed_at) > new Date(mtFilterDateTo + "T23:59:59")) return false;
@@ -322,7 +325,7 @@ function ResultsPageContent() {
 
   const filteredParticipants = useMemo(() => {
     return participantStats.filter((p) => {
-      if (ptFilterAreaId !== "all" && p.areaId !== ptFilterAreaId) return false;
+      if (!matchesAreaFilter(p.areaId, ptFilterAreaId)) return false;
       if (ptFilterUserId !== "all" && p.userId !== ptFilterUserId) return false;
       if (ptFilterDateFrom) {
         if (new Date(p.lastActivity).getTime() < new Date(ptFilterDateFrom).getTime()) return false;
@@ -337,7 +340,7 @@ function ResultsPageContent() {
   // Participant select only lists participants who actually have results under the current area/date filters
   const ptParticipantOptions = useMemo(() => {
     return participantStats.filter((p) => {
-      if (ptFilterAreaId !== "all" && p.areaId !== ptFilterAreaId) return false;
+      if (!matchesAreaFilter(p.areaId, ptFilterAreaId)) return false;
       if (ptFilterDateFrom && new Date(p.lastActivity).getTime() < new Date(ptFilterDateFrom).getTime()) return false;
       if (ptFilterDateTo && new Date(p.lastActivity).getTime() > new Date(ptFilterDateTo + "T23:59:59").getTime()) return false;
       return true;
@@ -516,6 +519,7 @@ function ResultsPageContent() {
                   <select value={mtFilterParticipantAreaId} onChange={(e) => setMtFilterParticipantAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
                     <option value="all">{t('results.allAreas')}</option>
                     {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    <option value="none">{t('results.noArea')}</option>
                   </select>
                 </div>
                 <div className="min-w-0">
@@ -752,6 +756,7 @@ function ResultsPageContent() {
                     {areas.map((a) => (
                       <option key={a.id} value={a.id}>{a.name}</option>
                     ))}
+                    <option value="none">{t('results.noArea')}</option>
                   </select>
                 </div>
                 <div className="min-w-0">
