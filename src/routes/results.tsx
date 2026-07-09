@@ -33,15 +33,34 @@ type RawResult = {
   profiles: { full_name: string | null; email: string };
 };
 
-type WeekPoint = { semana: string; promedio: number; count: number };
+type TrendPoint = { periodo: string; promedio: number; count: number };
+type TrendView = "week" | "month" | "quarter";
 
-function getISOWeekLabel(date: Date): string {
+function getISOWeekInfo(date: Date): { year: number; week: number; label: string } {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 4 - (d.getDay() || 7));
   const yearStart = new Date(d.getFullYear(), 0, 1);
-  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return `S${weekNo}`;
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return { year: d.getFullYear(), week, label: `S${week}` };
+}
+
+function getTrendBucket(date: Date, view: TrendView, locale: string): { sortKey: string; label: string } {
+  if (view === "week") {
+    const { year, week, label } = getISOWeekInfo(date);
+    return { sortKey: `${year}-${String(week).padStart(2, "0")}`, label };
+  }
+  if (view === "month") {
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    return {
+      sortKey: `${y}-${String(m + 1).padStart(2, "0")}`,
+      label: toTitleCase(date.toLocaleDateString(locale, { month: "short", year: "2-digit" })),
+    };
+  }
+  const y = date.getFullYear();
+  const q = Math.floor(date.getMonth() / 3) + 1;
+  return { sortKey: `${y}-Q${q}`, label: `T${q} ${String(y).slice(2)}` };
 }
 
 const SELECT_CLASS =
@@ -64,7 +83,7 @@ function ResultsPage() {
 }
 
 function ResultsPageContent() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -104,6 +123,7 @@ function ResultsPageContent() {
   const [mtFilterUserId, setMtFilterUserId] = useState<string>("all");
   const [mtFilterDateFrom, setMtFilterDateFrom] = useState(`${currentYear}-01-01`);
   const [mtFilterDateTo, setMtFilterDateTo] = useState(`${currentYear}-12-31`);
+  const [mtChartView, setMtChartView] = useState<TrendView>("week");
 
   // Active tab
   const [activeTab, setActiveTab] = useState<"metrics" | "participants">("metrics");
@@ -243,25 +263,21 @@ function ResultsPageContent() {
       }));
   }, [metricsFiltered]);
 
-  const weeklyData = useMemo<WeekPoint[]>(() => {
-    const filtered = metricsFiltered;
-    const map = new Map<string, { total: number; count: number }>();
-    for (const r of filtered) {
-      const label = getISOWeekLabel(new Date(r.completed_at));
-      const existing = map.get(label) ?? { total: 0, count: 0 };
-      map.set(label, { total: existing.total + r.score, count: existing.count + 1 });
+  const trendData = useMemo<TrendPoint[]>(() => {
+    const map = new Map<string, { label: string; total: number; count: number }>();
+    for (const r of metricsFiltered) {
+      const { sortKey, label } = getTrendBucket(new Date(r.completed_at), mtChartView, i18n.language);
+      const existing = map.get(sortKey) ?? { label, total: 0, count: 0 };
+      map.set(sortKey, { label, total: existing.total + r.score, count: existing.count + 1 });
     }
     return Array.from(map.entries())
-      .sort((a, b) => {
-        const n = (s: string) => parseInt(s.replace("S", ""), 10);
-        return n(a[0]) - n(b[0]);
-      })
-      .map(([semana, { total, count }]) => ({
-        semana,
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([, { label, total, count }]) => ({
+        periodo: label,
         promedio: Math.round((total / count) * 10) / 10,
         count,
       }));
-  }, [metricsFiltered]);
+  }, [metricsFiltered, mtChartView, i18n.language]);
 
   // ── Participant report data ────────────────────────────────────────────────
 
@@ -530,16 +546,33 @@ function ResultsPageContent() {
               ))}
             </div>
 
-            {/* Weekly trend chart */}
+            {/* Score trend chart */}
             <div className="rounded-xl border border-border bg-card shadow-sm">
-              <div className="px-6 pt-5 pb-4">
-                <h2 className="text-sm font-semibold text-foreground">{t('results.weeklyTrend')}</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {t('results.weeklyDesc')}
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">{t('results.trendTitle')}</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {t('results.trendDesc')}
+                  </p>
+                </div>
+                <div className="flex gap-1 rounded-lg border border-border bg-[var(--surface-2)] p-1">
+                  {(["week", "month", "quarter"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setMtChartView(v)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                        mtChartView === v
+                          ? "bg-accent text-accent-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {v === "week" ? t('results.viewWeek') : v === "month" ? t('results.viewMonth') : t('results.viewQuarter')}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="h-64 px-2 pb-4">
-                {weeklyData.length === 0 ? (
+                {trendData.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center gap-2.5">
                     <div className="grid size-10 place-items-center rounded-xl bg-[var(--surface-2)]">
                       <TrendingUp className="size-5 text-muted-foreground" />
@@ -548,10 +581,10 @@ function ResultsPageContent() {
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weeklyData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+                    <LineChart data={trendData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis
-                        dataKey="semana"
+                        dataKey="periodo"
                         tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                         axisLine={{ stroke: "var(--border)" }}
                         tickLine={false}
