@@ -10,6 +10,7 @@ export const APIRoute = createAPIFileRoute('/api/generate-questions')({
         numPreguntas: number;
         dificultad: string;
         categoria: string;
+        area: string;
         distribucion: Record<string, number>;
         customSystemPrompt?: string;
       };
@@ -19,6 +20,7 @@ export const APIRoute = createAPIFileRoute('/api/generate-questions')({
         input.numPreguntas,
         input.dificultad,
         input.categoria,
+        input.area,
         input.distribucion,
         input.customSystemPrompt
       );

@@ -185,6 +185,9 @@ async function route(
   // ── Categories ────────────────────────────────────────────────────────────
   if (res === "categories" && !id && m === "GET") return listCategories();
 
+  // ── Question areas (distinct 'area' values on questions, not the org 'areas' table) ──
+  if (res === "question-areas" && !id && m === "GET") return listQuestionAreas();
+
   // ── Notifications ─────────────────────────────────────────────────────────
   if (res === "notifications") {
     if (!id && m === "GET") return getNotifications(request);
@@ -405,15 +408,15 @@ async function createQuestion(request: Request): Promise<Response> {
 
   const body = await request.json();
   const { evaluation_id, question_text, options, correct_answer,
-    contexto, categoria, dificultad, estado, justificacion } = body;
+    contexto, categoria, area, dificultad, estado, justificacion } = body;
 
   const [row] = await db`
     INSERT INTO questions
       (evaluation_id, question_text, options, correct_answer,
-       contexto, categoria, dificultad, estado, justificacion)
+       contexto, categoria, area, dificultad, estado, justificacion)
     VALUES
       (${evaluation_id ?? null}, ${question_text}, ${JSON.stringify(options)},
-       ${correct_answer}, ${contexto ?? null}, ${categoria ?? null},
+       ${correct_answer}, ${contexto ?? null}, ${categoria ?? null}, ${area ?? null},
        ${dificultad ?? null}, ${estado ?? null}, ${justificacion ?? null})
     RETURNING *
   `;
@@ -435,6 +438,7 @@ async function createQuestionsBatch(request: Request): Promise<Response> {
       correct_answer: q.correct_answer,
       contexto: q.contexto ?? null,
       categoria: q.categoria ?? null,
+      area: q.area ?? null,
       dificultad: q.dificultad ?? null,
       estado: q.estado ?? null,
       justificacion: q.justificacion ?? null,
@@ -451,7 +455,7 @@ async function updateQuestion(request: Request, id: string): Promise<Response> {
   const body = await request.json();
   const allowed = [
     "evaluation_id", "question_text", "options", "correct_answer",
-    "contexto", "categoria", "dificultad", "estado", "justificacion",
+    "contexto", "categoria", "area", "dificultad", "estado", "justificacion",
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
@@ -882,6 +886,17 @@ async function listCategories(): Promise<Response> {
     .filter(Boolean)
     .sort();
   return json(cats);
+}
+
+async function listQuestionAreas(): Promise<Response> {
+  const rows = await db`
+    SELECT DISTINCT area FROM questions WHERE area IS NOT NULL
+  `;
+  const areas = rows
+    .map((r: any) => r.area as string)
+    .filter(Boolean)
+    .sort();
+  return json(areas);
 }
 
 // ── Stats ─────────────────────────────────────────────────────────────────────

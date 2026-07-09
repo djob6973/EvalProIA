@@ -25,7 +25,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { extractTextWithOCR, type GeneratedQuestion } from "@/lib/services/openai";
-import { questionsService, getUniqueCategories } from "@/lib/services/evaluations";
+import { questionsService, getUniqueCategories, getUniqueAreas } from "@/lib/services/evaluations";
 import { generateQuestionsFn } from "@/lib/services/openai-server";
 import { getModelConfig, getSystemPrompt } from "@/routes/settings";
 
@@ -77,13 +77,18 @@ function GeneratePage() {
   const [numPreguntas, setNumPreguntas] = useState(10);
   const [dificultad, setDificultad] = useState("medio");
   const [categoria, setCategoria] = useState("");
-  const [tiempoLimite, setTiempoLimite] = useState(30);
+  const [area, setArea] = useState("");
   const [idioma, setIdioma] = useState("Español");
   const [categorias, setCategorias] = useState<string[]>([]);
   const [nuevaCategoria, setNuevaCategoria] = useState(false);
   const [catComboSearch, setCatComboSearch] = useState("");
   const [catComboOpen, setCatComboOpen] = useState(false);
   const catComboRef = useRef<HTMLDivElement>(null);
+  const [areas, setAreas] = useState<string[]>([]);
+  const [nuevaArea, setNuevaArea] = useState(false);
+  const [areaComboSearch, setAreaComboSearch] = useState("");
+  const [areaComboOpen, setAreaComboOpen] = useState(false);
+  const areaComboRef = useRef<HTMLDivElement>(null);
   const [distribucion, setDistribucion] = useState<Record<QuestionType, number>>({
     seleccion_unica: 33,
     seleccion_multiple: 33,
@@ -106,12 +111,16 @@ function GeneratePage() {
   
   useEffect(() => {
     getUniqueCategories().then(setCategorias).catch(console.error);
+    getUniqueAreas().then(setAreas).catch(console.error);
   }, []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (catComboRef.current && !catComboRef.current.contains(e.target as Node)) {
         setCatComboOpen(false);
+      }
+      if (areaComboRef.current && !areaComboRef.current.contains(e.target as Node)) {
+        setAreaComboOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -179,7 +188,7 @@ function GeneratePage() {
       const customSystemPrompt = getSystemPrompt();
       const { model, temperature, maxTokens, retries } = getModelConfig();
       const questionsArray = await generateQuestionsFn({
-        data: { extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma },
+        data: { extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma },
       });
 
       setQuestions(questionsArray);
@@ -234,6 +243,7 @@ function GeneratePage() {
           numPreguntas: 1,
           dificultad: q.dificultad,
           categoria: q.categoria,
+          area: q.area,
           distribucion: singleDistribucion,
           customSystemPrompt,
           model,
@@ -301,6 +311,7 @@ function GeneratePage() {
         correct_answer: q.respuesta_correcta.join(','),
         contexto: q.contexto ?? '',
         categoria: q.categoria,
+        area: q.area,
         dificultad: q.dificultad,
         estado: 'activa',
         justificacion: q.justificacion ?? ''
@@ -541,14 +552,72 @@ function GeneratePage() {
                     />
                   )}
                 </Field>
-                <Field label={t('generate.timeLimit')} hint={t('generate.timeLimitHint')}>
-                  <input
-                    type="number"
-                    min={1}
-                    value={tiempoLimite}
-                    onChange={(e) => setTiempoLimite(parseInt(e.target.value) || 1)}
-                    className="field-base"
-                  />
+                <Field label={t('generate.area')}>
+                  <div className="relative" ref={areaComboRef}>
+                    <input
+                      type="text"
+                      value={areaComboOpen ? areaComboSearch : (nuevaArea ? t('generate.createArea') : (area || t('generate.noArea')))}
+                      onFocus={() => { setAreaComboOpen(true); setAreaComboSearch(""); }}
+                      onChange={(e) => { setAreaComboSearch(e.target.value); setAreaComboOpen(true); }}
+                      placeholder={t('generate.noArea')}
+                      className="field-base"
+                    />
+                    {areaComboOpen && (
+                      <div
+                        className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg overflow-hidden"
+                        style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                      >
+                        <div className="max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => { setArea(""); setNuevaArea(false); setAreaComboOpen(false); setAreaComboSearch(""); }}
+                            className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: !area && !nuevaArea ? "var(--accent)" : "var(--foreground)" }}
+                          >
+                            {t('generate.noArea')}
+                          </button>
+                          {areas
+                            .filter((a) => a.toLowerCase().includes(areaComboSearch.toLowerCase()))
+                            .map((a) => (
+                              <button
+                                key={a}
+                                type="button"
+                                onClick={() => { setArea(a); setNuevaArea(false); setAreaComboOpen(false); setAreaComboSearch(""); }}
+                                className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                                style={{ color: area === a && !nuevaArea ? "var(--accent)" : "var(--foreground)" }}
+                              >
+                                {a}
+                              </button>
+                            ))}
+                          {areas.filter((a) => a.toLowerCase().includes(areaComboSearch.toLowerCase())).length === 0 && areaComboSearch && (
+                            <div className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                              Sin resultados
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t" style={{ borderColor: "var(--border)" }}>
+                          <button
+                            type="button"
+                            onClick={() => { setNuevaArea(true); setArea(""); setAreaComboOpen(false); setAreaComboSearch(""); }}
+                            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: "var(--accent)" }}
+                          >
+                            {t('generate.createArea')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {nuevaArea && (
+                    <input
+                      type="text"
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      placeholder={t('generate.newAreaName')}
+                      autoFocus
+                      className="mt-2 field-base"
+                    />
+                  )}
                 </Field>
                 <Field label={t('generate.language')}>
                   <select
@@ -816,6 +885,11 @@ function GeneratePage() {
                           <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                             {editingId === q.id && editDraft ? editDraft.categoria : q.categoria}
                           </span>
+                          {(editingId === q.id && editDraft ? editDraft.area : q.area) && (
+                            <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {editingId === q.id && editDraft ? editDraft.area : q.area}
+                            </span>
+                          )}
                           <div className="ml-auto flex items-center gap-1">
                             <button
                               onClick={() => regenerateQuestion(q)}
@@ -912,8 +986,8 @@ function GeneratePage() {
                               })}
                             </div>
 
-                            {/* Dificultad + Categoría */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Dificultad + Categoría + Área */}
+                            <div className="grid grid-cols-3 gap-3">
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editDifficulty')}</label>
                                 <select
@@ -931,6 +1005,14 @@ function GeneratePage() {
                                 <input
                                   value={editDraft.categoria}
                                   onChange={(e) => setEditDraft({ ...editDraft, categoria: e.target.value })}
+                                  className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editArea')}</label>
+                                <input
+                                  value={editDraft.area}
+                                  onChange={(e) => setEditDraft({ ...editDraft, area: e.target.value })}
                                   className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
                                 />
                               </div>

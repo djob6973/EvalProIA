@@ -23,6 +23,7 @@ export type GeneratedQuestion = {
   justificacion: string;
   dificultad: string;
   categoria: string;
+  area: string;
 };
 
 export async function extractTextFromFile(file: File): Promise<string> {

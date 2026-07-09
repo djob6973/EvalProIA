@@ -73,12 +73,16 @@ export async function runMigrations(): Promise<void> {
       correct_answer TEXT NOT NULL,
       contexto       TEXT,
       categoria      TEXT,
+      area           TEXT,
       dificultad     TEXT,
       estado         TEXT,
       justificacion  TEXT,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `;
+
+  // Idempotent for installs whose questions table predates the 'area' column
+  await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS area TEXT`;
 
   await db`
     CREATE TABLE IF NOT EXISTS results (

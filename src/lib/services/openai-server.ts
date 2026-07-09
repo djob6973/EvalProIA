@@ -132,6 +132,7 @@ export type GeneratedQuestion = {
   justificacion: string;
   dificultad: string;
   categoria: string;
+  area: string;
 };
 
 const BATCH_SIZE = 20;
@@ -158,6 +159,7 @@ function buildPrompt(
   numPreguntas: number,
   dificultad: string,
   categoria: string,
+  area: string,
   distribucion: Record<QuestionType, number>,
   extractedText: string,
   idioma = "Español"
@@ -168,6 +170,7 @@ Parámetros:
 - Idioma de salida: ${idioma} (TODAS las preguntas, opciones, contexto y justificaciones deben estar en ${idioma})
 - Dificultad: ${dificultad}
 - Categoría: ${categoria || 'General'}
+- Área: ${area || 'General'}
 - Distribución por tipo:
   * Selección única: ${distribucion.seleccion_unica}%
   * Selección múltiple: ${distribucion.seleccion_multiple}%
@@ -188,7 +191,8 @@ Genera un JSON válido con el siguiente formato exacto:
       "respuesta_correcta": [0],
       "justificacion": "explicación de por qué esa opción es correcta",
       "dificultad": "${dificultad}",
-      "categoria": "${categoria || 'General'}"
+      "categoria": "${categoria || 'General'}",
+      "area": "${area || 'General'}"
     }
   ]
 }
@@ -210,6 +214,7 @@ async function generateBatch(
   numPreguntas: number,
   dificultad: string,
   categoria: string,
+  area: string,
   distribucion: Record<QuestionType, number>,
   customSystemPrompt: string | undefined,
   model: string,
@@ -218,7 +223,7 @@ async function generateBatch(
   retries: number,
   idioma = "Español"
 ): Promise<GeneratedQuestion[]> {
-  const prompt = buildPrompt(numPreguntas, dificultad, categoria, distribucion, extractedText, idioma);
+  const prompt = buildPrompt(numPreguntas, dificultad, categoria, area, distribucion, extractedText, idioma);
   let lastError: Error = new Error('Error desconocido al generar preguntas');
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -265,6 +270,7 @@ export async function generateQuestionsServer(
   numPreguntas: number,
   dificultad: string,
   categoria: string,
+  area: string,
   distribucion: Record<QuestionType, number>,
   customSystemPrompt?: string,
   model = "gpt-4o-mini",
@@ -282,7 +288,7 @@ export async function generateQuestionsServer(
   const openai = new OpenAI({ apiKey, timeout: 120_000 });
 
   if (numPreguntas <= BATCH_SIZE) {
-    return generateBatch(openai, extractedText, numPreguntas, dificultad, categoria, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma);
+    return generateBatch(openai, extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma);
   }
 
   // Divide en lotes de BATCH_SIZE para evitar timeouts en generaciones grandes
@@ -296,7 +302,7 @@ export async function generateQuestionsServer(
   const allQuestions: GeneratedQuestion[] = [];
   for (const batchCount of batches) {
     const batchQuestions = await generateBatch(
-      openai, extractedText, batchCount, dificultad, categoria, distribucion,
+      openai, extractedText, batchCount, dificultad, categoria, area, distribucion,
       customSystemPrompt, model, temperature, maxTokens, retries, idioma
     );
     allQuestions.push(...batchQuestions);
@@ -332,6 +338,7 @@ function normalizeQuestion(q: unknown, index: number): GeneratedQuestion | null 
     justificacion: typeof obj.justificacion === 'string' ? obj.justificacion : '',
     dificultad: typeof obj.dificultad === 'string' ? obj.dificultad : 'medio',
     categoria: typeof obj.categoria === 'string' ? obj.categoria : 'General',
+    area: typeof obj.area === 'string' ? obj.area : 'General',
   };
 }
 
@@ -340,6 +347,7 @@ type GenerateQuestionsInput = {
   numPreguntas: number;
   dificultad: string;
   categoria: string;
+  area: string;
   distribucion: Record<string, number>;
   customSystemPrompt?: string;
   model?: string;
@@ -357,6 +365,7 @@ export const generateQuestionsFn = createServerFn({ method: 'POST' })
       data.numPreguntas,
       data.dificultad,
       data.categoria,
+      data.area,
       data.distribucion as Record<QuestionType, number>,
       data.customSystemPrompt,
       data.model,

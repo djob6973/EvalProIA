@@ -35,6 +35,7 @@ type Question = {
   contexto: string;
   tipo: QType;
   categoria: string;
+  area: string;
   dificultad: Difficulty;
   estado: Status;
   opciones: string[];
@@ -73,6 +74,7 @@ const SEED: Question[] = [
       "AWS ofrece varios servicios de cómputo y almacenamiento. Algunos están orientados a infraestructura tradicional y otros a modelos de ejecución basados en eventos sin gestionar servidores.",
     tipo: "unica",
     categoria: "Arquitectura Cloud",
+    area: "",
     dificultad: "medio",
     estado: "activa",
     opciones: ["AWS Lambda", "AWS EC2", "AWS S3", "AWS RDS"],
@@ -85,6 +87,7 @@ const SEED: Question[] = [
       "La gestión de identidad y accesos define cómo se otorgan, revisan y revocan permisos sobre recursos dentro de una organización moderna.",
     tipo: "multiple",
     categoria: "Seguridad",
+    area: "",
     dificultad: "dificil",
     estado: "activa",
     opciones: [
@@ -102,6 +105,7 @@ const SEED: Question[] = [
       "En aplicaciones renderizadas en servidor, existe un proceso por el cual el cliente conecta el árbol del DOM ya entregado con el código JavaScript que aporta interactividad.",
     tipo: "vf",
     categoria: "Frontend",
+    area: "",
     dificultad: "medio",
     estado: "activa",
     opciones: ["Verdadero", "Falso"],
@@ -114,6 +118,7 @@ const SEED: Question[] = [
       "Las plataformas modernas distribuyen el cómputo en múltiples ubicaciones geográficas, lo que influye en dónde se procesan las solicitudes de los usuarios.",
     tipo: "vf",
     categoria: "Arquitectura Cloud",
+    area: "",
     dificultad: "facil",
     estado: "borrador",
     opciones: ["Verdadero", "Falso"],
@@ -128,6 +133,7 @@ function emptyQuestion(): Question {
     contexto: "",
     tipo: "unica",
     categoria: "General",
+    area: "",
     dificultad: "medio",
     estado: "activa",
     opciones: ["", "", "", ""],
@@ -153,6 +159,7 @@ function QuestionBankPage() {
 
   const [items, setItems] = useState<Question[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [areas, setAreas] = useState<string[]>([]);
 
   // Cargar preguntas desde Supabase
   useEffect(() => {
@@ -171,18 +178,23 @@ function QuestionBankPage() {
           tipo: q.options?.length === 2 && q.options[0] === 'Verdadero' ? 'vf' : 
                 q.correct_answer?.includes(',') ? 'multiple' : 'unica',
           categoria: q.categoria || 'General',
+          area: q.area || '',
           dificultad: (q.dificultad as Difficulty) || 'medio',
           estado: (q.estado as Status) || 'activa',
           opciones: q.options || [],
           correctas: q.correct_answer ? q.correct_answer.split(',').map(Number) : [],
           justificacion: q.justificacion || ''
         }));
-        
+
         setItems(mappedItems);
 
         // Extraer categorías únicas de las preguntas
         const uniqueCategories = Array.from(new Set(mappedItems.map(q => q.categoria))).sort();
         setCategories(uniqueCategories.length > 0 ? uniqueCategories : ['General']);
+
+        // Extraer áreas únicas de las preguntas
+        const uniqueAreas = Array.from(new Set(mappedItems.map(q => q.area).filter(Boolean))).sort();
+        setAreas(uniqueAreas);
 
         // Preseleccionar la categoría de la pregunta activa más reciente
         const lastActiveCat = mappedItems.find(q => q.estado === 'activa')?.categoria;
@@ -193,6 +205,7 @@ function QuestionBankPage() {
         // Usar datos de ejemplo si falla la carga
         setItems(SEED);
         setCategories(DEFAULT_CATEGORIES);
+        setAreas([]);
       } finally {
         setLoading(false);
       }
@@ -204,6 +217,7 @@ function QuestionBankPage() {
   const debouncedQuery = useDebounce(query, 250);
   const [filterCat, setFilterCat] = useState<string>("todas");
   const [catSearch, setCatSearch] = useState("");
+  const [filterArea, setFilterArea] = useState<string>("todas");
   const [filterEstado, setFilterEstado] = useState<"todos" | Status>("activa");
   const [filterTipo, setFilterTipo] = useState<"todos" | QType>("todos");
   const [page, setPage] = useState(1);
@@ -216,6 +230,11 @@ function QuestionBankPage() {
   const [catComboSearch, setCatComboSearch] = useState("");
   const [catComboOpen, setCatComboOpen] = useState(false);
   const catComboRef = useRef<HTMLDivElement>(null);
+  const [isCreatingArea, setIsCreatingArea] = useState(false);
+  const [newAreaName, setNewAreaName] = useState("");
+  const [areaComboSearch, setAreaComboSearch] = useState("");
+  const [areaComboOpen, setAreaComboOpen] = useState(false);
+  const areaComboRef = useRef<HTMLDivElement>(null);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -224,21 +243,25 @@ function QuestionBankPage() {
       items.filter((q) => {
         const matchQ = q.enunciado.toLowerCase().includes(debouncedQuery.toLowerCase());
         const matchC = filterCat === "todas" || q.categoria === filterCat;
+        const matchA = filterArea === "todas" || q.area === filterArea;
         const matchE = filterEstado === "todos" || q.estado === filterEstado;
         const matchT = filterTipo === "todos" || q.tipo === filterTipo;
-        return matchQ && matchC && matchE && matchT;
+        return matchQ && matchC && matchA && matchE && matchT;
       }),
-    [items, debouncedQuery, filterCat, filterEstado, filterTipo],
+    [items, debouncedQuery, filterCat, filterArea, filterEstado, filterTipo],
   );
 
   // Resetear página al cambiar cualquier filtro o búsqueda
-  useEffect(() => { setPage(1); }, [debouncedQuery, filterCat, filterEstado, filterTipo]);
+  useEffect(() => { setPage(1); }, [debouncedQuery, filterCat, filterArea, filterEstado, filterTipo]);
 
-  // Close category combobox on outside click
+  // Close category/area combobox on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (catComboRef.current && !catComboRef.current.contains(e.target as Node)) {
         setCatComboOpen(false);
+      }
+      if (areaComboRef.current && !areaComboRef.current.contains(e.target as Node)) {
+        setAreaComboOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -270,6 +293,10 @@ function QuestionBankPage() {
     setNewCategoryName("");
     setCatComboSearch("");
     setCatComboOpen(false);
+    setIsCreatingArea(false);
+    setNewAreaName("");
+    setAreaComboSearch("");
+    setAreaComboOpen(false);
     setShowModal(true);
   };
 
@@ -280,6 +307,10 @@ function QuestionBankPage() {
     setNewCategoryName("");
     setCatComboSearch("");
     setCatComboOpen(false);
+    setIsCreatingArea(false);
+    setNewAreaName("");
+    setAreaComboSearch("");
+    setAreaComboOpen(false);
     setShowModal(true);
   };
 
@@ -351,6 +382,8 @@ function QuestionBankPage() {
     if (!form.contexto.trim()) return showToast(t('questionBank.validContext'), "error");
     if (isCreatingCategory && !newCategoryName.trim())
       return showToast(t('questionBank.validCategory'), "error");
+    if (isCreatingArea && !newAreaName.trim())
+      return showToast(t('questionBank.validArea'), "error");
     const opcionesValidas = form.opciones.every((o) => o.trim().length > 0);
     if (!opcionesValidas) return showToast(t('questionBank.validOptions'), "error");
     if (form.correctas.length === 0)
@@ -365,6 +398,10 @@ function QuestionBankPage() {
     if (isCreatingCategory && newCategoryName.trim() && !categories.includes(newCategoryName.trim())) {
       setCategories((prev) => [...prev, newCategoryName.trim()].sort());
     }
+    // Si es un área nueva, agregarla a la lista de áreas
+    if (isCreatingArea && newAreaName.trim() && !areas.includes(newAreaName.trim())) {
+      setAreas((prev) => [...prev, newAreaName.trim()].sort());
+    }
 
     setIsSaving(true);
     try {
@@ -376,6 +413,7 @@ function QuestionBankPage() {
           options: form.opciones,
           correct_answer: form.correctas.join(','),
           categoria: form.categoria,
+          area: form.area,
           dificultad: form.dificultad,
           estado: form.estado,
           justificacion: form.justificacion
@@ -391,6 +429,7 @@ function QuestionBankPage() {
           options: form.opciones,
           correct_answer: form.correctas.join(','),
           categoria: form.categoria,
+          area: form.area,
           dificultad: form.dificultad,
           estado: form.estado,
           justificacion: form.justificacion
@@ -404,6 +443,7 @@ function QuestionBankPage() {
           tipo: created.options?.length === 2 && created.options[0] === 'Verdadero' ? 'vf'
               : created.correct_answer?.includes(',') ? 'multiple' : 'unica',
           categoria: created.categoria || 'General',
+          area: created.area || '',
           dificultad: (created.dificultad as Difficulty) || 'medio',
           estado: (created.estado as Status) || 'activa',
           opciones: created.options || [],
@@ -563,6 +603,17 @@ function QuestionBankPage() {
               <option value="vf">{t('evaluations.trueFalse')}</option>
             </select>
             <select
+              value={filterArea}
+              onChange={(e) => setFilterArea(e.target.value)}
+              className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
+              style={{ borderColor: "var(--border)", background: "var(--card)" }}
+            >
+              <option value="todas">{t('questionBank.allAreas')}</option>
+              {areas.map((a) => (
+                <option key={a} value={a}>{a}</option>
+              ))}
+            </select>
+            <select
               value={filterEstado}
               onChange={(e) => setFilterEstado(e.target.value as typeof filterEstado)}
               className="rounded-lg border px-3 py-2 text-sm transition-all duration-300 hover:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent"
@@ -603,6 +654,11 @@ function QuestionBankPage() {
                           <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
                             {q.categoria}
                           </span>
+                          {q.area && (
+                            <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
+                              {q.area}
+                            </span>
+                          )}
                           <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
                             {TYPE_LABEL[q.tipo]}
                           </span>
@@ -846,6 +902,97 @@ function QuestionBankPage() {
                         setForm({ ...form, categoria: e.target.value });
                       }}
                       placeholder={t('questionBank.newCategoryName')}
+                      autoFocus
+                      className="mt-2 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                      style={{ borderColor: "var(--border)", background: "var(--background)" }}
+                    />
+                  )}
+                </div>
+                <div className="animate-fade-in" style={{ animationDelay: "175ms" }}>
+                  <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
+                    {t('questionBank.areaLabel')}
+                  </label>
+                  <div className="relative" ref={areaComboRef}>
+                    <input
+                      type="text"
+                      value={areaComboOpen ? areaComboSearch : (isCreatingArea ? t('questionBank.createArea') : (form.area || t('generate.noArea')))}
+                      onFocus={() => { setAreaComboOpen(true); setAreaComboSearch(""); }}
+                      onChange={(e) => { setAreaComboSearch(e.target.value); setAreaComboOpen(true); }}
+                      placeholder={t('questionBank.areaLabel')}
+                      className="w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                      style={{ borderColor: "var(--border)", background: "var(--background)" }}
+                    />
+                    {areaComboOpen && (
+                      <div
+                        className="absolute z-50 mt-1 w-full rounded-lg border shadow-lg overflow-hidden"
+                        style={{ background: "var(--card)", borderColor: "var(--border)" }}
+                      >
+                        <div className="max-h-48 overflow-y-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForm({ ...form, area: "" });
+                              setIsCreatingArea(false);
+                              setAreaComboOpen(false);
+                              setAreaComboSearch("");
+                            }}
+                            className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: !form.area && !isCreatingArea ? "var(--accent)" : "var(--foreground)" }}
+                          >
+                            {t('generate.noArea')}
+                          </button>
+                          {areas
+                            .filter((a) => a.toLowerCase().includes(areaComboSearch.toLowerCase()))
+                            .map((a) => (
+                              <button
+                                key={a}
+                                type="button"
+                                onClick={() => {
+                                  setForm({ ...form, area: a });
+                                  setIsCreatingArea(false);
+                                  setAreaComboOpen(false);
+                                  setAreaComboSearch("");
+                                }}
+                                className="flex w-full items-center px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-2)]"
+                                style={{ color: form.area === a && !isCreatingArea ? "var(--accent)" : "var(--foreground)" }}
+                              >
+                                {a}
+                              </button>
+                            ))}
+                          {areas.filter((a) => a.toLowerCase().includes(areaComboSearch.toLowerCase())).length === 0 && (
+                            <div className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                              {t('questionBank.emptyFilters')}
+                            </div>
+                          )}
+                        </div>
+                        <div className="border-t" style={{ borderColor: "var(--border)" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCreatingArea(true);
+                              setNewAreaName("");
+                              setForm({ ...form, area: "" });
+                              setAreaComboOpen(false);
+                              setAreaComboSearch("");
+                            }}
+                            className="flex w-full items-center gap-1.5 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--surface-2)]"
+                            style={{ color: "var(--accent)" }}
+                          >
+                            + {t('questionBank.createArea')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {isCreatingArea && (
+                    <input
+                      type="text"
+                      value={newAreaName}
+                      onChange={(e) => {
+                        setNewAreaName(e.target.value);
+                        setForm({ ...form, area: e.target.value });
+                      }}
+                      placeholder={t('questionBank.newAreaName')}
                       autoFocus
                       className="mt-2 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
                       style={{ borderColor: "var(--border)", background: "var(--background)" }}

@@ -34,6 +34,7 @@ export interface Question {
   created_at: string
   contexto?: string
   categoria?: string
+  area?: string
   dificultad?: string
   estado?: string
   justificacion?: string
@@ -273,6 +274,10 @@ export async function getAllParticipants(): Promise<ParticipantProfile[]> {
 
 export async function getUniqueCategories(): Promise<string[]> {
   return apiFetch('/api/data/categories');
+}
+
+export async function getUniqueAreas(): Promise<string[]> {
+  return apiFetch('/api/data/question-areas');
 }
 
 // ── Scoring logic (pure, no network calls needed) ────────────────────────────
