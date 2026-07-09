@@ -269,11 +269,29 @@ function QuestionBankPage() {
   }, []);
 
   const counts = useMemo(() => {
-    const source = filterEstado === 'todos' ? items : items.filter(q => q.estado === filterEstado);
+    const source = items.filter(
+      (q) =>
+        (filterEstado === 'todos' || q.estado === filterEstado) &&
+        (filterArea === 'todas' || q.area === filterArea),
+    );
     const c: Record<string, number> = { Todas: source.length };
     categories.forEach((cat) => (c[cat] = source.filter((q) => q.categoria === cat).length));
     return c;
-  }, [items, categories, filterEstado]);
+  }, [items, categories, filterEstado, filterArea]);
+
+  // Cuando hay un área seleccionada, solo mostrar las categorías que tienen
+  // preguntas en esa área — así el usuario identifica qué categorías existen por área.
+  const categoriesForArea = useMemo(() => {
+    if (filterArea === "todas") return categories;
+    return categories.filter((cat) => (counts[cat] ?? 0) > 0);
+  }, [categories, filterArea, counts]);
+
+  // Si la categoría filtrada ya no aplica al área seleccionada, resetear el filtro
+  useEffect(() => {
+    if (filterCat !== "todas" && !categoriesForArea.includes(filterCat)) {
+      setFilterCat("todas");
+    }
+  }, [filterArea, categoriesForArea]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = useMemo(
@@ -515,8 +533,13 @@ function QuestionBankPage() {
           <div className="rounded-lg border border-border bg-card p-5 transition-all duration-300" style={{ boxShadow: "var(--shadow-sm)" }}>
             <div className="mb-3 font-mono text-[9px] font-bold uppercase tracking-[.14em] transition-colors duration-300" style={{ color: "var(--accent)" }}>
               {t('questionBank.categories')}
+              {filterArea !== "todas" && (
+                <span className="ml-1 normal-case tracking-normal" style={{ color: "var(--muted-foreground)" }}>
+                  · {filterArea}
+                </span>
+              )}
             </div>
-            {categories.length > 0 && (
+            {categoriesForArea.length > 0 && (
               <div className="relative mb-3">
                 <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
                 <input
@@ -553,7 +576,7 @@ function QuestionBankPage() {
                   </button>
                 </li>
               )}
-              {categories
+              {categoriesForArea
                 .filter((c) => c.toLowerCase().includes(catSearch.toLowerCase()))
                 .map((c: string, idx: number) => (
                   <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
@@ -570,9 +593,14 @@ function QuestionBankPage() {
                     </button>
                   </li>
                 ))}
-              {catSearch && categories.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase())).length === 0 && (
+              {catSearch && categoriesForArea.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase())).length === 0 && (
                 <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
                   Sin resultados
+                </li>
+              )}
+              {!catSearch && categoriesForArea.length === 0 && (
+                <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                  {t('questionBank.emptyFilters')}
                 </li>
               )}
             </ul>
