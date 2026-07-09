@@ -68,6 +68,9 @@ const SELECT_CLASS =
   "transition-colors hover:border-[var(--border-strong)] focus:border-accent focus:outline-none " +
   "focus:ring-2 focus:ring-accent/20 cursor-pointer";
 
+const FILTER_LABEL_CLASS =
+  "mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground";
+
 // KPI_ITEMS labels are replaced dynamically in the component using t()
 const KPI_ITEM_ICONS = [ClipboardList, Users, CheckCircle2, Clock, Trophy] as const;
 
@@ -485,41 +488,10 @@ function ResultsPageContent() {
           <>
             {/* Filters */}
             <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="mb-3 flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {t('results.filters')}
                 </span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('results.areaEvalLabel')}</span>
-                  <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={SELECT_CLASS}>
-                    <option value="all">{t('results.allAreas')}</option>
-                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    <option value="none">{t('results.noArea')}</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('results.areaParticipantLabel')}</span>
-                  <select value={mtFilterParticipantAreaId} onChange={(e) => setMtFilterParticipantAreaId(e.target.value)} className={SELECT_CLASS}>
-                    <option value="all">{t('results.allAreas')}</option>
-                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                </div>
-                <select value={mtFilterEvaluationId} onChange={(e) => setMtFilterEvaluationId(e.target.value)} className={SELECT_CLASS}>
-                  <option value="all">{t('results.allEvaluations')}</option>
-                  {evaluations.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
-                </select>
-                <select value={mtFilterUserId} onChange={(e) => setMtFilterUserId(e.target.value)} className={SELECT_CLASS}>
-                  <option value="all">{t('results.allParticipants')}</option>
-                  {mtParticipantOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
-                </select>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('results.from')}</span>
-                  <input type="date" value={mtFilterDateFrom} onChange={(e) => setMtFilterDateFrom(e.target.value)} className={SELECT_CLASS} />
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">{t('results.to')}</span>
-                  <input type="date" value={mtFilterDateTo} onChange={(e) => setMtFilterDateTo(e.target.value)} className={SELECT_CLASS} />
-                </div>
                 {(mtFilterAreaId !== "all" || mtFilterParticipantAreaId !== "all" || mtFilterEvaluationId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
                   <button
                     onClick={() => { setMtFilterAreaId("all"); setMtFilterParticipantAreaId("all"); setMtFilterEvaluationId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
@@ -528,6 +500,47 @@ function ResultsPageContent() {
                     {t('results.clearFilters')}
                   </button>
                 )}
+              </div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+                <div className="flex gap-2.5 rounded-lg border border-border bg-[var(--surface-2)] p-2.5" style={{ gridColumn: "span 2" }}>
+                  <div className="min-w-0 flex-1">
+                    <label className={FILTER_LABEL_CLASS}>{t('results.areaEvalLabel')}</label>
+                    <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
+                      <option value="all">{t('results.allAreas')}</option>
+                      {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                      <option value="none">{t('results.noArea')}</option>
+                    </select>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <label className={FILTER_LABEL_CLASS}>{t('results.areaParticipantLabel')}</label>
+                    <select value={mtFilterParticipantAreaId} onChange={(e) => setMtFilterParticipantAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
+                      <option value="all">{t('results.allAreas')}</option>
+                      {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.evaluationLabel')}</label>
+                  <select value={mtFilterEvaluationId} onChange={(e) => setMtFilterEvaluationId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
+                    <option value="all">{t('results.allEvaluations')}</option>
+                    {evaluations.map((ev) => <option key={ev.id} value={ev.id}>{ev.title}</option>)}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.participantLabel')}</label>
+                  <select value={mtFilterUserId} onChange={(e) => setMtFilterUserId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
+                    <option value="all">{t('results.allParticipants')}</option>
+                    {mtParticipantOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.from')}</label>
+                  <input type="date" value={mtFilterDateFrom} onChange={(e) => setMtFilterDateFrom(e.target.value)} className={`${SELECT_CLASS} w-full`} />
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.to')}</label>
+                  <input type="date" value={mtFilterDateTo} onChange={(e) => setMtFilterDateTo(e.target.value)} className={`${SELECT_CLASS} w-full`} />
+                </div>
               </div>
             </div>
 

@@ -551,6 +551,8 @@
     "allEvaluations": "Todas las evaluaciones",
     "areaEvalLabel": "Área evaluación",
     "areaParticipantLabel": "Área participante",
+    "evaluationLabel": "Evaluación",
+    "participantLabel": "Participante",
     "noArea": "Sin área",
     "scoreDistribution": "Distribución de Puntajes",
     "distributionDesc": "A lo largo de las {{count}} sesión(es) completada(s).",

@@ -547,6 +547,8 @@
     "allEvaluations": "All evaluations",
     "areaEvalLabel": "Evaluation area",
     "areaParticipantLabel": "Participant area",
+    "evaluationLabel": "Evaluation",
+    "participantLabel": "Participant",
     "noArea": "No area",
     "scoreDistribution": "Score Distribution",
     "distributionDesc": "Across {{count}} completed session(s).",
