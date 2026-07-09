@@ -38,6 +38,7 @@ function TakeEvaluationRoute() {
   const [submitting, setSubmitting] = useState(false);
   const [existingProgress, setExistingProgress] = useState<any>(null);
   const [currentAttempt, setCurrentAttempt] = useState<number>(1);
+  const [showStartConfirm, setShowStartConfirm] = useState(false);
 
   // Cargar evaluación y preguntas
   useEffect(() => {
@@ -440,13 +441,22 @@ function TakeEvaluationRoute() {
                   <RefreshCw className="size-4" /> {t('take.resume')}
                 </Button>
               ) : (
-                <Button onClick={() => handleStart()} disabled={questions.length === 0}>
+                <Button onClick={() => setShowStartConfirm(true)} disabled={questions.length === 0}>
                   <Play className="size-4" /> {t('take.start')}
                 </Button>
               )}
             </div>
           </div>
         </div>
+
+        <ConfirmDialog
+          open={showStartConfirm}
+          title={t('take.confirmStartTitle')}
+          description={t('take.confirmStartDesc')}
+          confirmLabel={t('take.confirmStartBtn')}
+          onConfirm={() => { setShowStartConfirm(false); handleStart(); }}
+          onCancel={() => setShowStartConfirm(false)}
+        />
       </AppShell>
     );
   }

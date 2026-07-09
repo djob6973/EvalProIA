@@ -658,7 +658,10 @@
     "confirmAnswerDesc": "Once you proceed, your answer will be locked and cannot be modified. Do you want to continue?",
     "confirmAnswerBtn": "Yes, continue",
     "confirmSubmitTitle": "Submit evaluation?",
-    "confirmSubmitDesc": "Once submitted you will not be able to modify your answers. Do you want to continue?"
+    "confirmSubmitDesc": "Once submitted you will not be able to modify your answers. Do you want to continue?",
+    "confirmStartTitle": "Start evaluation?",
+    "confirmStartDesc": "Once you start, the timer will begin. Do you want to continue?",
+    "confirmStartBtn": "Yes, start"
   },
   "account": {
     "pageTitle": "My Account — EvalPro",

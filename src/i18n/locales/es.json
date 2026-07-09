@@ -662,7 +662,10 @@
     "confirmAnswerDesc": "Una vez que avances, tu respuesta quedará bloqueada y no podrás modificarla. ¿Deseas continuar?",
     "confirmAnswerBtn": "Sí, continuar",
     "confirmSubmitTitle": "¿Enviar evaluación?",
-    "confirmSubmitDesc": "Una vez enviada no podrás modificar tus respuestas. ¿Deseas continuar?"
+    "confirmSubmitDesc": "Una vez enviada no podrás modificar tus respuestas. ¿Deseas continuar?",
+    "confirmStartTitle": "¿Iniciar evaluación?",
+    "confirmStartDesc": "Una vez que inicies, el tiempo comenzará a correr. ¿Deseas continuar?",
+    "confirmStartBtn": "Sí, iniciar"
   },
   "account": {
     "pageTitle": "Mi Cuenta — EvalPro",
