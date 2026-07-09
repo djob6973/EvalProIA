@@ -488,7 +488,7 @@ function ResultsPageContent() {
           <>
             {/* Filters */}
             <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center justify-between pb-3">
                 <div className="flex items-center gap-2">
                   <Filter className="size-4 text-accent" strokeWidth={2.5} />
                   <span className="text-sm font-semibold text-foreground">{t('results.filters')}</span>
@@ -502,23 +502,21 @@ function ResultsPageContent() {
                   </button>
                 )}
               </div>
-              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-                <div className="flex gap-2.5 rounded-lg border border-border bg-[var(--surface-2)] p-2.5" style={{ gridColumn: "span 2" }}>
-                  <div className="min-w-0 flex-1">
-                    <label className={FILTER_LABEL_CLASS}>{t('results.areaEvalLabel')}</label>
-                    <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
-                      <option value="all">{t('results.allAreas')}</option>
-                      {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                      <option value="none">{t('results.noArea')}</option>
-                    </select>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <label className={FILTER_LABEL_CLASS}>{t('results.areaParticipantLabel')}</label>
-                    <select value={mtFilterParticipantAreaId} onChange={(e) => setMtFilterParticipantAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
-                      <option value="all">{t('results.allAreas')}</option>
-                      {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                    </select>
-                  </div>
+              <div className="grid gap-3 border-t border-border pt-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.areaEvalLabel')}</label>
+                  <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
+                    <option value="all">{t('results.allAreas')}</option>
+                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    <option value="none">{t('results.noArea')}</option>
+                  </select>
+                </div>
+                <div className="min-w-0">
+                  <label className={FILTER_LABEL_CLASS}>{t('results.areaParticipantLabel')}</label>
+                  <select value={mtFilterParticipantAreaId} onChange={(e) => setMtFilterParticipantAreaId(e.target.value)} className={`${SELECT_CLASS} w-full`}>
+                    <option value="all">{t('results.allAreas')}</option>
+                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
                 </div>
                 <div className="min-w-0">
                   <label className={FILTER_LABEL_CLASS}>{t('results.evaluationLabel')}</label>
@@ -723,7 +721,7 @@ function ResultsPageContent() {
           <div className="space-y-4">
             {/* Filters */}
             <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center justify-between pb-3">
                 <div className="flex items-center gap-2">
                   <Filter className="size-4 text-accent" strokeWidth={2.5} />
                   <span className="text-sm font-semibold text-foreground">{t('results.filters')}</span>
@@ -742,7 +740,7 @@ function ResultsPageContent() {
                   </button>
                 )}
               </div>
-              <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+              <div className="grid gap-3 border-t border-border pt-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
                 <div className="min-w-0">
                   <label className={FILTER_LABEL_CLASS}>{t('results.areaParticipantLabel')}</label>
                   <select
