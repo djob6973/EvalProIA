@@ -540,6 +540,8 @@
     "noData": "Sem dados para os filtros selecionados.",
     "allAreas": "Todas as áreas",
     "allParticipants": "Todos os participantes",
+    "areaEvalLabel": "Área avaliação",
+    "areaParticipantLabel": "Área participante",
     "scoreDistribution": "Distribuição de Pontuações",
     "distributionDesc": "Ao longo das {{count}} sessão(ões) concluída(s).",
     "noSessions": "Sem sessões concluídas ainda.",

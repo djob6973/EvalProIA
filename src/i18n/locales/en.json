@@ -540,6 +540,8 @@
     "noData": "No data for the selected filters.",
     "allAreas": "All areas",
     "allParticipants": "All participants",
+    "areaEvalLabel": "Evaluation area",
+    "areaParticipantLabel": "Participant area",
     "scoreDistribution": "Score Distribution",
     "distributionDesc": "Across {{count}} completed session(s).",
     "noSessions": "No completed sessions yet.",

@@ -97,6 +97,7 @@ function ResultsPageContent() {
   // Metrics tab filters
   const currentYear = new Date().getFullYear();
   const [mtFilterAreaId, setMtFilterAreaId] = useState<string>("all");
+  const [mtFilterParticipantAreaId, setMtFilterParticipantAreaId] = useState<string>("all");
   const [mtFilterUserId, setMtFilterUserId] = useState<string>("all");
   const [mtFilterDateFrom, setMtFilterDateFrom] = useState(`${currentYear}-01-01`);
   const [mtFilterDateTo, setMtFilterDateTo] = useState(`${currentYear}-12-31`);
@@ -150,16 +151,46 @@ function ResultsPageContent() {
     loadResults();
   }, [isAdmin]);
 
+  const participantsById = useMemo(() => {
+    const map = new Map<string, { id: string; full_name: string | null; email: string; area_id: string | null }>();
+    for (const p of participants) map.set(p.id, p);
+    return map;
+  }, [participants]);
+
   // Metrics tab: results filtered by the shared filter bar
   const metricsFiltered = useMemo(() => {
     return allResults.filter((r) => {
       if (mtFilterAreaId !== "all" && r.evaluations?.area_id !== mtFilterAreaId) return false;
+      if (mtFilterParticipantAreaId !== "all" && participantsById.get(r.user_id)?.area_id !== mtFilterParticipantAreaId) return false;
       if (mtFilterUserId !== "all" && r.user_id !== mtFilterUserId) return false;
       if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
       if (mtFilterDateTo && new Date(r.completed_at) > new Date(mtFilterDateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [allResults, mtFilterAreaId, mtFilterUserId, mtFilterDateFrom, mtFilterDateTo]);
+  }, [allResults, participantsById, mtFilterAreaId, mtFilterParticipantAreaId, mtFilterUserId, mtFilterDateFrom, mtFilterDateTo]);
+
+  // Metrics tab: participant select only lists participants who actually have results under the current area/date filters
+  const mtParticipantOptions = useMemo(() => {
+    const relevantUserIds = new Set(
+      allResults
+        .filter((r) => {
+          if (mtFilterAreaId !== "all" && r.evaluations?.area_id !== mtFilterAreaId) return false;
+          if (mtFilterParticipantAreaId !== "all" && participantsById.get(r.user_id)?.area_id !== mtFilterParticipantAreaId) return false;
+          if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
+          if (mtFilterDateTo && new Date(r.completed_at) > new Date(mtFilterDateTo + "T23:59:59")) return false;
+          return true;
+        })
+        .map((r) => r.user_id)
+    );
+    return participants.filter((p) => relevantUserIds.has(p.id));
+  }, [allResults, participants, participantsById, mtFilterAreaId, mtFilterParticipantAreaId, mtFilterDateFrom, mtFilterDateTo]);
+
+  // If the selected participant falls out of the available options (area filters changed), reset it
+  useEffect(() => {
+    if (mtFilterUserId !== "all" && !mtParticipantOptions.some((p) => p.id === mtFilterUserId)) {
+      setMtFilterUserId("all");
+    }
+  }, [mtParticipantOptions, mtFilterUserId]);
 
   const stats = useMemo(() => {
     const total = metricsFiltered.length;
@@ -271,6 +302,22 @@ function ResultsPageContent() {
       return true;
     });
   }, [participantStats, ptFilterAreaId, ptFilterUserId, ptFilterDateFrom, ptFilterDateTo]);
+
+  // Participant select only lists participants who actually have results under the current area/date filters
+  const ptParticipantOptions = useMemo(() => {
+    return participantStats.filter((p) => {
+      if (ptFilterAreaId !== "all" && p.areaId !== ptFilterAreaId) return false;
+      if (ptFilterDateFrom && new Date(p.lastActivity).getTime() < new Date(ptFilterDateFrom).getTime()) return false;
+      if (ptFilterDateTo && new Date(p.lastActivity).getTime() > new Date(ptFilterDateTo + "T23:59:59").getTime()) return false;
+      return true;
+    });
+  }, [participantStats, ptFilterAreaId, ptFilterDateFrom, ptFilterDateTo]);
+
+  useEffect(() => {
+    if (ptFilterUserId !== "all" && !ptParticipantOptions.some((p) => p.userId === ptFilterUserId)) {
+      setPtFilterUserId("all");
+    }
+  }, [ptParticipantOptions, ptFilterUserId]);
 
   const ptTotalPages = Math.ceil(filteredParticipants.length / PT_PAGE_SIZE);
   const ptPageData = filteredParticipants.slice(
@@ -413,13 +460,23 @@ function ResultsPageContent() {
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   {t('results.filters')}
                 </span>
-                <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={SELECT_CLASS}>
-                  <option value="all">{t('results.allAreas')}</option>
-                  {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t('results.areaEvalLabel')}</span>
+                  <select value={mtFilterAreaId} onChange={(e) => setMtFilterAreaId(e.target.value)} className={SELECT_CLASS}>
+                    <option value="all">{t('results.allAreas')}</option>
+                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground">{t('results.areaParticipantLabel')}</span>
+                  <select value={mtFilterParticipantAreaId} onChange={(e) => setMtFilterParticipantAreaId(e.target.value)} className={SELECT_CLASS}>
+                    <option value="all">{t('results.allAreas')}</option>
+                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </div>
                 <select value={mtFilterUserId} onChange={(e) => setMtFilterUserId(e.target.value)} className={SELECT_CLASS}>
                   <option value="all">{t('results.allParticipants')}</option>
-                  {participants.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
+                  {mtParticipantOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name || p.email}</option>)}
                 </select>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">{t('results.from')}</span>
@@ -429,9 +486,9 @@ function ResultsPageContent() {
                   <span className="text-xs text-muted-foreground">{t('results.to')}</span>
                   <input type="date" value={mtFilterDateTo} onChange={(e) => setMtFilterDateTo(e.target.value)} className={SELECT_CLASS} />
                 </div>
-                {(mtFilterAreaId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
+                {(mtFilterAreaId !== "all" || mtFilterParticipantAreaId !== "all" || mtFilterUserId !== "all" || mtFilterDateFrom || mtFilterDateTo) && (
                   <button
-                    onClick={() => { setMtFilterAreaId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
+                    onClick={() => { setMtFilterAreaId("all"); setMtFilterParticipantAreaId("all"); setMtFilterUserId("all"); setMtFilterDateFrom(`${currentYear}-01-01`); setMtFilterDateTo(`${currentYear}-12-31`); }}
                     className="text-xs text-accent hover:underline"
                   >
                     {t('results.clearFilters')}
@@ -621,8 +678,8 @@ function ResultsPageContent() {
                   className={SELECT_CLASS}
                 >
                   <option value="all">{t('results.allParticipants')}</option>
-                  {participants.map((p) => (
-                    <option key={p.id} value={p.id}>{p.full_name || p.email}</option>
+                  {ptParticipantOptions.map((p) => (
+                    <option key={p.userId} value={p.userId}>{p.name || p.email}</option>
                   ))}
                 </select>
                 <div className="flex items-center gap-1.5">
