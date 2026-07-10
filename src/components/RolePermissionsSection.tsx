@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Shield, RotateCcw } from "lucide-react";
 import {
   LayoutDashboard, Users, Layers, ClipboardList, Library,
-  Sparkles, BarChart3, Settings, SlidersHorizontal, Home, History,
+  Sparkles, BarChart3, Settings, SlidersHorizontal, Home, History, MessageSquare,
 } from "lucide-react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ const MODULES: Array<{ key: string; label: string; sub?: boolean }> = [
   { key: "question_bank", label: "Banco de Preguntas" },
   { key: "generate",      label: "Generador IA"       },
   { key: "results",       label: "Resultados Globales"},
+  { key: "foro",          label: "Foro"               },
   { key: "settings",      label: "Prompts IA"         },
   { key: "config",        label: "Configuración"      },
   { key: "config.users",  label: "Usuarios",          sub: true },
@@ -60,6 +61,7 @@ const NAV_PREVIEW = [
   { key: "question_bank", label: "Banco de Preguntas",  icon: Library           },
   { key: "generate",      label: "Generador IA",        icon: Sparkles          },
   { key: "results",       label: "Resultados Globales", icon: BarChart3         },
+  { key: "foro",          label: "Foro",                 icon: MessageSquare    },
   { key: "settings",      label: "Prompts IA",          icon: Settings          },
   { key: "config",        label: "Configuración",       icon: SlidersHorizontal },
   { key: "participant",   label: "Participante",        icon: Home              },

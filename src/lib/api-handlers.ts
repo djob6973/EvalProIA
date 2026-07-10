@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { getAuthContext, AuthUser } from "./server-auth";
+import { getAuthContext, AuthUser, getPermissionLevel, levelAtLeast } from "./server-auth";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -210,6 +210,30 @@ async function route(
   if (res === "role-permissions") {
     if (!id && m === "GET") return getRolePermissions(request);
     if (!id && m === "PUT") return setRolePermissions(request);
+  }
+
+  // ── Foro ──────────────────────────────────────────────────────────────────
+  if (res === "foro-articulos") {
+    if (!id) {
+      if (m === "GET") return listForoArticulos(request, url);
+      if (m === "POST") return createForoArticulo(request);
+    }
+    if (id && !sub2) {
+      if (m === "GET") return getForoArticulo(request, id);
+      if (m === "PUT") return updateForoArticulo(request, id);
+      if (m === "DELETE") return deleteForoArticulo(request, id);
+    }
+  }
+
+  if (res === "foro-comentarios") {
+    if (!id && m === "POST") return createForoComentario(request);
+    if (id === "by-articulo" && sub2 && m === "GET")
+      return foroComentariosByArticulo(request, sub2);
+    if (id && sub2 === "like" && m === "POST") return toggleForoLike(request, id);
+    if (id && !sub2) {
+      if (m === "PUT") return updateForoComentario(request, id);
+      if (m === "DELETE") return deleteForoComentario(request, id);
+    }
   }
 
   return null;
@@ -1220,4 +1244,430 @@ async function setRolePermissions(request: Request): Promise<Response> {
   }
 
   return json({ success: true });
+}
+
+// ── Foro ────────────────────────────────────────────────────────────────────
+
+const FORO_ADJUNTO_MAX_BYTES = 5_000_000; // 5MB per file
+const FORO_ADJUNTOS_TOTAL_MAX_BYTES = 20_000_000; // 20MB total per article
+const FORO_ADJUNTO_MIME_RE =
+  /^data:(image\/(png|jpeg|jpg|webp|gif|svg\+xml)|application\/(pdf|msword|vnd\.openxmlformats-officedocument\.wordprocessingml\.document)|text\/plain);base64,/;
+
+function parseForoArticulo(row: any) {
+  if (!row) return row;
+  return {
+    ...row,
+    etiquetas: typeof row.etiquetas === "string" ? JSON.parse(row.etiquetas) : (row.etiquetas ?? []),
+  };
+}
+
+function parseForoComentario(row: any) {
+  if (!row) return row;
+  return {
+    ...row,
+    mentions: typeof row.mentions === "string" ? JSON.parse(row.mentions) : (row.mentions ?? []),
+  };
+}
+
+function validateForoAdjuntos(adjuntos: unknown): string | null {
+  if (adjuntos === undefined || adjuntos === null) return null;
+  if (!Array.isArray(adjuntos)) return "Formato de adjuntos inválido";
+  if (adjuntos.length > 10) return "Máximo 10 adjuntos por artículo";
+  let total = 0;
+  for (const a of adjuntos) {
+    if (
+      !a ||
+      typeof a.nombre !== "string" ||
+      typeof a.tipo !== "string" ||
+      typeof a.data_url !== "string" ||
+      typeof a.tamano !== "number"
+    )
+      return "Adjunto inválido";
+    if (!FORO_ADJUNTO_MIME_RE.test(a.data_url)) return `Tipo de archivo no permitido: ${a.nombre}`;
+    if (a.tamano > FORO_ADJUNTO_MAX_BYTES) return `El archivo "${a.nombre}" supera el límite de 5MB`;
+    total += a.tamano;
+  }
+  if (total > FORO_ADJUNTOS_TOTAL_MAX_BYTES) return "El total de adjuntos supera el límite de 20MB";
+  return null;
+}
+
+async function replaceForoAdjuntos(articuloId: string, adjuntos: any[] | undefined): Promise<void> {
+  await db`DELETE FROM foro_adjuntos WHERE articulo_id = ${articuloId}`;
+  if (!Array.isArray(adjuntos)) return;
+  for (const a of adjuntos) {
+    await db`
+      INSERT INTO foro_adjuntos (articulo_id, nombre, tipo, data_url, tamano)
+      VALUES (${articuloId}, ${a.nombre}, ${a.tipo}, ${a.data_url}, ${a.tamano})
+    `;
+  }
+}
+
+async function resolveForoMentions(mentions: unknown): Promise<string[]> {
+  if (!Array.isArray(mentions) || mentions.length === 0) return [];
+  const ids = mentions.filter((m): m is string => typeof m === "string").slice(0, 20);
+  if (ids.length === 0) return [];
+  const rows = await db`SELECT id FROM profiles WHERE id = ANY(${ids}::uuid[])`;
+  return rows.map((r: any) => r.id);
+}
+
+async function listForoArticulos(request: Request, url: URL): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const level = await getPermissionLevel(user, "foro");
+  if (level === "none") return json({ error: "Sin acceso al módulo Foro" }, 403);
+
+  const search = url.searchParams.get("search") || null;
+  const categoria = url.searchParams.get("categoria") || null;
+  const etiqueta = url.searchParams.get("etiqueta") || null;
+  const autor = url.searchParams.get("autor") || null;
+  const desde = url.searchParams.get("desde") || null;
+  const hasta = url.searchParams.get("hasta") || null;
+  const populares = url.searchParams.get("orden") === "populares";
+  const canSeeAllDrafts = level === "full";
+
+  const whereClause = db`
+    (a.estado = 'publicado' OR a.autor_id = ${user.id} OR ${canSeeAllDrafts})
+    AND (${search}::text IS NULL OR a.titulo ILIKE '%' || ${search} || '%' OR a.contenido ILIKE '%' || ${search} || '%')
+    AND (${categoria}::text IS NULL OR a.categoria = ${categoria})
+    AND (${etiqueta}::text IS NULL OR a.etiquetas ? ${etiqueta})
+    AND (${autor}::uuid IS NULL OR a.autor_id = ${autor}::uuid)
+    AND (${desde}::date IS NULL OR a.created_at >= ${desde}::date)
+    AND (${hasta}::date IS NULL OR a.created_at < (${hasta}::date + interval '1 day'))
+  `;
+
+  const rows = populares
+    ? await db`
+        SELECT a.id, a.titulo, a.resumen, a.autor_id, p.full_name AS autor_nombre, a.categoria, a.etiquetas,
+               a.estado, a.vistas, a.published_at, a.created_at,
+               (SELECT COUNT(*) FROM foro_comentarios c WHERE c.articulo_id = a.id) AS comentarios
+        FROM foro_articulos a
+        JOIN profiles p ON p.id = a.autor_id
+        WHERE ${whereClause}
+        ORDER BY a.vistas DESC, a.created_at DESC
+      `
+    : await db`
+        SELECT a.id, a.titulo, a.resumen, a.autor_id, p.full_name AS autor_nombre, a.categoria, a.etiquetas,
+               a.estado, a.vistas, a.published_at, a.created_at,
+               (SELECT COUNT(*) FROM foro_comentarios c WHERE c.articulo_id = a.id) AS comentarios
+        FROM foro_articulos a
+        JOIN profiles p ON p.id = a.autor_id
+        WHERE ${whereClause}
+        ORDER BY COALESCE(a.published_at, a.created_at) DESC
+      `;
+
+  return json(rows.map((r: any) => parseForoArticulo({ ...r, comentarios: parseInt(r.comentarios) })));
+}
+
+async function getForoArticulo(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const level = await getPermissionLevel(user, "foro");
+  if (level === "none") return json({ error: "Sin acceso al módulo Foro" }, 403);
+
+  const [article] = await db`
+    SELECT a.*, p.full_name AS autor_nombre, p.email AS autor_email
+    FROM foro_articulos a
+    JOIN profiles p ON p.id = a.autor_id
+    WHERE a.id = ${id}
+  `;
+  if (!article) return json({ error: "No encontrado" }, 404);
+
+  const isOwner = article.autor_id === user.id;
+  if (article.estado !== "publicado" && !isOwner && level !== "full")
+    return json({ error: "No encontrado" }, 404);
+
+  await db`
+    WITH ins AS (
+      INSERT INTO foro_vistas (articulo_id, user_id) VALUES (${id}, ${user.id})
+      ON CONFLICT DO NOTHING RETURNING 1
+    )
+    UPDATE foro_articulos SET vistas = vistas + 1
+    WHERE id = ${id} AND EXISTS (SELECT 1 FROM ins)
+  `;
+
+  const [{ vistas }] = await db`SELECT vistas FROM foro_articulos WHERE id = ${id}`;
+  const adjuntos = await db`
+    SELECT id, nombre, tipo, data_url, tamano FROM foro_adjuntos
+    WHERE articulo_id = ${id} ORDER BY created_at ASC
+  `;
+  const [{ count: comentarios }] = await db`
+    SELECT COUNT(*) AS count FROM foro_comentarios WHERE articulo_id = ${id}
+  ` as any[];
+
+  return json(parseForoArticulo({ ...article, vistas, adjuntos, comentarios: parseInt(comentarios) }));
+}
+
+async function createForoArticulo(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const level = await getPermissionLevel(user, "foro");
+  if (!levelAtLeast(level, "editar"))
+    return json({ error: "No tienes permiso para crear artículos" }, 403);
+
+  const body = await request.json();
+  const { titulo, contenido, resumen, categoria, etiquetas, estado, adjuntos } = body;
+
+  if (!titulo || typeof titulo !== "string" || !titulo.trim())
+    return json({ error: "El título es requerido" }, 400);
+  if (!contenido || typeof contenido !== "string" || !contenido.trim())
+    return json({ error: "El contenido es requerido" }, 400);
+
+  const attachmentsErr = validateForoAdjuntos(adjuntos);
+  if (attachmentsErr) return json({ error: attachmentsErr }, 400);
+
+  const estadoFinal = estado === "publicado" ? "publicado" : "borrador";
+  const etiquetasFinal = Array.isArray(etiquetas)
+    ? etiquetas.filter((t: any) => typeof t === "string").slice(0, 20)
+    : [];
+  const publishedAt = estadoFinal === "publicado" ? new Date() : null;
+
+  const [row] = await db`
+    INSERT INTO foro_articulos (titulo, contenido, resumen, autor_id, categoria, etiquetas, estado, published_at)
+    VALUES (${titulo.trim()}, ${contenido}, ${resumen ?? null}, ${user.id}, ${categoria ?? null},
+            ${db.json(etiquetasFinal)}, ${estadoFinal}, ${publishedAt})
+    RETURNING *
+  `;
+
+  await replaceForoAdjuntos(row.id, adjuntos);
+
+  return json(parseForoArticulo(row), 201);
+}
+
+async function updateForoArticulo(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const [existing] = await db`SELECT autor_id, estado, published_at FROM foro_articulos WHERE id = ${id}`;
+  if (!existing) return json({ error: "No encontrado" }, 404);
+
+  const level = await getPermissionLevel(user, "foro");
+  const isOwner = existing.autor_id === user.id;
+  if (!(level === "full" || (levelAtLeast(level, "editar") && isOwner)))
+    return json({ error: "No tienes permiso para editar este artículo" }, 403);
+
+  const body = await request.json();
+  const { titulo, contenido, resumen, categoria, etiquetas, estado, adjuntos } = body;
+
+  if (!titulo || typeof titulo !== "string" || !titulo.trim())
+    return json({ error: "El título es requerido" }, 400);
+  if (!contenido || typeof contenido !== "string" || !contenido.trim())
+    return json({ error: "El contenido es requerido" }, 400);
+
+  const attachmentsErr = validateForoAdjuntos(adjuntos);
+  if (attachmentsErr) return json({ error: attachmentsErr }, 400);
+
+  const estadoFinal = estado === "publicado" ? "publicado" : "borrador";
+  const etiquetasFinal = Array.isArray(etiquetas)
+    ? etiquetas.filter((t: any) => typeof t === "string").slice(0, 20)
+    : [];
+  const publishedAt =
+    estadoFinal === "publicado" ? (existing.published_at ?? new Date()) : existing.published_at;
+
+  const [row] = await db`
+    UPDATE foro_articulos SET
+      titulo = ${titulo.trim()},
+      contenido = ${contenido},
+      resumen = ${resumen ?? null},
+      categoria = ${categoria ?? null},
+      etiquetas = ${db.json(etiquetasFinal)},
+      estado = ${estadoFinal},
+      published_at = ${publishedAt},
+      updated_at = now()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+
+  await replaceForoAdjuntos(id, adjuntos);
+
+  return json(parseForoArticulo(row));
+}
+
+async function deleteForoArticulo(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const [existing] = await db`SELECT autor_id FROM foro_articulos WHERE id = ${id}`;
+  if (!existing) return json({ error: "No encontrado" }, 404);
+
+  const level = await getPermissionLevel(user, "foro");
+  const isOwner = existing.autor_id === user.id;
+  if (!(level === "full" || (levelAtLeast(level, "editar") && isOwner)))
+    return json({ error: "No tienes permiso para eliminar este artículo" }, 403);
+
+  await db`DELETE FROM foro_articulos WHERE id = ${id}`;
+  return json({ success: true });
+}
+
+async function foroComentariosByArticulo(request: Request, articuloId: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const level = await getPermissionLevel(user, "foro");
+  if (level === "none") return json({ error: "Sin acceso al módulo Foro" }, 403);
+
+  const rows = await db`
+    SELECT c.id, c.articulo_id, c.autor_id, p.full_name AS autor_nombre, c.parent_id,
+           c.contenido, c.mentions, c.created_at, c.updated_at,
+           (SELECT COUNT(*) FROM foro_reacciones r WHERE r.comentario_id = c.id) AS likes,
+           EXISTS(
+             SELECT 1 FROM foro_reacciones r WHERE r.comentario_id = c.id AND r.user_id = ${user.id}
+           ) AS liked_by_me
+    FROM foro_comentarios c
+    JOIN profiles p ON p.id = c.autor_id
+    WHERE c.articulo_id = ${articuloId}
+    ORDER BY c.created_at ASC
+  `;
+  return json(rows.map((r: any) => parseForoComentario({ ...r, likes: parseInt(r.likes) })));
+}
+
+async function createForoComentario(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const level = await getPermissionLevel(user, "foro");
+  if (level === "none") return json({ error: "Sin acceso al módulo Foro" }, 403);
+
+  const body = await request.json();
+  const { articulo_id, contenido, parent_id, mentions } = body;
+
+  if (!articulo_id || typeof articulo_id !== "string")
+    return json({ error: "articulo_id requerido" }, 400);
+  if (!contenido || typeof contenido !== "string" || !contenido.trim())
+    return json({ error: "El comentario no puede estar vacío" }, 400);
+
+  const [article] = await db`SELECT id, titulo, estado FROM foro_articulos WHERE id = ${articulo_id}`;
+  if (!article) return json({ error: "Artículo no encontrado" }, 404);
+  if (article.estado !== "publicado")
+    return json({ error: "No se puede comentar un borrador" }, 400);
+
+  let parentComment: any = null;
+  if (parent_id) {
+    const [parent] = await db`
+      SELECT id, articulo_id, autor_id, parent_id FROM foro_comentarios WHERE id = ${parent_id}
+    `;
+    if (!parent || parent.articulo_id !== articulo_id)
+      return json({ error: "Comentario padre inválido" }, 400);
+    if (parent.parent_id)
+      return json({ error: "Solo se puede responder a comentarios de nivel superior" }, 400);
+    parentComment = parent;
+  }
+
+  const validMentions = await resolveForoMentions(mentions);
+
+  const [row] = await db`
+    INSERT INTO foro_comentarios (articulo_id, autor_id, parent_id, contenido, mentions)
+    VALUES (${articulo_id}, ${user.id}, ${parent_id ?? null}, ${contenido.trim()}, ${db.json(validMentions)})
+    RETURNING *
+  `;
+
+  if (parentComment && parentComment.autor_id !== user.id) {
+    await db`
+      INSERT INTO notifications (user_id, type, title, body)
+      VALUES (${parentComment.autor_id}, 'foro_reply', 'Nueva respuesta a tu comentario',
+              ${'Respondieron tu comentario en "' + article.titulo + '"'})
+    `;
+  }
+
+  for (const uid of validMentions) {
+    if (uid === user.id) continue;
+    if (parentComment && uid === parentComment.autor_id) continue;
+    await db`
+      INSERT INTO notifications (user_id, type, title, body)
+      VALUES (${uid}, 'foro_mention', 'Te mencionaron en el Foro',
+              ${'Te mencionaron en un comentario de "' + article.titulo + '"'})
+    `;
+  }
+
+  return json(parseForoComentario(row), 201);
+}
+
+async function updateForoComentario(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const [existing] = await db`SELECT * FROM foro_comentarios WHERE id = ${id}`;
+  if (!existing) return json({ error: "No encontrado" }, 404);
+  if (existing.autor_id !== user.id)
+    return json({ error: "Solo puedes editar tus propios comentarios" }, 403);
+
+  const body = await request.json();
+  const { contenido, mentions } = body;
+  if (!contenido || typeof contenido !== "string" || !contenido.trim())
+    return json({ error: "El comentario no puede estar vacío" }, 400);
+
+  const validMentions = await resolveForoMentions(mentions);
+  const prevMentions: string[] =
+    typeof existing.mentions === "string" ? JSON.parse(existing.mentions) : (existing.mentions ?? []);
+  const newMentions = validMentions.filter((uid) => !prevMentions.includes(uid));
+
+  const [row] = await db`
+    UPDATE foro_comentarios SET
+      contenido = ${contenido.trim()}, mentions = ${db.json(validMentions)}, updated_at = now()
+    WHERE id = ${id}
+    RETURNING *
+  `;
+
+  if (newMentions.length > 0) {
+    const [article] = await db`SELECT titulo FROM foro_articulos WHERE id = ${existing.articulo_id}`;
+    for (const uid of newMentions) {
+      if (uid === user.id) continue;
+      await db`
+        INSERT INTO notifications (user_id, type, title, body)
+        VALUES (${uid}, 'foro_mention', 'Te mencionaron en el Foro',
+                ${'Te mencionaron en un comentario de "' + (article?.titulo ?? "") + '"'})
+      `;
+    }
+  }
+
+  return json(parseForoComentario(row));
+}
+
+async function deleteForoComentario(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const [existing] = await db`SELECT autor_id FROM foro_comentarios WHERE id = ${id}`;
+  if (!existing) return json({ error: "No encontrado" }, 404);
+
+  const level = await getPermissionLevel(user, "foro");
+  if (existing.autor_id !== user.id && level !== "full")
+    return json({ error: "No tienes permiso para eliminar este comentario" }, 403);
+
+  await db`DELETE FROM foro_comentarios WHERE id = ${id}`;
+  return json({ success: true });
+}
+
+async function toggleForoLike(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const [existing] = await db`SELECT 1 FROM foro_comentarios WHERE id = ${id}`;
+  if (!existing) return json({ error: "No encontrado" }, 404);
+
+  const [already] = await db`
+    SELECT 1 FROM foro_reacciones WHERE comentario_id = ${id} AND user_id = ${user.id}
+  `;
+  if (already) {
+    await db`DELETE FROM foro_reacciones WHERE comentario_id = ${id} AND user_id = ${user.id}`;
+  } else {
+    await db`INSERT INTO foro_reacciones (comentario_id, user_id) VALUES (${id}, ${user.id})`;
+  }
+
+  const [{ count }] = await db`
+    SELECT COUNT(*) AS count FROM foro_reacciones WHERE comentario_id = ${id}
+  ` as any[];
+  return json({ liked: !already, likes: parseInt(count) });
 }

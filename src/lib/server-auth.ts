@@ -51,3 +51,26 @@ export async function getAuthContext(request: Request): Promise<AuthUser | null>
 
   return user as unknown as AuthUser;
 }
+
+export type PermissionLevel = "none" | "ver" | "editar" | "full";
+
+const LEVEL_RANK: Record<PermissionLevel, number> = { none: 0, ver: 1, editar: 2, full: 3 };
+
+/**
+ * Server-side counterpart to the client's useRolePermissions().getLevel().
+ * role_permissions is otherwise only ever read from the browser, so any
+ * endpoint that needs to enforce a minimum level (not just "is authenticated")
+ * must go through this.
+ */
+export async function getPermissionLevel(user: AuthUser, module: string): Promise<PermissionLevel> {
+  if (user.role === "super_admin") return "full";
+  const role = user.role === "both" ? "admin" : user.role;
+  const [row] = await db`
+    SELECT level FROM role_permissions WHERE role = ${role} AND module = ${module}
+  `;
+  return (row?.level as PermissionLevel) ?? "none";
+}
+
+export function levelAtLeast(level: PermissionLevel, min: PermissionLevel): boolean {
+  return LEVEL_RANK[level] >= LEVEL_RANK[min];
+}

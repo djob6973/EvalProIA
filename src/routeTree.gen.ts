@@ -18,6 +18,7 @@ import { Route as PendingRouteImport } from './routes/pending'
 import { Route as ParticipantRouteImport } from './routes/participant'
 import { Route as MyHistoryRouteImport } from './routes/my-history'
 import { Route as GenerateRouteImport } from './routes/generate'
+import { Route as ForoRouteImport } from './routes/foro'
 import { Route as EvaluationsRouteImport } from './routes/evaluations'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfigRouteImport } from './routes/config'
@@ -27,6 +28,7 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TakeCodeRouteImport } from './routes/take.$code'
 import { Route as MyResultsIdRouteImport } from './routes/my-results.$id'
+import { Route as ForoIdRouteImport } from './routes/foro.$id'
 import { Route as EvaluationResultsIdRouteImport } from './routes/evaluation-results.$id'
 import { Route as ResultsParticipantUserIdRouteImport } from './routes/results.participant.$userId'
 import { Route as EvaluationsIdResultsRouteImport } from './routes/evaluations.$id.results'
@@ -76,6 +78,11 @@ const GenerateRoute = GenerateRouteImport.update({
   path: '/generate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForoRoute = ForoRouteImport.update({
+  id: '/foro',
+  path: '/foro',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EvaluationsRoute = EvaluationsRouteImport.update({
   id: '/evaluations',
   path: '/evaluations',
@@ -121,6 +128,11 @@ const MyResultsIdRoute = MyResultsIdRouteImport.update({
   path: '/my-results/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForoIdRoute = ForoIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ForoRoute,
+} as any)
 const EvaluationResultsIdRoute = EvaluationResultsIdRouteImport.update({
   id: '/evaluation-results/$id',
   path: '/evaluation-results/$id',
@@ -146,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/config': typeof ConfigRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
+  '/foro': typeof ForoRouteWithChildren
   '/generate': typeof GenerateRoute
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
@@ -156,6 +169,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
   '/evaluation-results/$id': typeof EvaluationResultsIdRoute
+  '/foro/$id': typeof ForoIdRoute
   '/my-results/$id': typeof MyResultsIdRoute
   '/take/$code': typeof TakeCodeRoute
   '/evaluations/$id/results': typeof EvaluationsIdResultsRoute
@@ -169,6 +183,7 @@ export interface FileRoutesByTo {
   '/config': typeof ConfigRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
+  '/foro': typeof ForoRouteWithChildren
   '/generate': typeof GenerateRoute
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
@@ -179,6 +194,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
   '/evaluation-results/$id': typeof EvaluationResultsIdRoute
+  '/foro/$id': typeof ForoIdRoute
   '/my-results/$id': typeof MyResultsIdRoute
   '/take/$code': typeof TakeCodeRoute
   '/evaluations/$id/results': typeof EvaluationsIdResultsRoute
@@ -193,6 +209,7 @@ export interface FileRoutesById {
   '/config': typeof ConfigRoute
   '/dashboard': typeof DashboardRoute
   '/evaluations': typeof EvaluationsRouteWithChildren
+  '/foro': typeof ForoRouteWithChildren
   '/generate': typeof GenerateRoute
   '/my-history': typeof MyHistoryRoute
   '/participant': typeof ParticipantRoute
@@ -203,6 +220,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/users': typeof UsersRoute
   '/evaluation-results/$id': typeof EvaluationResultsIdRoute
+  '/foro/$id': typeof ForoIdRoute
   '/my-results/$id': typeof MyResultsIdRoute
   '/take/$code': typeof TakeCodeRoute
   '/evaluations/$id/results': typeof EvaluationsIdResultsRoute
@@ -218,6 +236,7 @@ export interface FileRouteTypes {
     | '/config'
     | '/dashboard'
     | '/evaluations'
+    | '/foro'
     | '/generate'
     | '/my-history'
     | '/participant'
@@ -228,6 +247,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/users'
     | '/evaluation-results/$id'
+    | '/foro/$id'
     | '/my-results/$id'
     | '/take/$code'
     | '/evaluations/$id/results'
@@ -241,6 +261,7 @@ export interface FileRouteTypes {
     | '/config'
     | '/dashboard'
     | '/evaluations'
+    | '/foro'
     | '/generate'
     | '/my-history'
     | '/participant'
@@ -251,6 +272,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/users'
     | '/evaluation-results/$id'
+    | '/foro/$id'
     | '/my-results/$id'
     | '/take/$code'
     | '/evaluations/$id/results'
@@ -264,6 +286,7 @@ export interface FileRouteTypes {
     | '/config'
     | '/dashboard'
     | '/evaluations'
+    | '/foro'
     | '/generate'
     | '/my-history'
     | '/participant'
@@ -274,6 +297,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/users'
     | '/evaluation-results/$id'
+    | '/foro/$id'
     | '/my-results/$id'
     | '/take/$code'
     | '/evaluations/$id/results'
@@ -288,6 +312,7 @@ export interface RootRouteChildren {
   ConfigRoute: typeof ConfigRoute
   DashboardRoute: typeof DashboardRoute
   EvaluationsRoute: typeof EvaluationsRouteWithChildren
+  ForoRoute: typeof ForoRouteWithChildren
   GenerateRoute: typeof GenerateRoute
   MyHistoryRoute: typeof MyHistoryRoute
   ParticipantRoute: typeof ParticipantRoute
@@ -367,6 +392,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GenerateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/foro': {
+      id: '/foro'
+      path: '/foro'
+      fullPath: '/foro'
+      preLoaderRoute: typeof ForoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/evaluations': {
       id: '/evaluations'
       path: '/evaluations'
@@ -430,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MyResultsIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/foro/$id': {
+      id: '/foro/$id'
+      path: '/$id'
+      fullPath: '/foro/$id'
+      preLoaderRoute: typeof ForoIdRouteImport
+      parentRoute: typeof ForoRoute
+    }
     '/evaluation-results/$id': {
       id: '/evaluation-results/$id'
       path: '/evaluation-results/$id'
@@ -466,6 +505,16 @@ const EvaluationsRouteWithChildren = EvaluationsRoute._addFileChildren(
   EvaluationsRouteChildren,
 )
 
+interface ForoRouteChildren {
+  ForoIdRoute: typeof ForoIdRoute
+}
+
+const ForoRouteChildren: ForoRouteChildren = {
+  ForoIdRoute: ForoIdRoute,
+}
+
+const ForoRouteWithChildren = ForoRoute._addFileChildren(ForoRouteChildren)
+
 interface ResultsRouteChildren {
   ResultsParticipantUserIdRoute: typeof ResultsParticipantUserIdRoute
 }
@@ -485,6 +534,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfigRoute: ConfigRoute,
   DashboardRoute: DashboardRoute,
   EvaluationsRoute: EvaluationsRouteWithChildren,
+  ForoRoute: ForoRouteWithChildren,
   GenerateRoute: GenerateRoute,
   MyHistoryRoute: MyHistoryRoute,
   ParticipantRoute: ParticipantRoute,

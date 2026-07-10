@@ -17,6 +17,7 @@ import {
   Moon,
   ChevronRight,
   Languages,
+  MessageSquare,
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -34,13 +35,15 @@ const adminNavDef = [
   { titleKey: "nav.questionBank",   url: "/question-bank", icon: Library,           groupKey: "nav.management", module: "question_bank" },
   { titleKey: "nav.generateAI",     url: "/generate",      icon: Sparkles,          groupKey: "nav.tools",      module: "generate"      },
   { titleKey: "nav.globalResults",  url: "/results",       icon: BarChart3,         groupKey: "nav.tools",      module: "results"       },
+  { titleKey: "nav.forum",          url: "/foro",          icon: MessageSquare,     groupKey: "nav.tools",      module: "foro"          },
   { titleKey: "nav.promptsAI",      url: "/settings",      icon: Settings,          groupKey: "nav.tools",      module: "settings"      },
   { titleKey: "nav.config",         url: "/config",        icon: SlidersHorizontal, groupKey: "nav.tools",      module: "config"        },
 ];
 
 const participantNavDef = [
-  { titleKey: "nav.home",      url: "/participant", icon: Home,    groupKey: "nav.participant", module: "participant" },
-  { titleKey: "nav.myHistory", url: "/my-history",  icon: History, groupKey: "nav.participant", module: "my-history"  },
+  { titleKey: "nav.home",      url: "/participant", icon: Home,          groupKey: "nav.participant", module: "participant" },
+  { titleKey: "nav.myHistory", url: "/my-history",  icon: History,       groupKey: "nav.participant", module: "my-history"  },
+  { titleKey: "nav.forum",     url: "/foro",         icon: MessageSquare, groupKey: "nav.participant", module: "foro"        },
 ];
 
 type AppSidebarProps = {

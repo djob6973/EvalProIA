@@ -148,7 +148,7 @@ export async function runMigrations(): Promise<void> {
 
   // Always ensure super_admin has full access to every module (idempotent upsert)
   {
-    const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','config.users','config.roles','config.org','config.brand','participant','my_history'];
+    const allMods = ['dashboard','users','areas','evaluations','question_bank','generate','results','settings','config','config.users','config.roles','config.org','config.brand','participant','my_history','foro'];
     const caps    = ['create_users','edit_users','delete_users','manage_areas','export_results','generate_ai','manage_config'];
     for (const m of allMods) {
       await db`INSERT INTO role_permissions (role, module, level) VALUES ('super_admin', ${m}, 'full')
@@ -173,6 +173,19 @@ export async function runMigrations(): Promise<void> {
       for (const r of subDefaults) {
         await db`INSERT INTO role_permissions (role, module, level) VALUES (${r.role}, ${m}, ${r.level}) ON CONFLICT DO NOTHING`;
       }
+    }
+  }
+
+  // Ensure the 'foro' module has sane defaults for all roles (idempotent — DO NOTHING preserves manual overrides)
+  {
+    const foroDefaults = [
+      { role: 'admin',       level: 'full'   },
+      { role: 'supervisor',  level: 'editar' },
+      { role: 'leader',      level: 'ver'    },
+      { role: 'participant', level: 'ver'    },
+    ];
+    for (const r of foroDefaults) {
+      await db`INSERT INTO role_permissions (role, module, level) VALUES (${r.role}, 'foro', ${r.level}) ON CONFLICT DO NOTHING`;
     }
   }
 
@@ -231,6 +244,70 @@ export async function runMigrations(): Promise<void> {
     SET full_name = initcap(full_name)
     WHERE full_name IS NOT NULL
       AND full_name != initcap(full_name)
+  `;
+
+  // ── Foro ──────────────────────────────────────────────────────────────────
+  await db`
+    CREATE TABLE IF NOT EXISTS foro_articulos (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      titulo       TEXT NOT NULL,
+      contenido    TEXT NOT NULL,
+      resumen      TEXT,
+      autor_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      categoria    TEXT,
+      etiquetas    JSONB NOT NULL DEFAULT '[]',
+      estado       TEXT NOT NULL DEFAULT 'borrador' CHECK (estado IN ('borrador','publicado')),
+      vistas       INTEGER NOT NULL DEFAULT 0,
+      published_at TIMESTAMPTZ,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await db`CREATE INDEX IF NOT EXISTS idx_foro_articulos_estado ON foro_articulos(estado, published_at DESC)`;
+  await db`CREATE INDEX IF NOT EXISTS idx_foro_articulos_etiquetas ON foro_articulos USING GIN (etiquetas)`;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS foro_adjuntos (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      articulo_id UUID NOT NULL REFERENCES foro_articulos(id) ON DELETE CASCADE,
+      nombre      TEXT NOT NULL,
+      tipo        TEXT NOT NULL,
+      data_url    TEXT NOT NULL,
+      tamano      INTEGER NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS foro_comentarios (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      articulo_id UUID NOT NULL REFERENCES foro_articulos(id) ON DELETE CASCADE,
+      autor_id    UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      parent_id   UUID REFERENCES foro_comentarios(id) ON DELETE CASCADE,
+      contenido   TEXT NOT NULL,
+      mentions    JSONB NOT NULL DEFAULT '[]',
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await db`CREATE INDEX IF NOT EXISTS idx_foro_comentarios_articulo ON foro_comentarios(articulo_id, created_at)`;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS foro_reacciones (
+      comentario_id UUID NOT NULL REFERENCES foro_comentarios(id) ON DELETE CASCADE,
+      user_id       UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (comentario_id, user_id)
+    )
+  `;
+
+  await db`
+    CREATE TABLE IF NOT EXISTS foro_vistas (
+      articulo_id UUID NOT NULL REFERENCES foro_articulos(id) ON DELETE CASCADE,
+      user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (articulo_id, user_id)
+    )
   `;
 
   done = true;
