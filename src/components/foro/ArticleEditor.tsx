@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import Highlight from "@tiptap/extension-highlight";
 import { Table } from "@tiptap/extension-table";
@@ -117,8 +116,7 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
-      Link.configure({ openOnClick: false }),
+      StarterKit.configure({ link: { openOnClick: false } }),
       Highlight,
       Placeholder.configure({ placeholder: "Escribe el contenido del artículo…" }),
       Table.configure({ resizable: true }),
