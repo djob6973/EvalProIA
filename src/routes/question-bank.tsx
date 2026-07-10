@@ -582,14 +582,14 @@ function QuestionBankPage() {
                   <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
                     <button
                       onClick={() => { setFilterCat(c); setCatSearch(""); }}
-                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
+                      className={`flex w-full items-start justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-300 ${
                         filterCat === c
                           ? "bg-coral-soft text-coral-text"
                           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       }`}
                     >
-                      <span className="truncate pr-2">{c}</span>
-                      <span className="font-mono text-[10px] font-bold shrink-0">{counts[c] ?? 0}</span>
+                      <span className="break-words leading-snug">{c}</span>
+                      <span className="font-mono text-[10px] font-bold shrink-0 pt-0.5">{counts[c] ?? 0}</span>
                     </button>
                   </li>
                 ))}
