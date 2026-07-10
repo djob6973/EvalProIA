@@ -20,6 +20,7 @@ export interface ForoArticulo {
   categoria: string | null;
   etiquetas: string[];
   estado: "borrador" | "publicado";
+  origen: "manual" | "ia";
   vistas: number;
   comentarios?: number;
   adjuntos?: ForoAdjunto[];
@@ -60,6 +61,7 @@ export interface ForoArticuloInput {
   etiquetas: string[];
   estado: "borrador" | "publicado";
   adjuntos?: ForoAdjunto[];
+  origen?: "manual" | "ia";
 }
 
 // ── Helper ────────────────────────────────────────────────────────────────────

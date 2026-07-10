@@ -376,6 +376,138 @@ export const generateQuestionsFn = createServerFn({ method: 'POST' })
     );
   });
 
+// ── Foro: generación de artículos con IA a partir de documentos ──────────────
+
+const FORO_SYSTEM_PROMPT = `ROL DEL MODELO
+Actúas como un editor experto en documentación técnica y gestión del conocimiento corporativo. Tu tarea es transformar un documento (manual, guía, política o material de capacitación) en un artículo de conocimiento bien estructurado para un foro interno, PRESERVANDO POR COMPLETO su contenido original.
+
+REGLA CRÍTICA — PRESERVACIÓN DEL CONTENIDO
+- Debes conservar el 100% de la información, datos, cifras, procedimientos y pasos del documento original.
+- NO resumas, no omitas, no acortes ni elimines ningún procedimiento, regla o dato técnico.
+- NO modifiques el significado ni el orden de los pasos de un procedimiento.
+- NO agregues información externa que no esté en el documento.
+
+LO ÚNICO QUE PUEDES MEJORAR
+- Organización general del contenido (secciones lógicas).
+- Títulos y subtítulos (usa <h2> para secciones principales y <h3> para subsecciones).
+- Formato: listas (<ul>/<ol>/<li>) para enumeraciones o pasos, tablas (<table>/<thead>/<tbody>/<tr>/<th>/<td>) para datos tabulares.
+- Legibilidad: párrafos cortos y claros (<p>), <strong> para términos clave, <blockquote> para notas o advertencias importantes.
+- Resaltado de información crítica con <mark> (usar con moderación, solo en advertencias, requisitos obligatorios o datos que no se deben pasar por alto).
+
+CONTENIDO ADICIONAL OPCIONAL
+Si el documento se presta para ello, agrega AL FINAL del artículo (dentro del mismo HTML de "contenido"):
+- Una sección "<h2>Preguntas frecuentes</h2>" con 3 a 6 preguntas y respuestas relevantes, basadas únicamente en el documento.
+- Una sección "<h2>Glosario</h2>" con los términos técnicos o siglas del documento y su definición.
+Si el documento es muy corto o no tiene términos técnicos relevantes, omite estas secciones (no las inventes).
+
+FORMATO DE SALIDA
+Responde únicamente con un JSON válido, sin texto adicional fuera del objeto, con esta forma exacta:
+{
+  "titulo": "título claro y descriptivo del artículo",
+  "contenido": "HTML completo del artículo (incluyendo FAQ y Glosario si aplica), usando solo las etiquetas indicadas arriba",
+  "resumen": "resumen ejecutivo de 2 a 4 frases",
+  "palabras_clave": ["palabra clave 1", "palabra clave 2"],
+  "etiquetas_sugeridas": ["etiqueta 1", "etiqueta 2"],
+  "categoria_sugerida": "una categoría breve (2-4 palabras)"
+}`;
+
+export type GeneratedForoArticulo = {
+  titulo: string;
+  contenido: string;
+  resumen: string;
+  palabras_clave: string[];
+  etiquetas_sugeridas: string[];
+  categoria_sugerida: string;
+};
+
+function normalizeForoArticulo(parsed: unknown): GeneratedForoArticulo {
+  const obj = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
+
+  const titulo = typeof obj.titulo === 'string' ? obj.titulo.trim() : '';
+  const contenido = typeof obj.contenido === 'string' ? obj.contenido.trim() : '';
+  if (!titulo || !contenido) {
+    throw new Error('La IA no devolvió un artículo válido (falta título o contenido)');
+  }
+
+  const asStringArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
+
+  return {
+    titulo,
+    contenido,
+    resumen: typeof obj.resumen === 'string' ? obj.resumen.trim() : '',
+    palabras_clave: asStringArray(obj.palabras_clave),
+    etiquetas_sugeridas: asStringArray(obj.etiquetas_sugeridas),
+    categoria_sugerida: typeof obj.categoria_sugerida === 'string' ? obj.categoria_sugerida.trim() : '',
+  };
+}
+
+export async function generateForoArticuloServer(
+  extractedText: string,
+  model = 'gpt-4o',
+  temperature = 0.2,
+  maxTokens = 16_384,
+  retries = 3,
+): Promise<GeneratedForoArticulo> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno del servidor');
+  }
+  if (!extractedText.trim()) {
+    throw new Error('El documento no contiene texto extraíble');
+  }
+
+  const openai = new OpenAI({ apiKey, timeout: 180_000 });
+  const userPrompt = `Transforma el siguiente documento en un artículo de conocimiento, siguiendo estrictamente las reglas del sistema (preservar el 100% del contenido, solo mejorar formato/organización).\n\nDocumento:\n${extractedText}`;
+
+  let lastError: Error = new Error('Error desconocido al generar el artículo');
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      await sleep(Math.min(1000 * Math.pow(2, attempt - 1), 10_000));
+    }
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: FORO_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' },
+      });
+
+      if (response.choices[0].finish_reason === 'length') {
+        throw new Error('truncated: la respuesta se cortó por límite de tokens; el documento es muy extenso, intenta dividirlo en partes más pequeñas');
+      }
+
+      const content = response.choices[0].message.content;
+      if (!content) throw new Error('No se recibió respuesta de OpenAI');
+
+      return normalizeForoArticulo(JSON.parse(content));
+    } catch (err) {
+      lastError = err as Error;
+      if (!isRetryableError(err)) break;
+    }
+  }
+  throw lastError;
+}
+
+type GenerateForoArticuloInput = {
+  extractedText: string;
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  retries?: number;
+};
+
+export const generateForoArticuloFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: GenerateForoArticuloInput) => data)
+  .handler(async ({ data }) => {
+    return generateForoArticuloServer(data.extractedText, data.model, data.temperature, data.maxTokens, data.retries);
+  });
+
 type ExtractImageTextInput = {
   base64: string;
 };

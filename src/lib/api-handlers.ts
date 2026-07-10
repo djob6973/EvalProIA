@@ -1411,7 +1411,7 @@ async function createForoArticulo(request: Request): Promise<Response> {
     return json({ error: "No tienes permiso para crear artículos" }, 403);
 
   const body = await request.json();
-  const { titulo, contenido, resumen, categoria, etiquetas, estado, adjuntos } = body;
+  const { titulo, contenido, resumen, categoria, etiquetas, estado, adjuntos, origen } = body;
 
   if (!titulo || typeof titulo !== "string" || !titulo.trim())
     return json({ error: "El título es requerido" }, 400);
@@ -1422,15 +1422,16 @@ async function createForoArticulo(request: Request): Promise<Response> {
   if (attachmentsErr) return json({ error: attachmentsErr }, 400);
 
   const estadoFinal = estado === "publicado" ? "publicado" : "borrador";
+  const origenFinal = origen === "ia" ? "ia" : "manual";
   const etiquetasFinal = Array.isArray(etiquetas)
     ? etiquetas.filter((t: any) => typeof t === "string").slice(0, 20)
     : [];
   const publishedAt = estadoFinal === "publicado" ? new Date() : null;
 
   const [row] = await db`
-    INSERT INTO foro_articulos (titulo, contenido, resumen, autor_id, categoria, etiquetas, estado, published_at)
+    INSERT INTO foro_articulos (titulo, contenido, resumen, autor_id, categoria, etiquetas, estado, origen, published_at)
     VALUES (${titulo.trim()}, ${contenido}, ${resumen ?? null}, ${user.id}, ${categoria ?? null},
-            ${db.json(etiquetasFinal)}, ${estadoFinal}, ${publishedAt})
+            ${db.json(etiquetasFinal)}, ${estadoFinal}, ${origenFinal}, ${publishedAt})
     RETURNING *
   `;
 

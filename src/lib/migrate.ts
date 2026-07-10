@@ -310,5 +310,11 @@ export async function runMigrations(): Promise<void> {
     )
   `;
 
+  // Fase 2: origen del artículo (creado manualmente o generado con IA)
+  await db`
+    ALTER TABLE foro_articulos ADD COLUMN IF NOT EXISTS origen TEXT NOT NULL DEFAULT 'manual'
+      CHECK (origen IN ('manual','ia'))
+  `;
+
   done = true;
 }

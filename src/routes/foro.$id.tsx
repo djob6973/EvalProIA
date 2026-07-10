@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ArticleEditor } from "@/components/foro/ArticleEditor";
 import { CommentThread } from "@/components/foro/CommentThread";
-import { ArrowLeft, Eye, Pencil, Trash2, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, Pencil, Trash2, FileText, Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { foroService, ForoArticulo, ForoArticuloInput } from "@/lib/services/foro";
@@ -119,6 +119,11 @@ function ForoDetailPage() {
               {articulo.categoria}
             </span>
           )}
+          {articulo.origen === "ia" && (
+            <span className="flex items-center gap-1 rounded-full bg-[rgba(139,92,246,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#8B5CF6]">
+              <Sparkles className="size-3" /> Generado por IA
+            </span>
+          )}
           {articulo.estado === "borrador" && (
             <span className="rounded-full bg-[rgba(237,86,80,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#ED5650]">
               Borrador
@@ -150,7 +155,7 @@ function ForoDetailPage() {
         </div>
 
         <div
-          className="prose prose-sm mt-5 max-w-none dark:prose-invert"
+          className="prose prose-sm mt-5 max-w-none dark:prose-invert [&_table]:w-full [&_td]:border [&_th]:border [&_td]:border-[var(--border)] [&_th]:border-[var(--border)] [&_td]:p-2 [&_th]:p-2"
           dangerouslySetInnerHTML={{ __html: articulo.contenido }}
         />
 

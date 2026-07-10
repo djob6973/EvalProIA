@@ -1,28 +1,39 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useLocation, Outlet } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, Sparkles, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { foroService, ForoArticulo, ForoArticuloInput } from "@/lib/services/foro";
 import { ArticleCard } from "@/components/foro/ArticleCard";
 import { ArticleEditor } from "@/components/foro/ArticleEditor";
+import { AiArticleGenerator } from "@/components/foro/AiArticleGenerator";
 
 export const Route = createFileRoute("/foro")({
   head: () => ({ meta: [{ title: "Foro de Discusión — EvalPro" }] }),
-  component: ForoPage,
+  component: ForoRouteComponent,
 });
+
+// /foro/$id is a sibling route nested under this same file path (foro.$id.tsx);
+// TanStack renders this component for both, so hand off to <Outlet/> when the
+// child route is active — same pattern as ResultsPage in results.tsx.
+function ForoRouteComponent() {
+  const { pathname } = useLocation();
+  if (pathname.startsWith("/foro/")) return <Outlet />;
+  return <ForoPage />;
+}
 
 function ForoPage() {
   const { profile } = useAuth();
   const { getLevel, loading: permLoading } = useRolePermissions();
   const level = getLevel("foro");
   const canWrite = !permLoading && (level === "editar" || level === "full");
+  const canGenerateAI = !permLoading && level === "full";
 
   const [items, setItems] = useState<ForoArticulo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +47,8 @@ function ForoPage() {
 
   const [showEditor, setShowEditor] = useState(false);
   const [editing, setEditing] = useState<ForoArticulo | null>(null);
+  const [aiDraft, setAiDraft] = useState<ForoArticuloInput | null>(null);
+  const [showAiGenerator, setShowAiGenerator] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = () => {
@@ -58,14 +71,22 @@ function ForoPage() {
     [items],
   );
 
-  const openCreate = () => { setEditing(null); setShowEditor(true); };
+  const openCreate = () => { setEditing(null); setAiDraft(null); setShowEditor(true); };
+
+  const handleAiGenerated = (draft: ForoArticuloInput) => {
+    setEditing(null);
+    setAiDraft(draft);
+    setShowAiGenerator(false);
+    setShowEditor(true);
+  };
 
   const handleSave = async (input: ForoArticuloInput) => {
     setSaving(true);
     try {
       if (editing) await foroService.updateArticulo(editing.id, input);
-      else await foroService.createArticulo(input);
+      else await foroService.createArticulo({ ...input, origen: aiDraft ? "ia" : "manual" });
       setShowEditor(false);
+      setAiDraft(null);
       load();
     } catch (e: any) {
       setError(e.message ?? "No se pudo guardar el artículo");
@@ -80,11 +101,18 @@ function ForoPage() {
         title="Foro de Discusión"
         subtitle="Conocimiento compartido a partir de capacitaciones, documentos y evaluaciones"
         actions={
-          canWrite ? (
-            <Button onClick={openCreate}>
-              <Plus className="size-4" /> Nuevo artículo
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {canGenerateAI && (
+              <Button variant="outline" onClick={() => setShowAiGenerator(true)}>
+                <Sparkles className="size-4" /> Generar con IA
+              </Button>
+            )}
+            {canWrite && (
+              <Button onClick={openCreate}>
+                <Plus className="size-4" /> Nuevo artículo
+              </Button>
+            )}
+          </div>
         }
       />
 
@@ -141,10 +169,16 @@ function ForoPage() {
 
       <ArticleEditor
         open={showEditor}
-        initial={editing}
+        initial={editing ?? aiDraft}
         saving={saving}
-        onClose={() => setShowEditor(false)}
+        onClose={() => { setShowEditor(false); setAiDraft(null); }}
         onSave={handleSave}
+      />
+
+      <AiArticleGenerator
+        open={showAiGenerator}
+        onClose={() => setShowAiGenerator(false)}
+        onGenerated={handleAiGenerated}
       />
     </AppShell>
   );

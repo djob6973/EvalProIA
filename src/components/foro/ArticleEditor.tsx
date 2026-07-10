@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Bold,
   Italic,
@@ -37,7 +38,7 @@ const ACCEPTED_MIME = /^image\/(png|jpeg|webp|gif|svg\+xml)|^application\/(pdf|m
 
 interface ArticleEditorProps {
   open: boolean;
-  initial: ForoArticulo | null;
+  initial: ForoArticulo | ForoArticuloInput | null;
   saving: boolean;
   onClose: () => void;
   onSave: (input: ForoArticuloInput) => Promise<void>;
@@ -106,6 +107,7 @@ function Toolbar({ editor }: { editor: Editor | null }) {
 
 export function ArticleEditor({ open, initial, saving, onClose, onSave }: ArticleEditorProps) {
   const [titulo, setTitulo] = useState("");
+  const [resumen, setResumen] = useState("");
   const [categoria, setCategoria] = useState("");
   const [etiquetas, setEtiquetas] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -126,11 +128,18 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
     ],
     content: "",
     immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class:
+          "prose prose-sm max-w-none dark:prose-invert min-h-[260px] focus:outline-none [&_table]:w-full [&_td]:border [&_th]:border [&_td]:border-[var(--border)] [&_th]:border-[var(--border)] [&_td]:p-2 [&_th]:p-2",
+      },
+    },
   });
 
   useEffect(() => {
     if (!open) return;
     setTitulo(initial?.titulo ?? "");
+    setResumen(initial?.resumen ?? "");
     setCategoria(initial?.categoria ?? "");
     setEtiquetas(initial?.etiquetas ?? []);
     setTagInput("");
@@ -162,6 +171,7 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
     await onSave({
       titulo: titulo.trim(),
       contenido: editor.getHTML(),
+      resumen: resumen.trim() || null,
       categoria: categoria.trim() || null,
       etiquetas,
       estado,
@@ -180,6 +190,16 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
           <div>
             <label className="mb-1 block text-[12px] font-medium text-[var(--muted-foreground)]">Título</label>
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título del artículo" />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-[12px] font-medium text-[var(--muted-foreground)]">Resumen (opcional)</label>
+            <Textarea
+              value={resumen}
+              onChange={(e) => setResumen(e.target.value)}
+              placeholder="Breve resumen ejecutivo del artículo"
+              className="min-h-[60px] resize-none"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -216,8 +236,8 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
             <label className="mb-1 block text-[12px] font-medium text-[var(--muted-foreground)]">Contenido</label>
             <div className="rounded-[12px] border border-[var(--border)]">
               <Toolbar editor={editor} />
-              <div className="max-h-[320px] min-h-[200px] overflow-y-auto px-3 py-2">
-                <EditorContent editor={editor} className="prose prose-sm max-w-none focus:outline-none dark:prose-invert" />
+              <div className="max-h-[400px] overflow-y-auto px-3 py-2">
+                <EditorContent editor={editor} />
               </div>
             </div>
           </div>

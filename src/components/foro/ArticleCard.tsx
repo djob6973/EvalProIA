@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Eye, MessageCircle, FileText } from "lucide-react";
+import { Eye, MessageCircle, FileText, Sparkles } from "lucide-react";
 import { ForoArticulo } from "@/lib/services/foro";
 
 function formatDate(iso: string | null): string {
@@ -18,6 +18,11 @@ export function ArticleCard({ articulo }: { articulo: ForoArticulo }) {
         {articulo.categoria && (
           <span className="rounded-full bg-[var(--surface-2)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--muted-foreground)]">
             {articulo.categoria}
+          </span>
+        )}
+        {articulo.origen === "ia" && (
+          <span className="flex items-center gap-1 rounded-full bg-[rgba(139,92,246,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#8B5CF6]">
+            <Sparkles className="size-3" /> IA
           </span>
         )}
         {articulo.estado === "borrador" && (
