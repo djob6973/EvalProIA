@@ -171,7 +171,9 @@ function MyResultPage() {
         })
         .filter((x): x is FeedbackBreakdownItem => x !== null);
 
-      const generated = await generateResultFeedbackFn({ data: { evaluationId: evaluation.id, breakdown } });
+      const generated = await generateResultFeedbackFn({
+        data: { documentoTexto: evaluation.feedback_documento_texto ?? '', breakdown },
+      });
       const saved = await resultsService.submitFeedback(result.id, generated);
       setResult((prev: any) => ({ ...prev, feedback: saved }));
     } catch (err: any) {

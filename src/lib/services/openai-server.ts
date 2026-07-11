@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
 import OpenAI from 'openai';
-import { db } from '../db';
 
 const DEFAULT_SYSTEM_PROMPT = `ROL DEL MODELO
 Actúas como un experto en diseño instruccional, evaluación del aprendizaje y generación de preguntas para exámenes, quizzes interactivos (tipo Kahoot), evaluaciones internas y entrenamientos corporativos.
@@ -611,7 +610,7 @@ function normalizeResultFeedback(parsed: unknown): GeneratedResultFeedback {
 }
 
 export async function generateResultFeedbackServer(
-  evaluationId: string,
+  documentoTexto: string,
   breakdown: FeedbackBreakdownItem[],
   model = 'gpt-4o-mini',
   temperature = 0.4,
@@ -625,11 +624,6 @@ export async function generateResultFeedbackServer(
   if (!Array.isArray(breakdown) || breakdown.length === 0) {
     throw new Error('No hay respuestas para generar el feedback');
   }
-
-  const [evaluation] = await db`
-    SELECT feedback_documento_texto FROM evaluations WHERE id = ${evaluationId}
-  `;
-  const documentoTexto = evaluation?.feedback_documento_texto ?? '';
 
   const openai = new OpenAI({ apiKey, timeout: 120_000 });
   const userPrompt = `Documento de referencia:
@@ -675,7 +669,7 @@ Genera el feedback siguiendo estrictamente el formato indicado en las instruccio
 }
 
 type GenerateResultFeedbackInput = {
-  evaluationId: string;
+  documentoTexto: string;
   breakdown: FeedbackBreakdownItem[];
   model?: string;
   temperature?: number;
@@ -687,7 +681,7 @@ export const generateResultFeedbackFn = createServerFn({ method: 'POST' })
   .inputValidator((data: GenerateResultFeedbackInput) => data)
   .handler(async ({ data }) => {
     return generateResultFeedbackServer(
-      data.evaluationId,
+      data.documentoTexto,
       data.breakdown,
       data.model,
       data.temperature,
