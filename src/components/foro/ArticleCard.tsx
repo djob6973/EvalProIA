@@ -1,13 +1,15 @@
 import { Link } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
 import { Eye, MessageCircle, FileText, Sparkles } from "lucide-react";
 import { ForoArticulo } from "@/lib/services/foro";
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function ArticleCard({ articulo }: { articulo: ForoArticulo }) {
+  const { t, i18n } = useTranslation();
   return (
     <Link
       to="/foro/$id"
@@ -22,12 +24,12 @@ export function ArticleCard({ articulo }: { articulo: ForoArticulo }) {
         )}
         {articulo.origen === "ia" && (
           <span className="flex items-center gap-1 rounded-full bg-[rgba(139,92,246,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#8B5CF6]">
-            <Sparkles className="size-3" /> IA
+            <Sparkles className="size-3" /> {t("forum.aiBadgeShort")}
           </span>
         )}
         {articulo.estado === "borrador" && (
           <span className="rounded-full bg-[rgba(237,86,80,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#ED5650]">
-            Borrador
+            {t("forum.draftBadge")}
           </span>
         )}
       </div>
@@ -53,7 +55,7 @@ export function ArticleCard({ articulo }: { articulo: ForoArticulo }) {
       )}
 
       <div className="mt-auto flex items-center justify-between border-t border-[var(--border)] pt-3 text-[12px] text-[var(--muted-foreground)]">
-        <span className="truncate">{articulo.autor_nombre} · {formatDate(articulo.published_at ?? articulo.created_at)}</span>
+        <span className="truncate">{articulo.autor_nombre} · {formatDate(articulo.published_at ?? articulo.created_at, i18n.language)}</span>
         <div className="flex shrink-0 items-center gap-3">
           <span className="flex items-center gap-1"><Eye className="size-3.5" /> {articulo.vistas}</span>
           <span className="flex items-center gap-1"><MessageCircle className="size-3.5" /> {articulo.comentarios ?? 0}</span>

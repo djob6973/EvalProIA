@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -12,18 +13,19 @@ import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { foroService, ForoArticulo, ForoArticuloInput } from "@/lib/services/foro";
 
 export const Route = createFileRoute("/foro/$id")({
-  head: () => ({ meta: [{ title: "Foro de Discusión — EvalPro" }] }),
+  head: () => ({ meta: [{ title: "Foro de Discusión — EvalPro" }] }), // translated at runtime via useTranslation
   component: ForoDetailPage,
 });
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString("es-CO", { day: "2-digit", month: "long", year: "numeric" });
+  return new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "long", year: "numeric" });
 }
 
 function ForoDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const { getLevel, loading: permLoading } = useRolePermissions();
   const level = getLevel("foro");
@@ -42,7 +44,7 @@ function ForoDetailPage() {
     foroService
       .getArticulo(id)
       .then(setArticulo)
-      .catch(() => setError("No se pudo cargar el artículo"))
+      .catch(() => setError(t("forum.articleLoadError")))
       .finally(() => setLoading(false));
   };
 
@@ -63,7 +65,7 @@ function ForoDetailPage() {
       setArticulo(updated);
       setShowEditor(false);
     } catch (e: any) {
-      setError(e.message ?? "No se pudo guardar el artículo");
+      setError(e.message ?? t("forum.saveError"));
     } finally {
       setSaving(false);
     }
@@ -75,7 +77,7 @@ function ForoDetailPage() {
       await foroService.deleteArticulo(id);
       navigate({ to: "/foro" });
     } catch (e: any) {
-      setError(e.message ?? "No se pudo eliminar el artículo");
+      setError(e.message ?? t("forum.deleteError"));
       setDeleting(false);
       setConfirmDelete(false);
     }
@@ -84,7 +86,7 @@ function ForoDetailPage() {
   if (loading) {
     return (
       <AppShell>
-        <p className="text-[13px] text-[var(--muted-foreground)]">Cargando artículo…</p>
+        <p className="text-[13px] text-[var(--muted-foreground)]">{t("forum.loadingArticle")}</p>
       </AppShell>
     );
   }
@@ -102,11 +104,11 @@ function ForoDetailPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Foro de Discusión"
+        title={t("forum.title")}
         actions={
           <div className="flex items-center gap-2">
             <Link to="/foro" className="flex items-center gap-1.5 text-[13px] text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-              <ArrowLeft className="size-4" /> Volver al Foro
+              <ArrowLeft className="size-4" /> {t("forum.backToForum")}
             </Link>
           </div>
         }
@@ -121,12 +123,12 @@ function ForoDetailPage() {
           )}
           {articulo.origen === "ia" && (
             <span className="flex items-center gap-1 rounded-full bg-[rgba(139,92,246,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#8B5CF6]">
-              <Sparkles className="size-3" /> Generado por IA
+              <Sparkles className="size-3" /> {t("forum.aiBadge")}
             </span>
           )}
           {articulo.estado === "borrador" && (
             <span className="rounded-full bg-[rgba(237,86,80,0.12)] px-2.5 py-0.5 text-[11px] font-semibold text-[#ED5650]">
-              Borrador
+              {t("forum.draftBadge")}
             </span>
           )}
         </div>
@@ -137,25 +139,25 @@ function ForoDetailPage() {
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] pb-4 text-[13px] text-[var(--muted-foreground)]">
           <span>
-            {articulo.autor_nombre} · {formatDate(articulo.published_at ?? articulo.created_at)}
+            {articulo.autor_nombre} · {formatDate(articulo.published_at ?? articulo.created_at, i18n.language)}
           </span>
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1"><Eye className="size-3.5" /> {articulo.vistas} vistas</span>
+            <span className="flex items-center gap-1"><Eye className="size-3.5" /> {t("forum.views", { count: articulo.vistas })}</span>
             {canEdit && (
               <button onClick={() => setShowEditor(true)} className="flex items-center gap-1 hover:text-[var(--foreground)]">
-                <Pencil className="size-3.5" /> Editar
+                <Pencil className="size-3.5" /> {t("forum.edit")}
               </button>
             )}
             {canEdit && (
               <button onClick={() => setConfirmDelete(true)} className="flex items-center gap-1 hover:text-destructive">
-                <Trash2 className="size-3.5" /> Eliminar
+                <Trash2 className="size-3.5" /> {t("forum.delete")}
               </button>
             )}
           </div>
         </div>
 
         <div
-          className="prose prose-sm mt-5 max-w-none dark:prose-invert [&_table]:w-full [&_td]:border [&_th]:border [&_td]:border-[var(--border)] [&_th]:border-[var(--border)] [&_td]:p-2 [&_th]:p-2"
+          className="prose prose-sm mt-5 max-w-none dark:prose-invert [&_table]:w-full [&_td]:border [&_th]:border [&_td]:border-[var(--border)] [&_th]:border-[var(--border)] [&_td]:p-2 [&_th]:p-2 [&_img]:max-w-full [&_img]:rounded-lg"
           dangerouslySetInnerHTML={{ __html: articulo.contenido }}
         />
 
@@ -171,7 +173,7 @@ function ForoDetailPage() {
 
         {(articulo.adjuntos?.length ?? 0) > 0 && (
           <div className="mt-6 flex flex-col gap-2 border-t border-[var(--border)] pt-4">
-            <span className="text-[12px] font-medium text-[var(--muted-foreground)]">Adjuntos</span>
+            <span className="text-[12px] font-medium text-[var(--muted-foreground)]">{t("forum.attachments")}</span>
             {articulo.adjuntos!.map((a) => (
               <a
                 key={a.id}
@@ -202,8 +204,8 @@ function ForoDetailPage() {
 
       <ConfirmDialog
         open={confirmDelete}
-        title="Eliminar artículo"
-        description="Esta acción eliminará el artículo y todos sus comentarios. No se puede deshacer."
+        title={t("forum.deleteArticleTitle")}
+        description={t("forum.deleteArticleDesc")}
         variant="destructive"
         loading={deleting}
         onConfirm={handleDelete}

@@ -444,6 +444,7 @@ function normalizeForoArticulo(parsed: unknown): GeneratedForoArticulo {
 
 export async function generateForoArticuloServer(
   extractedText: string,
+  idioma = 'Español',
   model = 'gpt-4o',
   temperature = 0.2,
   maxTokens = 16_384,
@@ -458,7 +459,12 @@ export async function generateForoArticuloServer(
   }
 
   const openai = new OpenAI({ apiKey, timeout: 180_000 });
-  const userPrompt = `Transforma el siguiente documento en un artículo de conocimiento, siguiendo estrictamente las reglas del sistema (preservar el 100% del contenido, solo mejorar formato/organización).\n\nDocumento:\n${extractedText}`;
+  const userPrompt = `Transforma el siguiente documento en un artículo de conocimiento, siguiendo estrictamente las reglas del sistema (preservar el 100% del contenido, solo mejorar formato/organización).
+
+Idioma de salida: ${idioma} — el título, el contenido (incluyendo FAQ y Glosario si aplica), el resumen, las palabras clave, las etiquetas sugeridas y la categoría sugerida deben estar TODOS en ${idioma}, sin importar el idioma original del documento.
+
+Documento:
+${extractedText}`;
 
   let lastError: Error = new Error('Error desconocido al generar el artículo');
 
@@ -496,6 +502,7 @@ export async function generateForoArticuloServer(
 
 type GenerateForoArticuloInput = {
   extractedText: string;
+  idioma?: string;
   model?: string;
   temperature?: number;
   maxTokens?: number;
@@ -505,7 +512,7 @@ type GenerateForoArticuloInput = {
 export const generateForoArticuloFn = createServerFn({ method: 'POST' })
   .inputValidator((data: GenerateForoArticuloInput) => data)
   .handler(async ({ data }) => {
-    return generateForoArticuloServer(data.extractedText, data.model, data.temperature, data.maxTokens, data.retries);
+    return generateForoArticuloServer(data.extractedText, data.idioma, data.model, data.temperature, data.maxTokens, data.retries);
   });
 
 type ExtractImageTextInput = {

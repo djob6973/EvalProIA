@@ -1,5 +1,6 @@
 import { createFileRoute, useLocation, Outlet } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ function ForoRouteComponent() {
 }
 
 function ForoPage() {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const { getLevel, loading: permLoading } = useRolePermissions();
   const level = getLevel("foro");
@@ -56,7 +58,7 @@ function ForoPage() {
     foroService
       .getArticulos({ search: debouncedQuery, categoria, etiqueta, orden })
       .then(setItems)
-      .catch(() => setError("No se pudieron cargar los artículos"))
+      .catch(() => setError(t("forum.loadError")))
       .finally(() => setLoading(false));
   };
 
@@ -89,7 +91,7 @@ function ForoPage() {
       setAiDraft(null);
       load();
     } catch (e: any) {
-      setError(e.message ?? "No se pudo guardar el artículo");
+      setError(e.message ?? t("forum.saveError"));
     } finally {
       setSaving(false);
     }
@@ -98,18 +100,18 @@ function ForoPage() {
   return (
     <AppShell>
       <PageHeader
-        title="Foro de Discusión"
-        subtitle="Conocimiento compartido a partir de capacitaciones, documentos y evaluaciones"
+        title={t("forum.title")}
+        subtitle={t("forum.subtitle")}
         actions={
           <div className="flex items-center gap-2">
             {canGenerateAI && (
               <Button variant="outline" onClick={() => setShowAiGenerator(true)}>
-                <Sparkles className="size-4" /> Generar con IA
+                <Sparkles className="size-4" /> {t("forum.generateWithAI")}
               </Button>
             )}
             {canWrite && (
               <Button onClick={openCreate}>
-                <Plus className="size-4" /> Nuevo artículo
+                <Plus className="size-4" /> {t("forum.newArticle")}
               </Button>
             )}
           </div>
@@ -122,7 +124,7 @@ function ForoPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por título o contenido…"
+            placeholder={t("forum.searchPlaceholder")}
             className="pl-9"
           />
         </div>
@@ -133,7 +135,7 @@ function ForoPage() {
             onChange={(e) => setCategoria(e.target.value)}
             className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           >
-            <option value="">Todas las categorías</option>
+            <option value="">{t("forum.allCategories")}</option>
             {categorias.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
@@ -141,14 +143,14 @@ function ForoPage() {
         {etiqueta && (
           <span className="flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[12px]">
             #{etiqueta}
-            <button onClick={() => setEtiqueta("")} aria-label="Quitar filtro de etiqueta"><X className="size-3" /></button>
+            <button onClick={() => setEtiqueta("")} aria-label={t("forum.removeTagFilter")}><X className="size-3" /></button>
           </span>
         )}
 
         <Tabs value={orden} onValueChange={(v) => setOrden(v as "recientes" | "populares")}>
           <TabsList>
-            <TabsTrigger value="recientes">Recientes</TabsTrigger>
-            <TabsTrigger value="populares">Más vistos</TabsTrigger>
+            <TabsTrigger value="recientes">{t("forum.recent")}</TabsTrigger>
+            <TabsTrigger value="populares">{t("forum.mostViewed")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -156,10 +158,10 @@ function ForoPage() {
       {error && <p className="mb-4 text-[13px] text-destructive">{error}</p>}
 
       {loading ? (
-        <p className="text-[13px] text-[var(--muted-foreground)]">Cargando artículos…</p>
+        <p className="text-[13px] text-[var(--muted-foreground)]">{t("forum.loadingArticles")}</p>
       ) : items.length === 0 ? (
         <div className="rounded-[16px] border border-dashed border-[var(--border)] py-16 text-center text-[14px] text-[var(--muted-foreground)]">
-          Aún no hay artículos publicados.
+          {t("forum.emptyState")}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

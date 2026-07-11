@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Heart, MessageCircle, Pencil, Trash2, Send, Loader2, AtSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,8 +18,8 @@ interface CommentThreadProps {
   canModerateAny: boolean;
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+function formatDateTime(iso: string, locale: string): string {
+  return new Date(iso).toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function MentionPicker({
@@ -96,6 +97,7 @@ function CommentComposer({
   onCancel?: () => void;
   autoFocus?: boolean;
 }) {
+  const { t } = useTranslation();
   const { text, setText, mentioned, mentionQuery, pick, reset } = useMentionInput(participants);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -121,10 +123,10 @@ function CommentComposer({
       />
       <div className="mt-2 flex items-center justify-between">
         <span className="flex items-center gap-1 text-[11px] text-[var(--muted-foreground)]">
-          <AtSign className="size-3" /> Escribe @ para mencionar a alguien
+          <AtSign className="size-3" /> {t("forum.mentionHint")}
         </span>
         <div className="flex gap-2">
-          {onCancel && <Button size="sm" variant="outline" onClick={onCancel}>Cancelar</Button>}
+          {onCancel && <Button size="sm" variant="outline" onClick={onCancel}>{t("forum.cancel")}</Button>}
           <Button size="sm" onClick={submit} disabled={submitting || !text.trim()}>
             {submitting ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
             {submitLabel}
@@ -154,6 +156,7 @@ function SingleComment({
   onDelete: () => void;
   isReply?: boolean;
 }) {
+  const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(comment.contenido);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -169,15 +172,15 @@ function SingleComment({
           <div className="rounded-[14px] bg-[var(--surface-2)] px-3.5 py-2.5">
             <div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--foreground)]">
               {comment.autor_nombre}
-              <span className="font-normal text-[var(--muted-foreground)]">{formatDateTime(comment.created_at)}</span>
+              <span className="font-normal text-[var(--muted-foreground)]">{formatDateTime(comment.created_at, i18n.language)}</span>
             </div>
             {editing ? (
               <div className="mt-1.5 flex flex-col gap-2">
                 <Textarea value={editText} onChange={(e) => setEditText(e.target.value)} className="min-h-[60px] resize-none" />
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditing(false)}>{t("forum.cancel")}</Button>
                   <Button size="sm" onClick={() => { onEdit(editText.trim()); setEditing(false); }} disabled={!editText.trim()}>
-                    Guardar
+                    {t("forum.saveComment")}
                   </Button>
                 </div>
               </div>
@@ -189,7 +192,7 @@ function SingleComment({
             <button
               type="button"
               onClick={onLike}
-              aria-label={comment.liked_by_me ? "Quitar me gusta" : "Me gusta"}
+              aria-label={comment.liked_by_me ? t("forum.unlike") : t("forum.like")}
               aria-pressed={comment.liked_by_me}
               className={`flex items-center gap-1 hover:opacity-80 ${comment.liked_by_me ? "text-[#ED5650]" : ""}`}
             >
@@ -197,17 +200,17 @@ function SingleComment({
             </button>
             {onReply && (
               <button type="button" onClick={onReply} className="flex items-center gap-1 hover:opacity-80">
-                <MessageCircle className="size-3.5" /> Responder
+                <MessageCircle className="size-3.5" /> {t("forum.reply")}
               </button>
             )}
             {isOwner && (
               <button type="button" onClick={() => setEditing(true)} className="flex items-center gap-1 hover:opacity-80">
-                <Pencil className="size-3.5" /> Editar
+                <Pencil className="size-3.5" /> {t("forum.edit")}
               </button>
             )}
             {(isOwner || canModerateAny) && (
               <button type="button" onClick={() => setConfirmDelete(true)} className="flex items-center gap-1 hover:opacity-80">
-                <Trash2 className="size-3.5" /> Eliminar
+                <Trash2 className="size-3.5" /> {t("forum.delete")}
               </button>
             )}
           </div>
@@ -215,8 +218,8 @@ function SingleComment({
       </div>
       <ConfirmDialog
         open={confirmDelete}
-        title="Eliminar comentario"
-        description="Esta acción no se puede deshacer."
+        title={t("forum.deleteCommentTitle")}
+        description={t("forum.deleteCommentDesc")}
         variant="destructive"
         onConfirm={() => { setConfirmDelete(false); onDelete(); }}
         onCancel={() => setConfirmDelete(false)}
@@ -226,6 +229,7 @@ function SingleComment({
 }
 
 export function CommentThread({ articuloId, currentUserId, canModerateAny }: CommentThreadProps) {
+  const { t } = useTranslation();
   const [comments, setComments] = useState<ForoComentario[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -279,18 +283,18 @@ export function CommentThread({ articuloId, currentUserId, canModerateAny }: Com
     }
   };
 
-  if (loading) return <p className="text-[13px] text-[var(--muted-foreground)]">Cargando comentarios…</p>;
+  if (loading) return <p className="text-[13px] text-[var(--muted-foreground)]">{t("forum.commentsLoading")}</p>;
 
   return (
     <div className="flex flex-col gap-5">
       <h3 className="font-display text-[18px] font-medium text-[var(--foreground)]">
-        Comentarios ({comments.length})
+        {t("forum.commentsTitle", { count: comments.length })}
       </h3>
 
       <CommentComposer
         participants={participants}
-        placeholder="Escribe un comentario…"
-        submitLabel="Comentar"
+        placeholder={t("forum.commentPlaceholder")}
+        submitLabel={t("forum.commentSubmit")}
         submitting={posting}
         onSubmit={(contenido, mentions) => postComment(contenido, mentions)}
       />
@@ -323,8 +327,8 @@ export function CommentThread({ articuloId, currentUserId, canModerateAny }: Com
               <div className="ml-10 mt-3">
                 <CommentComposer
                   participants={participants}
-                  placeholder={`Responder a ${root.autor_nombre}…`}
-                  submitLabel="Responder"
+                  placeholder={t("forum.replyPlaceholder", { name: root.autor_nombre })}
+                  submitLabel={t("forum.replySubmit")}
                   submitting={posting}
                   autoFocus
                   onCancel={() => setReplyingTo(null)}
@@ -335,7 +339,7 @@ export function CommentThread({ articuloId, currentUserId, canModerateAny }: Com
           </div>
         ))}
         {roots.length === 0 && (
-          <p className="text-[13px] text-[var(--muted-foreground)]">Sé el primero en comentar.</p>
+          <p className="text-[13px] text-[var(--muted-foreground)]">{t("forum.noComments")}</p>
         )}
       </div>
     </div>
