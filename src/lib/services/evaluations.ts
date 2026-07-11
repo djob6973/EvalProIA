@@ -45,11 +45,31 @@ export interface Question {
   justificacion?: string
 }
 
+export type MasteryLevel = 'alto' | 'medio' | 'bajo'
+
+export interface ResultFeedbackStrength {
+  competencia: string
+  detalles: string[]
+}
+
+export interface ResultFeedbackImprovement {
+  competencia: string
+  explicacion: string
+  practica: string
+}
+
+export interface ResultFeedbackMastery {
+  competencia: string
+  nivel: MasteryLevel
+}
+
 export interface ResultFeedback {
-  positivos: string[]
-  negativos: string[]
-  temas_intro: string
-  temas: string[]
+  resumen: string
+  fortalezas: ResultFeedbackStrength[]
+  mejoras: ResultFeedbackImprovement[]
+  dominio: ResultFeedbackMastery[]
+  recomendaciones: string[]
+  cierre: string
 }
 
 export interface Result {

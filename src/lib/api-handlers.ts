@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { getAuthContext, AuthUser, getPermissionLevel, levelAtLeast } from "./server-auth";
+import { normalizeResultFeedback } from "./services/openai-server";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -688,14 +689,7 @@ async function submitResultFeedback(request: Request, id: string): Promise<Respo
   }
 
   const body = await request.json();
-  const { positivos, negativos, temas_intro, temas } = body;
-  const asStringArray = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-  const feedback = {
-    positivos: asStringArray(positivos),
-    negativos: asStringArray(negativos),
-    temas_intro: typeof temas_intro === 'string' ? temas_intro : '',
-    temas: asStringArray(temas),
-  };
+  const feedback = normalizeResultFeedback(body);
 
   const [row] = await db`
     UPDATE results SET feedback = ${db.json(feedback)}

@@ -163,6 +163,7 @@ function MyResultPage() {
             enunciado: question.question_text,
             contexto: question.contexto ?? '',
             tipo: inferQuestionType(question),
+            categoria: question.categoria ?? '',
             opciones: question.options ?? [],
             seleccionadas,
             estado,

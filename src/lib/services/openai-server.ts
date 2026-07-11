@@ -557,64 +557,129 @@ export const extractImageTextFn = createServerFn({ method: 'POST' })
 // ── Feedback personalizado de resultados de evaluación ───────────────────────
 
 const RESULT_FEEDBACK_SYSTEM_PROMPT = `ROL DEL MODELO
-Actúas como un tutor experto que da retroalimentación personalizada a un colaborador después de presentar una evaluación interna.
+Actúas como un mentor experto de una plataforma de aprendizaje corporativo moderna (en el mismo espíritu que Coursera, LinkedIn Learning o Duolingo), dando retroalimentación personalizada a un colaborador después de presentar una evaluación interna.
 
 CONTEXTO DE ENTRADA
-Recibirás un documento de referencia (material de estudio, manual o guía sobre el que se basó la evaluación) y el detalle completo de las respuestas del participante: para cada pregunta, su enunciado, contexto, tipo, las opciones disponibles, cuáles seleccionó, si esa pregunta quedó correcta, parcial o incorrecta, y la justificación de la respuesta correcta.
+Recibirás un documento de referencia (material de estudio, manual o guía sobre el que se basó la evaluación) y el detalle completo de las respuestas del participante: para cada pregunta, su enunciado, contexto, tipo, categoría administrativa (pista, no definitiva), las opciones disponibles, cuáles seleccionó, si esa pregunta quedó correcta, parcial o incorrecta, y la justificación de la respuesta correcta.
 
-QUÉ DEBES HACER
-- Usa el documento de referencia como fuente de verdad para explicar POR QUÉ algo estuvo bien o mal, no inventes información que no esté en el documento ni en las justificaciones entregadas.
-- Identifica 2 a 4 aspectos positivos concretos (qué demostró dominar el participante), basados en las preguntas que respondió correctamente.
-- Identifica 2 a 4 aspectos a mejorar concretos (qué conceptos o procedimientos confundió), basados en las preguntas incorrectas o parciales — sé específico, no genérico.
-- Escribe una frase corta de introducción (una sola oración, tono cercano y alentador) que anteceda la lista de temas para repasar.
-- Lista de 2 a 5 temas cortos (2-4 palabras cada uno) que el participante debería repasar, derivados directamente de las preguntas que falló.
-- Tono: constructivo, cercano, en segunda persona ("tú"), nunca condescendiente ni punitivo. No repitas literalmente el enunciado de las preguntas.
+REGLA CENTRAL — ANÁLISIS GLOBAL, NO POR PREGUNTA
+Tienes PROHIBIDO producir un resumen pregunta por pregunta ("acertaste la pregunta 3", "fallaste la pregunta 5"). Debes analizar el conjunto de respuestas para inferir **competencias** (habilidades o temas de fondo, ej. "Empatía con el cliente", "Control emocional", "Resolución de conflictos", "Escucha activa") a partir del contenido semántico de las preguntas — la categoría administrativa que recibes es solo una pista adicional, no la unidad de análisis. Agrupa siempre por competencia, nunca por pregunta individual.
+
+QUÉ DEBES GENERAR
+
+1. "resumen": un párrafo de 3 a 5 líneas que describa el desempeño general — debe mencionar el nivel general alcanzado, la o las principales fortalezas, y la principal oportunidad de mejora. Tono narrativo, no una lista.
+
+2. "fortalezas": agrupa los aciertos por competencia (nunca por pregunta). Para cada competencia detectada como fuerte, da 1 a 3 "detalles" concretos de qué demostró dominar el participante (no "acertaste la pregunta X").
+
+3. "mejoras": detecta PATRONES entre las respuestas incorrectas o parciales y agrúpalos por competencia (no listes cada respuesta incorrecta suelta). Para cada mejora, entrega:
+   - "explicacion": qué concepto o procedimiento se confundió y por qué la respuesta correcta importa en la práctica.
+   - "practica": la práctica recomendada y accionable para ese punto específico.
+
+4. "dominio": clasifica CADA competencia evaluada (las mismas que aparecen en fortalezas/mejoras, más cualquier otra competencia cubierta por la evaluación) con un nivel "alto", "medio" o "bajo", inferido de la proporción de aciertos de esa competencia.
+
+5. "recomendaciones": 3 a 5 acciones concretas y accionables (nunca genéricas tipo "estudia más"), derivadas directamente de las mejoras detectadas.
+
+6. "cierre": un mensaje de cierre motivador y personalizado, mencionando el efecto esperado de fortalecer el punto más débil detectado.
+
+USO DEL DOCUMENTO DE REFERENCIA
+Cuando el concepto que el participante confundió aparezca explícitamente en el documento de referencia, usa esa idea para fundamentar el "porqué" en "mejoras.explicacion" — parafraseando la idea principal en una frase corta. Nunca copies fragmentos largos del documento ni cites literalmente. Si el documento no cubre el concepto, explica el porqué con criterio profesional propio, sin inventar que proviene del documento.
+
+REGLAS OBLIGATORIAS
+- No repitas el enunciado literal de ninguna pregunta ni la justificación tal cual fue entregada.
+- Usa EXACTAMENTE el mismo nombre de competencia en "fortalezas", "mejoras" y "dominio" cuando te refieras al mismo concepto — nunca uses sinónimos distintos para la misma competencia.
+- Tono: profesional, positivo, cercano, en segunda persona ("tú"), orientado al aprendizaje — nunca condescendiente ni punitivo.
+- Si no hay aciertos, "fortalezas" puede ser un arreglo vacío; si no hay errores, "mejoras" puede ser un arreglo vacío. No inventes contenido para rellenar.
 
 FORMATO DE SALIDA
 Responde únicamente con un JSON válido, sin texto adicional fuera del objeto, con esta forma exacta:
 {
-  "positivos": ["...", "..."],
-  "negativos": ["...", "..."],
-  "temas_intro": "frase corta de introducción",
-  "temas": ["...", "..."]
+  "resumen": "párrafo de 3 a 5 líneas",
+  "fortalezas": [{ "competencia": "...", "detalles": ["...", "..."] }],
+  "mejoras": [{ "competencia": "...", "explicacion": "...", "practica": "..." }],
+  "dominio": [{ "competencia": "...", "nivel": "alto|medio|bajo" }],
+  "recomendaciones": ["...", "...", "..."],
+  "cierre": "..."
 }`;
 
 export type FeedbackBreakdownItem = {
   enunciado: string;
   contexto?: string;
   tipo: string;
+  categoria?: string;
   opciones: string[];
   seleccionadas: string[];
   estado: 'correcta' | 'parcial' | 'incorrecta';
   justificacion?: string;
 };
 
+export type MasteryLevel = 'alto' | 'medio' | 'bajo';
+
 export type GeneratedResultFeedback = {
-  positivos: string[];
-  negativos: string[];
-  temas_intro: string;
-  temas: string[];
+  resumen: string;
+  fortalezas: { competencia: string; detalles: string[] }[];
+  mejoras: { competencia: string; explicacion: string; practica: string }[];
+  dominio: { competencia: string; nivel: MasteryLevel }[];
+  recomendaciones: string[];
+  cierre: string;
 };
 
-function normalizeResultFeedback(parsed: unknown): GeneratedResultFeedback {
+export function normalizeResultFeedback(parsed: unknown): GeneratedResultFeedback {
   const obj = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
   const asStringArray = (v: unknown): string[] =>
     Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
+  const asString = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+
+  const fortalezas = Array.isArray(obj.fortalezas)
+    ? (obj.fortalezas as unknown[])
+        .map((f) => {
+          const item = (f && typeof f === 'object' ? f : {}) as Record<string, unknown>;
+          const competencia = asString(item.competencia);
+          if (!competencia) return null;
+          return { competencia, detalles: asStringArray(item.detalles) };
+        })
+        .filter((f): f is { competencia: string; detalles: string[] } => f !== null)
+    : [];
+
+  const mejoras = Array.isArray(obj.mejoras)
+    ? (obj.mejoras as unknown[])
+        .map((m) => {
+          const item = (m && typeof m === 'object' ? m : {}) as Record<string, unknown>;
+          const competencia = asString(item.competencia);
+          if (!competencia) return null;
+          return { competencia, explicacion: asString(item.explicacion), practica: asString(item.practica) };
+        })
+        .filter((m): m is { competencia: string; explicacion: string; practica: string } => m !== null)
+    : [];
+
+  const dominio = Array.isArray(obj.dominio)
+    ? (obj.dominio as unknown[])
+        .map((d) => {
+          const item = (d && typeof d === 'object' ? d : {}) as Record<string, unknown>;
+          const competencia = asString(item.competencia);
+          if (!competencia) return null;
+          const nivelRaw = asString(item.nivel);
+          const nivel: MasteryLevel = nivelRaw === 'alto' || nivelRaw === 'bajo' ? nivelRaw : 'medio';
+          return { competencia, nivel };
+        })
+        .filter((d): d is { competencia: string; nivel: MasteryLevel } => d !== null)
+    : [];
 
   return {
-    positivos: asStringArray(obj.positivos),
-    negativos: asStringArray(obj.negativos),
-    temas_intro: typeof obj.temas_intro === 'string' ? obj.temas_intro.trim() : '',
-    temas: asStringArray(obj.temas),
+    resumen: asString(obj.resumen),
+    fortalezas,
+    mejoras,
+    dominio,
+    recomendaciones: asStringArray(obj.recomendaciones),
+    cierre: asString(obj.cierre),
   };
 }
 
 export async function generateResultFeedbackServer(
   documentoTexto: string,
   breakdown: FeedbackBreakdownItem[],
-  model = 'gpt-4o-mini',
-  temperature = 0.4,
-  maxTokens = 2048,
+  model = 'gpt-4o',
+  temperature = 0.5,
+  maxTokens = 4096,
   retries = 3,
 ): Promise<GeneratedResultFeedback> {
   const apiKey = process.env.OPENAI_API_KEY;

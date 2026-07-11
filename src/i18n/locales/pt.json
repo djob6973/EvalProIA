@@ -836,9 +836,16 @@
     "feedbackError": "Não foi possível gerar o feedback",
     "feedbackBadge": "Feedback gerado com IA",
     "feedbackTitle": "Seu desempenho nesta avaliação",
-    "feedbackPositives": "Pontos positivos",
-    "feedbackNegatives": "Pontos a melhorar",
-    "feedbackTopics": "Temas para revisar"
+    "feedbackStrengths": "Pontos fortes",
+    "feedbackImprovements": "Oportunidades de melhoria",
+    "feedbackPracticeLabel": "Prática recomendada",
+    "feedbackMastery": "Nível de domínio",
+    "feedbackMasteryHigh": "Alto",
+    "feedbackMasteryMedium": "Médio",
+    "feedbackMasteryLow": "Baixo",
+    "feedbackTopics": "Temas para revisar",
+    "feedbackRecommendations": "Recomendações",
+    "feedbackNextGoal": "Seu próximo objetivo"
   },
   "evalResults": {
     "pageTitle": "Resultados da Avaliação — EvalPro",
