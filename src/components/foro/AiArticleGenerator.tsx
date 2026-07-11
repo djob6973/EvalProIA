@@ -111,7 +111,7 @@ export function AiArticleGenerator({ open, onClose, onGenerated }: AiArticleGene
               <FileText className="size-4 shrink-0" /> {file.name}
             </span>
             {!busy && (
-              <button type="button" onClick={() => setFile(null)}>
+              <button type="button" onClick={() => setFile(null)} aria-label="Quitar archivo">
                 <X className="size-3.5" />
               </button>
             )}

@@ -189,6 +189,8 @@ function SingleComment({
             <button
               type="button"
               onClick={onLike}
+              aria-label={comment.liked_by_me ? "Quitar me gusta" : "Me gusta"}
+              aria-pressed={comment.liked_by_me}
               className={`flex items-center gap-1 hover:opacity-80 ${comment.liked_by_me ? "text-[#ED5650]" : ""}`}
             >
               <Heart className={`size-3.5 ${comment.liked_by_me ? "fill-current" : ""}`} /> {comment.likes || ""}

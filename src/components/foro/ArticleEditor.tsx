@@ -222,7 +222,7 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
               {etiquetas.map((tag) => (
                 <span key={tag} className="flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[12px] text-[var(--foreground)]">
                   {tag}
-                  <button type="button" onClick={() => setEtiquetas((e) => e.filter((t) => t !== tag))}>
+                  <button type="button" onClick={() => setEtiquetas((e) => e.filter((t) => t !== tag))} aria-label={`Quitar etiqueta ${tag}`}>
                     <X className="size-3" />
                   </button>
                 </span>
@@ -265,7 +265,7 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
                 {adjuntos.map((a, i) => (
                   <div key={i} className="flex items-center justify-between rounded-[10px] bg-[var(--surface-2)] px-3 py-1.5 text-[12px]">
                     <span className="truncate">{a.nombre}</span>
-                    <button type="button" onClick={() => setAdjuntos((prev) => prev.filter((_, idx) => idx !== i))}>
+                    <button type="button" onClick={() => setAdjuntos((prev) => prev.filter((_, idx) => idx !== i))} aria-label={`Quitar adjunto ${a.nombre}`}>
                       <X className="size-3.5" />
                     </button>
                   </div>

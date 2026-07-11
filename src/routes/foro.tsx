@@ -141,7 +141,7 @@ function ForoPage() {
         {etiqueta && (
           <span className="flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[12px]">
             #{etiqueta}
-            <button onClick={() => setEtiqueta("")}><X className="size-3" /></button>
+            <button onClick={() => setEtiqueta("")} aria-label="Quitar filtro de etiqueta"><X className="size-3" /></button>
           </span>
         )}
 
