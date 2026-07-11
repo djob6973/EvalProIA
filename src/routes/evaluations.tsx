@@ -40,6 +40,7 @@ import { toTitleCase } from "@/lib/utils";
 import { Paginator } from "@/components/Paginator";
 import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService, FeedbackTrigger } from "@/lib/services/evaluations";
 import { extractTextWithOCR } from "@/lib/services/openai";
+import { defaultIdioma } from "@/components/foro/AiArticleGenerator";
 
 export const Route = createFileRoute("/evaluations")({
   head: () => ({ meta: [{ title: "evaluations.pageTitle" }] }),
@@ -1040,7 +1041,7 @@ function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPr
 }
 
 function EvaluationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -1174,6 +1175,7 @@ function EvaluationsPage() {
   };
   const [form, setForm] = useState<Evaluation>(emptyForm);
   const [extractingFeedbackDoc, setExtractingFeedbackDoc] = useState(false);
+  const [docIdioma, setDocIdioma] = useState(() => defaultIdioma(i18n.language));
 
   const handleFeedbackDocument = async (file: File | null) => {
     if (!file) return;
@@ -1261,7 +1263,7 @@ function EvaluationsPage() {
 
       if (editing) {
         // Actualizar en Supabase
-        await evaluationsService.update(editing.id, {
+        const updated = await evaluationsService.update(editing.id, {
           title: form.nombre,
           description: form.descripcion,
           tiempo_limite: form.tiempo_limite,
@@ -1274,10 +1276,14 @@ function EvaluationsPage() {
           feedback_trigger: form.feedback_trigger,
           feedback_documento_texto: form.feedback_documento_texto || null,
           feedback_documento_nombre: form.feedback_documento_nombre || null,
+          feedback_documento_idioma: docIdioma,
         });
 
         setItems((p) => p.map((x) => (x.id === editing.id ? { ...form, id: editing.id, fecha_vencimiento: form.fecha_vencimiento || undefined } : x)));
         showToast(t('evaluations.updated'));
+        if ((updated as any).foro_articulo_error) {
+          showToast(t('evaluations.foroArticleGenerationError'), 'error');
+        }
       } else {
         // Crear en Supabase
         const newEvaluation = await evaluationsService.create({
@@ -1294,7 +1300,11 @@ function EvaluationsPage() {
           feedback_trigger: form.feedback_trigger,
           feedback_documento_texto: form.feedback_documento_texto || null,
           feedback_documento_nombre: form.feedback_documento_nombre || null,
+          feedback_documento_idioma: docIdioma,
         });
+        if ((newEvaluation as any).foro_articulo_error) {
+          showToast(t('evaluations.foroArticleGenerationError'), 'error');
+        }
 
         const mappedItem: Evaluation = {
           id: newEvaluation.id,
@@ -2047,6 +2057,23 @@ function EvaluationsPage() {
                         </label>
                       )}
                       <p className="mt-1 text-xs text-muted-foreground">{t('evaluations.feedbackDocumentHint')}</p>
+                      {form.feedback_documento_nombre && (
+                        <div className="mt-3">
+                          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                            {t('evaluations.feedbackArticleLanguage')}
+                          </label>
+                          <select
+                            value={docIdioma}
+                            onChange={(e) => setDocIdioma(e.target.value)}
+                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                          >
+                            <option value="Español">{t('generate.spanish')}</option>
+                            <option value="Inglés">{t('generate.english')}</option>
+                            <option value="Portugués">{t('generate.portuguese')}</option>
+                          </select>
+                          <p className="mt-1 text-xs text-muted-foreground">{t('evaluations.feedbackArticleHint')}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

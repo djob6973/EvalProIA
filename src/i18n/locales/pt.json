@@ -270,7 +270,10 @@
     "feedbackUploadDocument": "Clique para enviar um documento",
     "feedbackRemoveDocument": "Remover documento",
     "feedbackDocumentHint": "Usado apenas como insumo interno para gerar o feedback — nunca é visível para o participante.",
-    "feedbackExtractError": "Não foi possível processar o documento"
+    "feedbackExtractError": "Não foi possível processar o documento",
+    "feedbackArticleLanguage": "Idioma do artigo gerado",
+    "feedbackArticleHint": "Este documento também gera um artigo de conhecimento no Fórum (como rascunho). Será publicado automaticamente quando a avaliação for desativada.",
+    "foroArticleGenerationError": "A avaliação foi salva, mas não foi possível gerar o artigo do Fórum"
   },
   "areas": {
     "pageTitle": "Áreas — EvalPro",
@@ -845,7 +848,10 @@
     "feedbackMasteryLow": "Baixo",
     "feedbackTopics": "Temas para revisar",
     "feedbackRecommendations": "Recomendações",
-    "feedbackNextGoal": "Seu próximo objetivo"
+    "feedbackNextGoal": "Seu próximo objetivo",
+    "relatedArticleTitle": "Artigo relacionado",
+    "relatedArticleDesc": "Aprofunde-se neste tema com o artigo do Fórum.",
+    "relatedArticleCta": "Ver artigo"
   },
   "evalResults": {
     "pageTitle": "Resultados da Avaliação — EvalPro",

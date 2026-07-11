@@ -28,6 +28,10 @@ export interface Evaluation {
   feedback_trigger?: FeedbackTrigger
   feedback_documento_texto?: string | null
   feedback_documento_nombre?: string | null
+  /** Solo escritura: idioma transitorio usado al generar/actualizar el artículo del Foro. No se persiste. */
+  feedback_documento_idioma?: string
+  /** Solo lectura: id del artículo del Foro asociado, únicamente si ya está publicado. */
+  foro_articulo_id?: string | null
 }
 
 export interface Question {

@@ -18,7 +18,7 @@ interface AiArticleGeneratorProps {
   onGenerated: (draft: ForoArticuloInput) => void;
 }
 
-function defaultIdioma(lang: string): string {
+export function defaultIdioma(lang: string): string {
   if (lang.startsWith("en")) return "Inglés";
   if (lang.startsWith("pt")) return "Portugués";
   return "Español";

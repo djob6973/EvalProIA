@@ -325,5 +325,9 @@ export async function runMigrations(): Promise<void> {
   await db`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS feedback_documento_nombre TEXT`;
   await db`ALTER TABLE results ADD COLUMN IF NOT EXISTS feedback JSONB`;
 
+  // Foro: artículo generado automáticamente desde el documento de referencia de una evaluación
+  await db`ALTER TABLE foro_articulos ADD COLUMN IF NOT EXISTS evaluation_id UUID REFERENCES evaluations(id) ON DELETE SET NULL`;
+  await db`CREATE INDEX IF NOT EXISTS idx_foro_articulos_evaluation ON foro_articulos(evaluation_id)`;
+
   done = true;
 }

@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { getAuthContext, AuthUser, getPermissionLevel, levelAtLeast } from "./server-auth";
-import { normalizeResultFeedback } from "./services/openai-server";
+import { normalizeResultFeedback, generateForoArticuloServer } from "./services/openai-server";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -243,6 +243,56 @@ async function route(
 
 // ── Evaluations handlers ──────────────────────────────────────────────────────
 
+// Genera o actualiza (mientras siga en borrador) el artículo del Foro asociado al documento
+// de referencia de una evaluación. Nunca modifica un artículo ya publicado.
+async function syncForoArticuloFromEvaluation(
+  evaluationId: string,
+  documentoTexto: string | null | undefined,
+  idioma: string,
+  autorId: string,
+): Promise<{ status: "created" | "updated" | "skipped"; error?: string }> {
+  if (!documentoTexto || !documentoTexto.trim()) return { status: "skipped" };
+
+  const [existing] = await db`SELECT id, estado FROM foro_articulos WHERE evaluation_id = ${evaluationId}`;
+  if (existing?.estado === "publicado") return { status: "skipped" };
+
+  try {
+    const generated = await generateForoArticuloServer(documentoTexto, idioma);
+    if (existing) {
+      await db`
+        UPDATE foro_articulos SET
+          titulo = ${generated.titulo},
+          contenido = ${generated.contenido},
+          resumen = ${generated.resumen || null},
+          categoria = ${generated.categoria_sugerida || null},
+          etiquetas = ${db.json(generated.etiquetas_sugeridas ?? [])},
+          updated_at = now()
+        WHERE id = ${existing.id}
+      `;
+      return { status: "updated" };
+    }
+    await db`
+      INSERT INTO foro_articulos
+        (titulo, contenido, resumen, autor_id, categoria, etiquetas, estado, origen, evaluation_id)
+      VALUES
+        (${generated.titulo}, ${generated.contenido}, ${generated.resumen || null}, ${autorId},
+         ${generated.categoria_sugerida || null}, ${db.json(generated.etiquetas_sugeridas ?? [])},
+         'borrador', 'ia', ${evaluationId})
+    `;
+    return { status: "created" };
+  } catch (err) {
+    console.error("Error generating Foro article from evaluation document:", err);
+    return { status: "skipped", error: (err as Error).message };
+  }
+}
+
+async function publishForoArticuloIfDeactivated(evaluationId: string): Promise<void> {
+  await db`
+    UPDATE foro_articulos SET estado = 'publicado', published_at = now()
+    WHERE evaluation_id = ${evaluationId} AND estado = 'borrador'
+  `;
+}
+
 async function listEvaluations(): Promise<Response> {
   const rows = await db`
     SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
@@ -267,7 +317,12 @@ async function activeEvaluations(): Promise<Response> {
 }
 
 async function getEvaluation(id: string): Promise<Response> {
-  const [row] = await db`SELECT * FROM evaluations WHERE id = ${id}`;
+  const [row] = await db`
+    SELECT e.*,
+      (SELECT fa.id FROM foro_articulos fa
+       WHERE fa.evaluation_id = e.id AND fa.estado = 'publicado' LIMIT 1) AS foro_articulo_id
+    FROM evaluations e WHERE e.id = ${id}
+  `;
   if (!row) return json({ error: "No encontrado" }, 404);
   return json(parseEvaluation(row));
 }
@@ -280,7 +335,7 @@ async function createEvaluation(request: Request): Promise<Response> {
   const {
     title, description, created_by, area_id, activa,
     tiempo_limite, intentos_permitidos, categorias, config, fecha_vencimiento,
-    feedback_trigger, feedback_documento_texto, feedback_documento_nombre,
+    feedback_trigger, feedback_documento_texto, feedback_documento_nombre, feedback_documento_idioma,
   } = body;
 
   const feedbackTriggerFinal = ["ninguno", "al_finalizar", "inactiva"].includes(feedback_trigger)
@@ -323,7 +378,17 @@ async function createEvaluation(request: Request): Promise<Response> {
     }
   }
 
-  return json(parseEvaluation(row), 201);
+  let foro_articulo_error: string | undefined;
+  if (feedback_documento_texto) {
+    const idioma = typeof feedback_documento_idioma === "string" ? feedback_documento_idioma : "Español";
+    const result = await syncForoArticuloFromEvaluation(row.id, feedback_documento_texto, idioma, adminOrErr.id);
+    foro_articulo_error = result.error;
+  }
+  if (row.activa === false) {
+    await publishForoArticuloIfDeactivated(row.id);
+  }
+
+  return json({ ...parseEvaluation(row), foro_articulo_error }, 201);
 }
 
 async function updateEvaluation(request: Request, id: string): Promise<Response> {
@@ -351,13 +416,28 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
   }
   if (Object.keys(patch).length === 0) return json({ error: "Sin cambios" }, 400);
 
+  const [before] = await db`SELECT feedback_documento_texto FROM evaluations WHERE id = ${id}`;
+
   const [row] = await db`
     UPDATE evaluations SET ${db(patch)}, updated_at = now()
     WHERE id = ${id}
     RETURNING *
   `;
   if (!row) return json({ error: "No encontrado" }, 404);
-  return json(parseEvaluation(row));
+
+  let foro_articulo_error: string | undefined;
+  const docChanged =
+    "feedback_documento_texto" in patch && body.feedback_documento_texto !== before?.feedback_documento_texto;
+  if (docChanged) {
+    const idioma = typeof body.feedback_documento_idioma === "string" ? body.feedback_documento_idioma : "Español";
+    const result = await syncForoArticuloFromEvaluation(id, row.feedback_documento_texto, idioma, adminOrErr.id);
+    foro_articulo_error = result.error;
+  }
+  if (patch.activa === false) {
+    await publishForoArticuloIfDeactivated(id);
+  }
+
+  return json({ ...parseEvaluation(row), foro_articulo_error });
 }
 
 async function deleteEvaluation(request: Request, id: string): Promise<Response> {

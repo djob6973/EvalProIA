@@ -9,7 +9,7 @@ import { resultsService, evaluationsService, questionsService, getAnswerStatus }
 import type { Evaluation } from "@/lib/services/evaluations";
 import { generateResultFeedbackFn, type FeedbackBreakdownItem } from "@/lib/services/openai-server";
 import { ResultFeedbackCard } from "@/components/ResultFeedbackCard";
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2, BookOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/my-results/$id")({
@@ -310,6 +310,23 @@ function MyResultPage() {
               </div>
             </div>
           )
+        )}
+
+        {evaluation?.foro_articulo_id && (
+          <Link
+            to="/foro/$id"
+            params={{ id: evaluation.foro_articulo_id }}
+            className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-accent/40"
+          >
+            <div className="flex items-center gap-3">
+              <BookOpen className="size-5 text-accent" />
+              <div>
+                <p className="text-sm font-medium">{t('myResults.relatedArticleTitle')}</p>
+                <p className="text-xs text-muted-foreground">{t('myResults.relatedArticleDesc')}</p>
+              </div>
+            </div>
+            <span className="text-xs font-medium text-accent">{t('myResults.relatedArticleCta')} →</span>
+          </Link>
         )}
 
         <div className="rounded-xl border border-border bg-card shadow-sm">
