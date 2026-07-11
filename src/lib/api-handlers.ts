@@ -111,6 +111,7 @@ async function route(
     if (id === "by-evaluation" && sub2 && m === "GET")
       return resultsByEval(sub2);
     if (id === "count" && !sub2 && m === "GET") return getResultCount(url);
+    if (id && sub2 === "feedback" && m === "POST") return submitResultFeedback(request, id);
     if (id && !sub2 && m === "GET") return getResult(id);
   }
 
@@ -242,13 +243,21 @@ async function route(
 // ── Evaluations handlers ──────────────────────────────────────────────────────
 
 async function listEvaluations(): Promise<Response> {
-  const rows = await db`SELECT * FROM evaluations ORDER BY created_at DESC`;
+  const rows = await db`
+    SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
+           categorias, config, fecha_vencimiento, created_at, updated_at,
+           feedback_trigger, feedback_documento_nombre
+    FROM evaluations ORDER BY created_at DESC
+  `;
   return json(rows.map(parseEvaluation));
 }
 
 async function activeEvaluations(): Promise<Response> {
   const rows = await db`
-    SELECT * FROM evaluations
+    SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
+           categorias, config, fecha_vencimiento, created_at, updated_at,
+           feedback_trigger, feedback_documento_nombre
+    FROM evaluations
     WHERE activa = true
       AND (fecha_vencimiento IS NULL OR fecha_vencimiento > now())
     ORDER BY created_at DESC
@@ -270,17 +279,24 @@ async function createEvaluation(request: Request): Promise<Response> {
   const {
     title, description, created_by, area_id, activa,
     tiempo_limite, intentos_permitidos, categorias, config, fecha_vencimiento,
+    feedback_trigger, feedback_documento_texto, feedback_documento_nombre,
   } = body;
+
+  const feedbackTriggerFinal = ["ninguno", "al_finalizar", "inactiva"].includes(feedback_trigger)
+    ? feedback_trigger
+    : "ninguno";
 
   const [row] = await db`
     INSERT INTO evaluations
       (title, description, created_by, area_id, activa, tiempo_limite,
-       intentos_permitidos, categorias, config, fecha_vencimiento)
+       intentos_permitidos, categorias, config, fecha_vencimiento,
+       feedback_trigger, feedback_documento_texto, feedback_documento_nombre)
     VALUES
       (${title}, ${description ?? null}, ${created_by ?? null}, ${area_id ?? null},
        ${activa ?? true}, ${tiempo_limite ?? null}, ${intentos_permitidos ?? 1},
        ${db.json(categorias ?? [])}, ${db.json(config ?? {})},
-       ${fecha_vencimiento ?? null})
+       ${fecha_vencimiento ?? null},
+       ${feedbackTriggerFinal}, ${feedback_documento_texto ?? null}, ${feedback_documento_nombre ?? null})
     RETURNING *
   `;
 
@@ -318,11 +334,18 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
     "title", "description", "activa", "tiempo_limite",
     "intentos_permitidos", "categorias", "config", "area_id",
     "fecha_vencimiento", "created_by",
+    "feedback_trigger", "feedback_documento_texto", "feedback_documento_nombre",
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) {
-      patch[k] = (k === "categorias" || k === "config") ? db.json(body[k]) : body[k];
+      if (k === "categorias" || k === "config") {
+        patch[k] = db.json(body[k]);
+      } else if (k === "feedback_trigger") {
+        patch[k] = ["ninguno", "al_finalizar", "inactiva"].includes(body[k]) ? body[k] : "ninguno";
+      } else {
+        patch[k] = body[k];
+      }
     }
   }
   if (Object.keys(patch).length === 0) return json({ error: "Sin cambios" }, 400);
@@ -646,7 +669,46 @@ async function getResult(id: string): Promise<Response> {
   const [row] = await db`SELECT * FROM results WHERE id = ${id}`;
   if (!row) return json({ error: "No encontrado" }, 404);
   if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
+  if (typeof row.feedback === 'string') row.feedback = JSON.parse(row.feedback);
   return json(row);
+}
+
+async function submitResultFeedback(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const [existing] = await db`SELECT user_id, feedback FROM results WHERE id = ${id}`;
+  if (!existing) return json({ error: "No encontrado" }, 404);
+  if (existing.user_id !== user.id) return json({ error: "No autorizado" }, 403);
+
+  if (existing.feedback) {
+    const feedback = typeof existing.feedback === 'string' ? JSON.parse(existing.feedback) : existing.feedback;
+    return json(feedback);
+  }
+
+  const body = await request.json();
+  const { positivos, negativos, temas_intro, temas } = body;
+  const asStringArray = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  const feedback = {
+    positivos: asStringArray(positivos),
+    negativos: asStringArray(negativos),
+    temas_intro: typeof temas_intro === 'string' ? temas_intro : '',
+    temas: asStringArray(temas),
+  };
+
+  const [row] = await db`
+    UPDATE results SET feedback = ${db.json(feedback)}
+    WHERE id = ${id} AND feedback IS NULL
+    RETURNING feedback
+  `;
+
+  if (!row) {
+    const [reread] = await db`SELECT feedback FROM results WHERE id = ${id}`;
+    return json(typeof reread.feedback === 'string' ? JSON.parse(reread.feedback) : reread.feedback);
+  }
+
+  return json(typeof row.feedback === 'string' ? JSON.parse(row.feedback) : row.feedback, 201);
 }
 
 async function getResultCount(url: URL): Promise<Response> {

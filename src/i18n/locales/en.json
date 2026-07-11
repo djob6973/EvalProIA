@@ -260,7 +260,17 @@
     "colQuestions": "QUESTIONS",
     "colTime": "TIME",
     "colAttempts": "ATTEMPTS",
-    "sharedFrom": "Shared from EvalPro"
+    "sharedFrom": "Shared from EvalPro",
+    "feedbackTitle": "AI Feedback",
+    "feedbackTriggerLabel": "Generate feedback",
+    "feedbackNone": "Don't generate",
+    "feedbackOnFinish": "When the evaluation is finished",
+    "feedbackOnInactive": "When the evaluation is deactivated",
+    "feedbackDocumentLabel": "Reference document",
+    "feedbackUploadDocument": "Click to upload a document",
+    "feedbackRemoveDocument": "Remove document",
+    "feedbackDocumentHint": "Used only as an internal input to generate feedback — never visible to the participant.",
+    "feedbackExtractError": "Could not process the document"
   },
   "areas": {
     "pageTitle": "Areas — EvalPro",
@@ -818,7 +828,17 @@
     "correctBadge": "Correct",
     "partialBadge": "Partial",
     "incorrectBadge": "Incorrect",
-    "completedAt": "Completed on {{date}}"
+    "completedAt": "Completed on {{date}}",
+    "feedbackCta": "Get your personalized feedback",
+    "feedbackCtaDesc": "The AI will analyze your answers and tell you what to reinforce.",
+    "feedbackButton": "Get feedback",
+    "feedbackGenerating": "Analyzing your answers…",
+    "feedbackError": "Could not generate the feedback",
+    "feedbackBadge": "AI-generated feedback",
+    "feedbackTitle": "Your performance on this evaluation",
+    "feedbackPositives": "Strengths",
+    "feedbackNegatives": "Areas to improve",
+    "feedbackTopics": "Topics to review"
   },
   "evalResults": {
     "pageTitle": "Evaluation Results — EvalPro",

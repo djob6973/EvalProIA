@@ -9,6 +9,8 @@ export interface Area {
   updated_at: string
 }
 
+export type FeedbackTrigger = 'ninguno' | 'al_finalizar' | 'inactiva'
+
 export interface Evaluation {
   id: string
   title: string
@@ -23,6 +25,9 @@ export interface Evaluation {
   config?: any
   fecha_vencimiento?: string | null
   area_id?: string | null
+  feedback_trigger?: FeedbackTrigger
+  feedback_documento_texto?: string | null
+  feedback_documento_nombre?: string | null
 }
 
 export interface Question {
@@ -40,6 +45,13 @@ export interface Question {
   justificacion?: string
 }
 
+export interface ResultFeedback {
+  positivos: string[]
+  negativos: string[]
+  temas_intro: string
+  temas: string[]
+}
+
 export interface Result {
   id: string
   user_id: string
@@ -48,6 +60,7 @@ export interface Result {
   answers: Record<string, string | string[]>
   started_at: string
   completed_at: string
+  feedback?: ResultFeedback | null
 }
 
 export interface EvaluationProgress {
@@ -201,6 +214,14 @@ export const resultsService = {
       `/api/data/results/count?userId=${encodeURIComponent(userId)}&evalId=${encodeURIComponent(evaluationId)}`
     );
     return data.count;
+  },
+
+  async submitFeedback(id: string, feedback: ResultFeedback): Promise<ResultFeedback> {
+    return apiFetch(`/api/data/results/${id}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(feedback),
+    });
   },
 }
 

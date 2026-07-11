@@ -7,7 +7,9 @@ import { useEffect, useState } from "react";
 import React from "react";
 import { resultsService, evaluationsService, questionsService, getAnswerStatus } from "@/lib/services/evaluations";
 import type { Evaluation } from "@/lib/services/evaluations";
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { generateResultFeedbackFn, type FeedbackBreakdownItem } from "@/lib/services/openai-server";
+import { ResultFeedbackCard } from "@/components/ResultFeedbackCard";
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/my-results/$id")({
@@ -26,6 +28,8 @@ function MyResultPage() {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [questionsMap, setQuestionsMap] = useState<Record<string, any>>({});
   const [attemptCount, setAttemptCount] = useState<number>(0);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -132,6 +136,52 @@ function MyResultPage() {
 
   const count = intentosPermitidos - attemptCount;
 
+  const feedbackTrigger = evaluation?.feedback_trigger ?? 'ninguno';
+  const feedbackEligible =
+    feedbackTrigger === 'al_finalizar' ||
+    (feedbackTrigger === 'inactiva' && (evaluation?.activa === false || evaluacionVencida));
+
+  const inferQuestionType = (question: any): string => {
+    if (question.options?.length === 2 && question.options[0] === 'Verdadero') return 'vf';
+    return question.correct_answer?.includes(',') ? 'multiple' : 'unica';
+  };
+
+  const handleGetFeedback = async () => {
+    if (!evaluation || !result) return;
+    setFeedbackLoading(true);
+    setFeedbackError(null);
+    try {
+      const breakdown: FeedbackBreakdownItem[] = Object.keys(result.answers)
+        .map((questionId) => {
+          const question = questionsMap[questionId];
+          if (!question) return null;
+          const userAnswer = result.answers[questionId];
+          const status = getAnswerStatus(question, userAnswer ?? "");
+          const estado = status === 'correct' ? 'correcta' : status === 'partial' ? 'parcial' : 'incorrecta';
+          const seleccionadas = Array.isArray(userAnswer) ? userAnswer : [userAnswer].filter(Boolean);
+          return {
+            enunciado: question.question_text,
+            contexto: question.contexto ?? '',
+            tipo: inferQuestionType(question),
+            opciones: question.options ?? [],
+            seleccionadas,
+            estado,
+            justificacion: question.justificacion ?? '',
+          } as FeedbackBreakdownItem;
+        })
+        .filter((x): x is FeedbackBreakdownItem => x !== null);
+
+      const generated = await generateResultFeedbackFn({ data: { evaluationId: evaluation.id, breakdown } });
+      const saved = await resultsService.submitFeedback(result.id, generated);
+      setResult((prev: any) => ({ ...prev, feedback: saved }));
+    } catch (err: any) {
+      console.error('Error generating feedback:', err);
+      setFeedbackError(err.message ?? t('myResults.feedbackError'));
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   return (
     <AppShell>
       <PageHeader
@@ -236,6 +286,28 @@ function MyResultPage() {
             {passed ? t('common.approved') : t('common.failed')}
           </div>
         </div>
+
+        {feedbackEligible && (
+          result.feedback ? (
+            <ResultFeedbackCard feedback={result.feedback} />
+          ) : (
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="flex items-center gap-1.5 font-medium text-sm">
+                    <Sparkles className="size-4 text-[#ED5650]" /> {t('myResults.feedbackCta')}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('myResults.feedbackCtaDesc')}</p>
+                  {feedbackError && <p className="mt-1 text-xs text-destructive">{feedbackError}</p>}
+                </div>
+                <Button onClick={handleGetFeedback} disabled={feedbackLoading}>
+                  {feedbackLoading ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                  {feedbackLoading ? t('myResults.feedbackGenerating') : t('myResults.feedbackButton')}
+                </Button>
+              </div>
+            </div>
+          )
+        )}
 
         <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="border-b border-border p-6">

@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import OpenAI from 'openai';
+import { db } from '../db';
 
 const DEFAULT_SYSTEM_PROMPT = `ROL DEL MODELO
 Actúas como un experto en diseño instruccional, evaluación del aprendizaje y generación de preguntas para exámenes, quizzes interactivos (tipo Kahoot), evaluaciones internas y entrenamientos corporativos.
@@ -552,4 +553,145 @@ export const extractImageTextFn = createServerFn({ method: 'POST' })
     const content = response.choices[0].message.content;
     if (!content) throw new Error('No se recibió contenido de OpenAI');
     return content;
+  });
+
+// ── Feedback personalizado de resultados de evaluación ───────────────────────
+
+const RESULT_FEEDBACK_SYSTEM_PROMPT = `ROL DEL MODELO
+Actúas como un tutor experto que da retroalimentación personalizada a un colaborador después de presentar una evaluación interna.
+
+CONTEXTO DE ENTRADA
+Recibirás un documento de referencia (material de estudio, manual o guía sobre el que se basó la evaluación) y el detalle completo de las respuestas del participante: para cada pregunta, su enunciado, contexto, tipo, las opciones disponibles, cuáles seleccionó, si esa pregunta quedó correcta, parcial o incorrecta, y la justificación de la respuesta correcta.
+
+QUÉ DEBES HACER
+- Usa el documento de referencia como fuente de verdad para explicar POR QUÉ algo estuvo bien o mal, no inventes información que no esté en el documento ni en las justificaciones entregadas.
+- Identifica 2 a 4 aspectos positivos concretos (qué demostró dominar el participante), basados en las preguntas que respondió correctamente.
+- Identifica 2 a 4 aspectos a mejorar concretos (qué conceptos o procedimientos confundió), basados en las preguntas incorrectas o parciales — sé específico, no genérico.
+- Escribe una frase corta de introducción (una sola oración, tono cercano y alentador) que anteceda la lista de temas para repasar.
+- Lista de 2 a 5 temas cortos (2-4 palabras cada uno) que el participante debería repasar, derivados directamente de las preguntas que falló.
+- Tono: constructivo, cercano, en segunda persona ("tú"), nunca condescendiente ni punitivo. No repitas literalmente el enunciado de las preguntas.
+
+FORMATO DE SALIDA
+Responde únicamente con un JSON válido, sin texto adicional fuera del objeto, con esta forma exacta:
+{
+  "positivos": ["...", "..."],
+  "negativos": ["...", "..."],
+  "temas_intro": "frase corta de introducción",
+  "temas": ["...", "..."]
+}`;
+
+export type FeedbackBreakdownItem = {
+  enunciado: string;
+  contexto?: string;
+  tipo: string;
+  opciones: string[];
+  seleccionadas: string[];
+  estado: 'correcta' | 'parcial' | 'incorrecta';
+  justificacion?: string;
+};
+
+export type GeneratedResultFeedback = {
+  positivos: string[];
+  negativos: string[];
+  temas_intro: string;
+  temas: string[];
+};
+
+function normalizeResultFeedback(parsed: unknown): GeneratedResultFeedback {
+  const obj = (parsed && typeof parsed === 'object' ? parsed : {}) as Record<string, unknown>;
+  const asStringArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
+
+  return {
+    positivos: asStringArray(obj.positivos),
+    negativos: asStringArray(obj.negativos),
+    temas_intro: typeof obj.temas_intro === 'string' ? obj.temas_intro.trim() : '',
+    temas: asStringArray(obj.temas),
+  };
+}
+
+export async function generateResultFeedbackServer(
+  evaluationId: string,
+  breakdown: FeedbackBreakdownItem[],
+  model = 'gpt-4o-mini',
+  temperature = 0.4,
+  maxTokens = 2048,
+  retries = 3,
+): Promise<GeneratedResultFeedback> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno del servidor');
+  }
+  if (!Array.isArray(breakdown) || breakdown.length === 0) {
+    throw new Error('No hay respuestas para generar el feedback');
+  }
+
+  const [evaluation] = await db`
+    SELECT feedback_documento_texto FROM evaluations WHERE id = ${evaluationId}
+  `;
+  const documentoTexto = evaluation?.feedback_documento_texto ?? '';
+
+  const openai = new OpenAI({ apiKey, timeout: 120_000 });
+  const userPrompt = `Documento de referencia:
+${documentoTexto || '(sin documento de referencia disponible)'}
+
+Detalle de las respuestas del participante (JSON):
+${JSON.stringify(breakdown, null, 2)}
+
+Genera el feedback siguiendo estrictamente el formato indicado en las instrucciones del sistema.`;
+
+  let lastError: Error = new Error('Error desconocido al generar el feedback');
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      await sleep(Math.min(1000 * Math.pow(2, attempt - 1), 10_000));
+    }
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: RESULT_FEEDBACK_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' },
+      });
+
+      if (response.choices[0].finish_reason === 'length') {
+        throw new Error('truncated: la respuesta se cortó por límite de tokens');
+      }
+
+      const content = response.choices[0].message.content;
+      if (!content) throw new Error('No se recibió respuesta de OpenAI');
+
+      return normalizeResultFeedback(JSON.parse(content));
+    } catch (err) {
+      lastError = err as Error;
+      if (!isRetryableError(err)) break;
+    }
+  }
+  throw lastError;
+}
+
+type GenerateResultFeedbackInput = {
+  evaluationId: string;
+  breakdown: FeedbackBreakdownItem[];
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  retries?: number;
+};
+
+export const generateResultFeedbackFn = createServerFn({ method: 'POST' })
+  .inputValidator((data: GenerateResultFeedbackInput) => data)
+  .handler(async ({ data }) => {
+    return generateResultFeedbackServer(
+      data.evaluationId,
+      data.breakdown,
+      data.model,
+      data.temperature,
+      data.maxTokens,
+      data.retries,
+    );
   });

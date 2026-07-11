@@ -264,7 +264,17 @@
     "colQuestions": "PREGUNTAS",
     "colTime": "TIEMPO",
     "colAttempts": "INTENTOS",
-    "sharedFrom": "Compartido desde EvalPro"
+    "sharedFrom": "Compartido desde EvalPro",
+    "feedbackTitle": "Feedback con IA",
+    "feedbackTriggerLabel": "Generar feedback",
+    "feedbackNone": "No generar",
+    "feedbackOnFinish": "Al finalizar la evaluación",
+    "feedbackOnInactive": "Cuando la evaluación se inactive",
+    "feedbackDocumentLabel": "Documento de referencia",
+    "feedbackUploadDocument": "Haz clic para subir un documento",
+    "feedbackRemoveDocument": "Quitar documento",
+    "feedbackDocumentHint": "Solo se usa como insumo interno para generar el feedback — nunca es visible para el participante.",
+    "feedbackExtractError": "No se pudo procesar el documento"
   },
   "areas": {
     "pageTitle": "Áreas — EvalPro",
@@ -822,7 +832,17 @@
     "correctBadge": "Correcta",
     "partialBadge": "Parcial",
     "incorrectBadge": "Incorrecta",
-    "completedAt": "Completada el {{date}}"
+    "completedAt": "Completada el {{date}}",
+    "feedbackCta": "Obtén tu feedback personalizado",
+    "feedbackCtaDesc": "La IA analizará tus respuestas y te dirá qué reforzar.",
+    "feedbackButton": "Obtener feedback",
+    "feedbackGenerating": "Analizando tus respuestas…",
+    "feedbackError": "No se pudo generar el feedback",
+    "feedbackBadge": "Feedback generado con IA",
+    "feedbackTitle": "Tu desempeño en esta evaluación",
+    "feedbackPositives": "Aspectos positivos",
+    "feedbackNegatives": "Aspectos a mejorar",
+    "feedbackTopics": "Temas para repasar"
   },
   "evalResults": {
     "pageTitle": "Resultados de Evaluación — EvalPro",

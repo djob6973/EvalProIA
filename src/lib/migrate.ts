@@ -316,5 +316,14 @@ export async function runMigrations(): Promise<void> {
       CHECK (origen IN ('manual','ia'))
   `;
 
+  // Feedback personalizado con IA al finalizar/inactivar una evaluación
+  await db`
+    ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS feedback_trigger TEXT NOT NULL DEFAULT 'ninguno'
+      CHECK (feedback_trigger IN ('ninguno','al_finalizar','inactiva'))
+  `;
+  await db`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS feedback_documento_texto TEXT`;
+  await db`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS feedback_documento_nombre TEXT`;
+  await db`ALTER TABLE results ADD COLUMN IF NOT EXISTS feedback JSONB`;
+
   done = true;
 }

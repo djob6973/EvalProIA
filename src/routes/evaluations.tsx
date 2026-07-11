@@ -32,12 +32,14 @@ import {
   Share2,
   MoreHorizontal,
   Download,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { toTitleCase } from "@/lib/utils";
 import { Paginator } from "@/components/Paginator";
-import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService } from "@/lib/services/evaluations";
+import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService, FeedbackTrigger } from "@/lib/services/evaluations";
+import { extractTextWithOCR } from "@/lib/services/openai";
 
 export const Route = createFileRoute("/evaluations")({
   head: () => ({ meta: [{ title: "evaluations.pageTitle" }] }),
@@ -66,6 +68,9 @@ type Evaluation = {
   created_at?: string;
   fecha_vencimiento?: string;
   area_id?: string | null;
+  feedback_trigger: FeedbackTrigger;
+  feedback_documento_texto: string;
+  feedback_documento_nombre: string;
 };
 
 function toLocalDateTimeInput(isoString: string): string {
@@ -1097,6 +1102,9 @@ function EvaluationsPage() {
           created_at: evaluation.created_at,
           fecha_vencimiento: evaluation.fecha_vencimiento ?? undefined,
           area_id: evaluation.area_id ?? null,
+          feedback_trigger: evaluation.feedback_trigger ?? 'ninguno',
+          feedback_documento_texto: evaluation.feedback_documento_texto ?? '',
+          feedback_documento_nombre: evaluation.feedback_documento_nombre ?? '',
           };
         });
 
@@ -1160,8 +1168,26 @@ function EvaluationsPage() {
     config: DEFAULT_CONFIG,
     fecha_vencimiento: "",
     area_id: null,
+    feedback_trigger: "ninguno",
+    feedback_documento_texto: "",
+    feedback_documento_nombre: "",
   };
   const [form, setForm] = useState<Evaluation>(emptyForm);
+  const [extractingFeedbackDoc, setExtractingFeedbackDoc] = useState(false);
+
+  const handleFeedbackDocument = async (file: File | null) => {
+    if (!file) return;
+    setExtractingFeedbackDoc(true);
+    try {
+      const text = await extractTextWithOCR(file);
+      setForm((f) => ({ ...f, feedback_documento_texto: text, feedback_documento_nombre: file.name }));
+    } catch (err) {
+      console.error('Error extracting feedback document:', err);
+      showToast(t('evaluations.feedbackExtractError'), 'error');
+    } finally {
+      setExtractingFeedbackDoc(false);
+    }
+  };
 
   const filtered = useMemo(
     () =>
@@ -1245,6 +1271,9 @@ function EvaluationsPage() {
           config: form.config,
           fecha_vencimiento: fechaVencimientoISO,
           area_id: form.area_id ?? null,
+          feedback_trigger: form.feedback_trigger,
+          feedback_documento_texto: form.feedback_documento_texto || null,
+          feedback_documento_nombre: form.feedback_documento_nombre || null,
         });
 
         setItems((p) => p.map((x) => (x.id === editing.id ? { ...form, id: editing.id, fecha_vencimiento: form.fecha_vencimiento || undefined } : x)));
@@ -1262,6 +1291,9 @@ function EvaluationsPage() {
           config: form.config,
           fecha_vencimiento: fechaVencimientoISO,
           area_id: form.area_id ?? null,
+          feedback_trigger: form.feedback_trigger,
+          feedback_documento_texto: form.feedback_documento_texto || null,
+          feedback_documento_nombre: form.feedback_documento_nombre || null,
         });
 
         const mappedItem: Evaluation = {
@@ -1276,6 +1308,9 @@ function EvaluationsPage() {
           created_at: newEvaluation.created_at,
           fecha_vencimiento: form.fecha_vencimiento || undefined,
           area_id: form.area_id ?? null,
+          feedback_trigger: form.feedback_trigger,
+          feedback_documento_texto: form.feedback_documento_texto,
+          feedback_documento_nombre: form.feedback_documento_nombre,
         };
         
         setItems((p) => [mappedItem, ...p]);
@@ -1355,6 +1390,9 @@ function EvaluationsPage() {
         config: { ...ev.config },
         fecha_vencimiento: null,
         area_id: ev.area_id ?? null,
+        feedback_trigger: ev.feedback_trigger,
+        feedback_documento_texto: ev.feedback_documento_texto || null,
+        feedback_documento_nombre: ev.feedback_documento_nombre || null,
       });
 
       const mappedItem: Evaluation = {
@@ -1368,6 +1406,9 @@ function EvaluationsPage() {
         config: { ...ev.config },
         created_at: newEvaluation.created_at,
         area_id: ev.area_id ?? null,
+        feedback_trigger: ev.feedback_trigger,
+        feedback_documento_texto: ev.feedback_documento_texto,
+        feedback_documento_nombre: ev.feedback_documento_nombre,
       };
 
       setItems((prev) => [mappedItem, ...prev]);
@@ -1946,6 +1987,68 @@ function EvaluationsPage() {
                     />
                     {t('evaluations.randomOrder')}
                   </label>
+                </div>
+              </div>
+
+              <div className="border-t border-border pt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Sparkles className="size-4 text-accent" />
+                  <h4 className="text-sm font-semibold">{t('evaluations.feedbackTitle')}</h4>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                      {t('evaluations.feedbackTriggerLabel')}
+                    </label>
+                    <select
+                      value={form.feedback_trigger}
+                      onChange={(e) =>
+                        setForm({ ...form, feedback_trigger: e.target.value as FeedbackTrigger })
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    >
+                      <option value="ninguno">{t('evaluations.feedbackNone')}</option>
+                      <option value="al_finalizar">{t('evaluations.feedbackOnFinish')}</option>
+                      <option value="inactiva">{t('evaluations.feedbackOnInactive')}</option>
+                    </select>
+                  </div>
+                  {form.feedback_trigger !== 'ninguno' && (
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                        {t('evaluations.feedbackDocumentLabel')}
+                      </label>
+                      {form.feedback_documento_nombre ? (
+                        <div className="flex items-center justify-between rounded-md bg-accent/10 px-3 py-2 text-xs">
+                          <span className="truncate">{form.feedback_documento_nombre}</span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm({ ...form, feedback_documento_texto: '', feedback_documento_nombre: '' })
+                            }
+                            aria-label={t('evaluations.feedbackRemoveDocument')}
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex h-20 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-input text-xs text-muted-foreground transition-colors hover:border-accent/40">
+                          {extractingFeedbackDoc ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <span>{t('evaluations.feedbackUploadDocument')}</span>
+                          )}
+                          <input
+                            type="file"
+                            hidden
+                            accept=".pdf,.docx,.txt"
+                            disabled={extractingFeedbackDoc}
+                            onChange={(e) => handleFeedbackDocument(e.target.files?.[0] ?? null)}
+                          />
+                        </label>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">{t('evaluations.feedbackDocumentHint')}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
