@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Sparkles, CircleCheck, TriangleAlert, BookOpen, ListChecks, Target } from "lucide-react";
 import { ResultFeedback, MasteryLevel } from "@/lib/services/evaluations";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 const MASTERY_DOT: Record<MasteryLevel, string> = {
   alto: "bg-green-500",
@@ -25,15 +26,22 @@ export function ResultFeedbackCard({ feedback }: { feedback: ResultFeedback }) {
 
   return (
     <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
-      <div className="mb-1 flex items-center gap-2">
-        <Sparkles className="size-3.5 text-[#ED5650]" />
-        <span className="font-mono text-[11px] font-semibold uppercase tracking-[.08em] text-[#ED5650]">
-          {t('myResults.feedbackBadge')}
-        </span>
-      </div>
-      <p className="mb-3 font-display text-[17px] font-medium text-[var(--foreground)]">
-        {t('myResults.feedbackTitle')}
-      </p>
+      <Accordion type="single" collapsible>
+        <AccordionItem value="feedback" className="border-b-0">
+          <AccordionTrigger className="py-0 hover:no-underline">
+            <div className="flex flex-col items-start gap-1 text-left">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-3.5 text-[#ED5650]" />
+                <span className="font-mono text-[11px] font-semibold uppercase tracking-[.08em] text-[#ED5650]">
+                  {t('myResults.feedbackBadge')}
+                </span>
+              </div>
+              <p className="font-display text-[17px] font-medium text-[var(--foreground)]">
+                {t('myResults.feedbackTitle')}
+              </p>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pt-4">
 
       {feedback.resumen && (
         <p className="mb-5 text-[13.5px] leading-relaxed text-[var(--muted-foreground)]">
@@ -158,6 +166,9 @@ export function ResultFeedbackCard({ feedback }: { feedback: ResultFeedback }) {
           <p className="text-[13px] leading-relaxed text-[var(--foreground)]">{feedback.cierre}</p>
         </div>
       )}
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

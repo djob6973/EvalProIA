@@ -9,6 +9,7 @@ import { resultsService, evaluationsService, questionsService, getAnswerStatus }
 import type { Evaluation } from "@/lib/services/evaluations";
 import { generateResultFeedbackFn, type FeedbackBreakdownItem } from "@/lib/services/openai-server";
 import { ResultFeedbackCard } from "@/components/ResultFeedbackCard";
+import { Paginator } from "@/components/Paginator";
 import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2, BookOpen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -30,6 +31,8 @@ function MyResultPage() {
   const [attemptCount, setAttemptCount] = useState<number>(0);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [answersPage, setAnswersPage] = useState(1);
+  const ANSWERS_PAGE_SIZE = 10;
 
   useEffect(() => {
     async function loadData() {
@@ -113,6 +116,12 @@ function MyResultPage() {
 
   const passingThreshold = evaluation?.config?.porcentaje_aprobacion ?? 60;
   const passed = result.score >= passingThreshold;
+
+  const answerIds: string[] = result.answers ? Object.keys(result.answers) : [];
+  const pagedAnswerIds = answerIds.slice(
+    (answersPage - 1) * ANSWERS_PAGE_SIZE,
+    answersPage * ANSWERS_PAGE_SIZE
+  );
 
   // Calcular conteo de respuestas
   let correctCount = 0;
@@ -341,7 +350,8 @@ function MyResultPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {Object.keys(result.answers).map((questionId, qIndex) => {
+                {pagedAnswerIds.map((questionId, localIndex) => {
+                  const qIndex = (answersPage - 1) * ANSWERS_PAGE_SIZE + localIndex;
                   const question = questionsMap[questionId];
                   if (!question) return null;
 
@@ -373,6 +383,12 @@ function MyResultPage() {
                 })}
               </div>
             )}
+            <Paginator
+              page={answersPage}
+              total={answerIds.length}
+              pageSize={ANSWERS_PAGE_SIZE}
+              onPage={setAnswersPage}
+            />
           </div>
         </div>
       </div>
