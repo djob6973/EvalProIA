@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import {
   ClipboardList,
   Plus,
@@ -1176,6 +1177,7 @@ function EvaluationsPage() {
   const [form, setForm] = useState<Evaluation>(emptyForm);
   const [extractingFeedbackDoc, setExtractingFeedbackDoc] = useState(false);
   const [docIdioma, setDocIdioma] = useState(() => defaultIdioma(i18n.language));
+  const [catFilter, setCatFilter] = useState("");
 
   const handleFeedbackDocument = async (file: File | null) => {
     if (!file) return;
@@ -1868,11 +1870,15 @@ function EvaluationsPage() {
                 )}
               </div>
 
-              <div className="border-t border-border pt-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <Settings className="size-4 text-accent" />
-                  <h4 className="text-sm font-semibold">{t('evaluations.questionsConfig')}</h4>
-                </div>
+              <Accordion type="multiple" className="border-t border-border">
+              <AccordionItem value="preguntas">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Settings className="size-4 text-accent" />
+                    <span className="text-sm font-semibold">{t('evaluations.questionsConfig')}</span>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -1998,13 +2004,17 @@ function EvaluationsPage() {
                     {t('evaluations.randomOrder')}
                   </label>
                 </div>
-              </div>
+                </AccordionContent>
+              </AccordionItem>
 
-              <div className="border-t border-border pt-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <Sparkles className="size-4 text-accent" />
-                  <h4 className="text-sm font-semibold">{t('evaluations.feedbackTitle')}</h4>
-                </div>
+              <AccordionItem value="feedback">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="size-4 text-accent" />
+                    <span className="text-sm font-semibold">{t('evaluations.feedbackTitle')}</span>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
                 <div className="space-y-3">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -2077,34 +2087,87 @@ function EvaluationsPage() {
                     </div>
                   )}
                 </div>
-              </div>
+                </AccordionContent>
+              </AccordionItem>
 
-              <div className="border-t border-border pt-4">
-                <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                  {t('evaluations.categories')}{" "}
-                  <span className="text-muted-foreground/70">{t('evaluations.categoriesHint')}</span>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((cat) => {
-                    const active = form.categorias.includes(cat);
-                    return (
+              <AccordionItem value="categorias" className="border-b-0">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Tag className="size-4 text-accent" />
+                    <span className="text-sm font-semibold">{t('evaluations.categories')}</span>
+                    {form.categorias.length > 0 && (
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                        {t('evaluations.categoriesSelectedCount', { count: form.categorias.length })}
+                      </span>
+                    )}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                <p className="mb-2 text-xs text-muted-foreground">{t('evaluations.categoriesHint')}</p>
+
+                {form.categorias.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-1.5">
+                    {form.categorias.map((cat) => (
                       <button
                         key={cat}
                         type="button"
                         onClick={() => toggleCat(cat)}
-                        className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-all ${
-                          active
-                            ? "border-accent bg-accent text-accent-foreground"
-                            : "border-border bg-card text-muted-foreground hover:border-accent/40"
-                        }`}
+                        className="flex items-center gap-1 rounded-full border border-accent bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
                       >
-                        <Tag className="size-3" />
                         {cat}
+                        <X className="size-3" />
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={catFilter}
+                      onChange={(e) => setCatFilter(e.target.value)}
+                      placeholder={t('evaluations.categoriesSearchPlaceholder')}
+                      className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                    />
+                  </div>
+                  {form.categorias.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, categorias: [] })}
+                      className="whitespace-nowrap text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      {t('evaluations.categoriesClearAll')}
+                    </button>
+                  )}
                 </div>
-              </div>
+
+                <div className="mt-2 max-h-48 space-y-0.5 overflow-y-auto rounded-md border border-border p-1.5">
+                  {categories
+                    .filter((cat) => cat.toLowerCase().includes(catFilter.trim().toLowerCase()))
+                    .sort((a, b) => a.localeCompare(b))
+                    .map((cat) => {
+                      const active = form.categorias.includes(cat);
+                      return (
+                        <label
+                          key={cat}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent/10"
+                        >
+                          <input type="checkbox" checked={active} onChange={() => toggleCat(cat)} />
+                          {cat}
+                        </label>
+                      );
+                    })}
+                  {categories.filter((cat) => cat.toLowerCase().includes(catFilter.trim().toLowerCase())).length === 0 && (
+                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      {t('evaluations.categoriesNoResults')}
+                    </p>
+                  )}
+                </div>
+                </AccordionContent>
+              </AccordionItem>
+              </Accordion>
 
               <div className="flex gap-3 pt-2">
                 <Button
