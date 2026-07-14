@@ -1111,6 +1111,7 @@ function EvaluationsPage() {
           feedback_trigger: evaluation.feedback_trigger ?? 'ninguno',
           feedback_documento_texto: evaluation.feedback_documento_texto ?? '',
           feedback_documento_nombre: evaluation.feedback_documento_nombre ?? '',
+          etiqueta_id: evaluation.etiqueta_id ?? null,
           };
         });
 
