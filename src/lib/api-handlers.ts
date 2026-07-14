@@ -184,6 +184,12 @@ async function route(
     if (id === "brand-logo" && m === "DELETE") return deleteBrandLogo(request);
   }
 
+  // ── Etiquetas ─────────────────────────────────────────────────────────────
+  if (res === "etiquetas") {
+    if (!id && m === "GET") return listEtiquetas();
+    if (!id && m === "POST") return createEtiqueta(request);
+  }
+
   // ── Categories ────────────────────────────────────────────────────────────
   if (res === "categories" && !id && m === "GET") return listCategories();
 
@@ -297,7 +303,7 @@ async function listEvaluations(): Promise<Response> {
   const rows = await db`
     SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
-           feedback_trigger, feedback_documento_nombre
+           feedback_trigger, feedback_documento_nombre, etiqueta_id
     FROM evaluations ORDER BY created_at DESC
   `;
   return json(rows.map(parseEvaluation));
@@ -307,7 +313,7 @@ async function activeEvaluations(): Promise<Response> {
   const rows = await db`
     SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
-           feedback_trigger, feedback_documento_nombre
+           feedback_trigger, feedback_documento_nombre, etiqueta_id
     FROM evaluations
     WHERE activa = true
       AND (fecha_vencimiento IS NULL OR fecha_vencimiento > now())
@@ -336,6 +342,7 @@ async function createEvaluation(request: Request): Promise<Response> {
     title, description, created_by, area_id, activa,
     tiempo_limite, intentos_permitidos, categorias, config, fecha_vencimiento,
     feedback_trigger, feedback_documento_texto, feedback_documento_nombre, feedback_documento_idioma,
+    etiqueta_id,
   } = body;
 
   const feedbackTriggerFinal = ["ninguno", "al_finalizar", "inactiva"].includes(feedback_trigger)
@@ -346,13 +353,14 @@ async function createEvaluation(request: Request): Promise<Response> {
     INSERT INTO evaluations
       (title, description, created_by, area_id, activa, tiempo_limite,
        intentos_permitidos, categorias, config, fecha_vencimiento,
-       feedback_trigger, feedback_documento_texto, feedback_documento_nombre)
+       feedback_trigger, feedback_documento_texto, feedback_documento_nombre, etiqueta_id)
     VALUES
       (${title}, ${description ?? null}, ${created_by ?? null}, ${area_id ?? null},
        ${activa ?? true}, ${tiempo_limite ?? null}, ${intentos_permitidos ?? 1},
        ${db.json(categorias ?? [])}, ${db.json(config ?? {})},
        ${fecha_vencimiento ?? null},
-       ${feedbackTriggerFinal}, ${feedback_documento_texto ?? null}, ${feedback_documento_nombre ?? null})
+       ${feedbackTriggerFinal}, ${feedback_documento_texto ?? null}, ${feedback_documento_nombre ?? null},
+       ${etiqueta_id ?? null})
     RETURNING *
   `;
 
@@ -401,6 +409,7 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
     "intentos_permitidos", "categorias", "config", "area_id",
     "fecha_vencimiento", "created_by",
     "feedback_trigger", "feedback_documento_texto", "feedback_documento_nombre",
+    "etiqueta_id",
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
@@ -1033,6 +1042,30 @@ async function markAllNotificationsRead(request: Request): Promise<Response> {
     WHERE user_id = ${user.id} AND read = false
   `;
   return json({ success: true });
+}
+
+// ── Etiquetas ─────────────────────────────────────────────────────────────────
+
+async function listEtiquetas(): Promise<Response> {
+  const rows = await db`SELECT id, nombre, created_at FROM etiquetas ORDER BY nombre ASC`;
+  return json(rows);
+}
+
+async function createEtiqueta(request: Request): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
+
+  const body = await request.json();
+  const nombre = typeof body.nombre === "string" ? body.nombre.trim() : "";
+  if (!nombre) return json({ error: "El nombre es requerido" }, 400);
+
+  const [existing] = await db`SELECT id FROM etiquetas WHERE lower(nombre) = lower(${nombre})`;
+  if (existing) return json({ error: "Ya existe una etiqueta con ese nombre" }, 409);
+
+  const [row] = await db`
+    INSERT INTO etiquetas (nombre) VALUES (${nombre}) RETURNING *
+  `;
+  return json(row, 201);
 }
 
 // ── Categories ────────────────────────────────────────────────────────────────

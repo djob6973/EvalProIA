@@ -34,12 +34,13 @@ import {
   MoreHorizontal,
   Download,
   Sparkles,
+  Bookmark,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { toTitleCase } from "@/lib/utils";
 import { Paginator } from "@/components/Paginator";
-import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService, FeedbackTrigger } from "@/lib/services/evaluations";
+import { evaluationsService, getUniqueCategories, areasService, Area, evaluationParticipantsService, getAllParticipants, ParticipantProfile, questionsService, resultsService, FeedbackTrigger, etiquetasService, Etiqueta } from "@/lib/services/evaluations";
 import { extractTextWithOCR } from "@/lib/services/openai";
 import { defaultIdioma } from "@/components/foro/AiArticleGenerator";
 
@@ -73,6 +74,7 @@ type Evaluation = {
   feedback_trigger: FeedbackTrigger;
   feedback_documento_texto: string;
   feedback_documento_nombre: string;
+  etiqueta_id: string | null;
 };
 
 function toLocalDateTimeInput(isoString: string): string {
@@ -1051,6 +1053,7 @@ function EvaluationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
+  const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
   const [resultCounts, setResultCounts] = useState<Record<string, number>>({});
   const [shareEval, setShareEval] = useState<Evaluation | null>(null);
   const [groupBy, setGroupBy] = useState<"none" | "area" | "semana">("none");
@@ -1070,11 +1073,12 @@ function EvaluationsPage() {
     async function loadAll() {
       try {
         setLoading(true);
-        const [evalData, uniqueCategories, areasData, allResults] = await Promise.all([
+        const [evalData, uniqueCategories, areasData, allResults, etiquetasData] = await Promise.all([
           evaluationsService.getAll(),
           getUniqueCategories(),
           areasService.getAll(),
           resultsService.getAll().catch(() => []),
+          etiquetasService.getAll().catch(() => []),
         ]);
 
         // Compute participant counts per evaluation
@@ -1128,6 +1132,7 @@ function EvaluationsPage() {
         setItems(mappedItems);
         setCategories(uniqueCategories);
         setAreas(areasData);
+        setEtiquetas(etiquetasData);
       } catch (err) {
         console.error('Error loading evaluations page data:', err);
         setError('Error al cargar las evaluaciones');
@@ -1173,11 +1178,15 @@ function EvaluationsPage() {
     feedback_trigger: "ninguno",
     feedback_documento_texto: "",
     feedback_documento_nombre: "",
+    etiqueta_id: null,
   };
   const [form, setForm] = useState<Evaluation>(emptyForm);
   const [extractingFeedbackDoc, setExtractingFeedbackDoc] = useState(false);
   const [docIdioma, setDocIdioma] = useState(() => defaultIdioma(i18n.language));
   const [catFilter, setCatFilter] = useState("");
+  const [etiquetaFilter, setEtiquetaFilter] = useState("");
+  const [newEtiquetaInput, setNewEtiquetaInput] = useState("");
+  const [creatingEtiqueta, setCreatingEtiqueta] = useState(false);
 
   const handleFeedbackDocument = async (file: File | null) => {
     if (!file) return;
@@ -1243,7 +1252,10 @@ function EvaluationsPage() {
       categorias: [...ev.categorias],
       fecha_vencimiento: ev.fecha_vencimiento ? toLocalDateTimeInput(ev.fecha_vencimiento) : "",
       area_id: ev.area_id ?? null,
+      etiqueta_id: ev.etiqueta_id ?? null,
     });
+    setEtiquetaFilter("");
+    setNewEtiquetaInput("");
     setShowModal(true);
   };
 
@@ -1279,6 +1291,7 @@ function EvaluationsPage() {
           feedback_documento_texto: form.feedback_documento_texto || null,
           feedback_documento_nombre: form.feedback_documento_nombre || null,
           feedback_documento_idioma: docIdioma,
+          etiqueta_id: form.etiqueta_id ?? null,
         });
 
         setItems((p) => p.map((x) => (x.id === editing.id ? { ...form, id: editing.id, fecha_vencimiento: form.fecha_vencimiento || undefined } : x)));
@@ -1303,6 +1316,7 @@ function EvaluationsPage() {
           feedback_documento_texto: form.feedback_documento_texto || null,
           feedback_documento_nombre: form.feedback_documento_nombre || null,
           feedback_documento_idioma: docIdioma,
+          etiqueta_id: form.etiqueta_id ?? null,
         });
         if ((newEvaluation as any).foro_articulo_error) {
           showToast(t('evaluations.foroArticleGenerationError'), 'error');
@@ -1323,8 +1337,9 @@ function EvaluationsPage() {
           feedback_trigger: form.feedback_trigger,
           feedback_documento_texto: form.feedback_documento_texto,
           feedback_documento_nombre: form.feedback_documento_nombre,
+          etiqueta_id: form.etiqueta_id ?? null,
         };
-        
+
         setItems((p) => [mappedItem, ...p]);
         showToast(t('evaluations.created_toast'));
       }
@@ -1430,6 +1445,22 @@ function EvaluationsPage() {
       showToast(t('evaluations.duplicateError'), "error");
     } finally {
       setDuplicatingId(null);
+    }
+  };
+
+  const handleCreateEtiqueta = async () => {
+    const nombre = newEtiquetaInput.trim();
+    if (!nombre) return;
+    setCreatingEtiqueta(true);
+    try {
+      const created = await etiquetasService.create(nombre);
+      setEtiquetas((prev) => [...prev, created].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      setForm((f) => ({ ...f, etiqueta_id: created.id }));
+      setNewEtiquetaInput("");
+    } catch (err: any) {
+      showToast(err?.message || t('evaluations.etiquetaCreateError'), "error");
+    } finally {
+      setCreatingEtiqueta(false);
     }
   };
 
@@ -2090,7 +2121,7 @@ function EvaluationsPage() {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="categorias" className="border-b-0">
+              <AccordionItem value="categorias">
                 <AccordionTrigger>
                   <span className="flex items-center gap-2">
                     <Tag className="size-4 text-accent" />
@@ -2162,6 +2193,91 @@ function EvaluationsPage() {
                   {categories.filter((cat) => cat.toLowerCase().includes(catFilter.trim().toLowerCase())).length === 0 && (
                     <p className="px-2 py-3 text-center text-xs text-muted-foreground">
                       {t('evaluations.categoriesNoResults')}
+                    </p>
+                  )}
+                </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="etiquetas" className="border-b-0">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Bookmark className="size-4 text-accent" />
+                    <span className="text-sm font-semibold">{t('evaluations.etiquetas')}</span>
+                    {form.etiqueta_id && (
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                        {etiquetas.find((e) => e.id === form.etiqueta_id)?.nombre ?? ""}
+                      </span>
+                    )}
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                <p className="mb-3 text-xs text-muted-foreground">{t('evaluations.etiquetasHint')}</p>
+
+                {/* Create new tag */}
+                <div className="mb-3 flex gap-2">
+                  <input
+                    type="text"
+                    value={newEtiquetaInput}
+                    onChange={(e) => setNewEtiquetaInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateEtiqueta(); } }}
+                    placeholder={t('evaluations.etiquetaNewPlaceholder')}
+                    className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateEtiqueta}
+                    disabled={creatingEtiqueta || !newEtiquetaInput.trim()}
+                    className="flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground disabled:opacity-50"
+                  >
+                    {creatingEtiqueta ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" />}
+                    {t('evaluations.etiquetaCreate')}
+                  </button>
+                </div>
+
+                {/* Search */}
+                <div className="relative mb-2">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    value={etiquetaFilter}
+                    onChange={(e) => setEtiquetaFilter(e.target.value)}
+                    placeholder={t('evaluations.etiquetaSearch')}
+                    className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                  />
+                </div>
+
+                {/* Radio list */}
+                <div className="max-h-48 space-y-0.5 overflow-y-auto rounded-md border border-border p-1.5">
+                  {/* None option */}
+                  <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent/10">
+                    <input
+                      type="radio"
+                      name="etiqueta_id"
+                      checked={!form.etiqueta_id}
+                      onChange={() => setForm((f) => ({ ...f, etiqueta_id: null }))}
+                    />
+                    <span className="text-muted-foreground italic">{t('evaluations.etiquetaNone')}</span>
+                  </label>
+                  {etiquetas
+                    .filter((e) => e.nombre.toLowerCase().includes(etiquetaFilter.trim().toLowerCase()))
+                    .map((etiqueta) => (
+                      <label
+                        key={etiqueta.id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent/10"
+                      >
+                        <input
+                          type="radio"
+                          name="etiqueta_id"
+                          checked={form.etiqueta_id === etiqueta.id}
+                          onChange={() => setForm((f) => ({ ...f, etiqueta_id: etiqueta.id }))}
+                        />
+                        {etiqueta.nombre}
+                      </label>
+                    ))}
+                  {etiquetas.filter((e) => e.nombre.toLowerCase().includes(etiquetaFilter.trim().toLowerCase())).length === 0 && (
+                    <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      {t('evaluations.etiquetaNoResults')}
                     </p>
                   )}
                 </div>

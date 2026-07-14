@@ -329,5 +329,15 @@ export async function runMigrations(): Promise<void> {
   await db`ALTER TABLE foro_articulos ADD COLUMN IF NOT EXISTS evaluation_id UUID REFERENCES evaluations(id) ON DELETE SET NULL`;
   await db`CREATE INDEX IF NOT EXISTS idx_foro_articulos_evaluation ON foro_articulos(evaluation_id)`;
 
+  // ── Etiquetas (labels) para evaluaciones ─────────────────────────────────
+  await db`
+    CREATE TABLE IF NOT EXISTS etiquetas (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      nombre     TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `;
+  await db`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS etiqueta_id UUID REFERENCES etiquetas(id) ON DELETE SET NULL`;
+
   done = true;
 }

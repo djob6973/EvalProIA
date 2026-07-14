@@ -32,6 +32,13 @@ export interface Evaluation {
   feedback_documento_idioma?: string
   /** Solo lectura: id del artículo del Foro asociado, únicamente si ya está publicado. */
   foro_articulo_id?: string | null
+  etiqueta_id?: string | null
+}
+
+export interface Etiqueta {
+  id: string
+  nombre: string
+  created_at: string
 }
 
 export interface Question {
@@ -319,6 +326,21 @@ export async function getAllParticipants(): Promise<ParticipantProfile[]> {
 
 export async function getUniqueCategories(): Promise<string[]> {
   return apiFetch('/api/data/categories');
+}
+
+// ── Etiquetas ─────────────────────────────────────────────────────────────────
+
+export const etiquetasService = {
+  async getAll(): Promise<Etiqueta[]> {
+    return apiFetch('/api/data/etiquetas');
+  },
+  async create(nombre: string): Promise<Etiqueta> {
+    return apiFetch('/api/data/etiquetas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+  },
 }
 
 export async function getUniqueAreas(): Promise<string[]> {
