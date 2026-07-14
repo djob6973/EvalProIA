@@ -703,9 +703,10 @@ async function resultsByUser(userId: string): Promise<Response> {
     SELECT
       r.id, r.user_id, r.evaluation_id, r.score, r.answers,
       r.started_at, r.completed_at, r.created_at,
-      e.title      AS eval_title,
-      e.created_at AS eval_created_at,
-      e.categorias AS eval_categorias
+      e.title       AS eval_title,
+      e.created_at  AS eval_created_at,
+      e.categorias  AS eval_categorias,
+      e.etiqueta_id AS eval_etiqueta_id
     FROM results r
     LEFT JOIN evaluations e ON e.id = r.evaluation_id
     WHERE r.user_id = ${userId}
@@ -717,6 +718,7 @@ async function resultsByUser(userId: string): Promise<Response> {
       user_id: r.user_id,
       evaluation_id: r.evaluation_id,
       score: r.score,
+      etiqueta_id: r.eval_etiqueta_id ?? null,
       answers: typeof r.answers === 'string' ? JSON.parse(r.answers) : r.answers,
       started_at: r.started_at,
       completed_at: r.completed_at,
