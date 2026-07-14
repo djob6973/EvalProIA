@@ -551,11 +551,16 @@ function ResultsPageContent() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {KPI_ITEMS.map((k, i) => (
                 <div key={k.label} className="dash-card p-[22px]">
-                  <div className="flex items-center gap-1.5">
-                    <k.icon className="size-3.5 shrink-0" style={{ color: "var(--accent)" }} strokeWidth={2.5} />
+                  <div className="flex items-center gap-[8px]">
+                    <div
+                      className="grid size-8 shrink-0 place-items-center rounded-[10px]"
+                      style={{ background: "var(--coral-soft)" }}
+                    >
+                      <k.icon className="size-4" style={{ color: "var(--coral-text)" }} strokeWidth={1.8} />
+                    </div>
                     <span className="font-mono text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--muted-foreground)" }}>{k.label}</span>
                   </div>
-                  <div className="mt-[10px] font-display text-[34px] font-medium leading-none tracking-tight tabular-nums" style={{ color: "var(--foreground)" }}>
+                  <div className="mt-[12px] font-display text-[34px] font-medium leading-none tracking-tight tabular-nums" style={{ color: "var(--foreground)" }}>
                     {kpiValues[i]}
                   </div>
                 </div>
