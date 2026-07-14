@@ -115,6 +115,7 @@ function HistoryPage() {
   // Card-only filters
   const [filterCategory, setFilterCategory] = useState<string>("todas");
   const [filterMonth, setFilterMonth] = useState<string>("todos");
+  const [filterEtiqueta, setFilterEtiqueta] = useState<string>("todas");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -248,9 +249,12 @@ function HistoryPage() {
       if (filterMonth !== "todos") {
         if (!r.completed_at || monthKey(r.completed_at) !== filterMonth) return false;
       }
+      if (filterEtiqueta !== "todas") {
+        if (r.etiqueta_id !== filterEtiqueta) return false;
+      }
       return true;
     });
-  }, [results, query, filterCategory, filterMonth]);
+  }, [results, query, filterCategory, filterMonth, filterEtiqueta]);
 
   const SELECT_STYLE = {
     border: "1px solid var(--border)",
@@ -538,6 +542,19 @@ function HistoryPage() {
                   <option value="todas">{t('myHistory.allCategories')}</option>
                   {allCategories.map((c) => (
                     <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              )}
+              {etiquetas.length > 0 && (
+                <select
+                  value={filterEtiqueta}
+                  onChange={(e) => setFilterEtiqueta(e.target.value)}
+                  className="rounded-[10px] border px-3 py-2 text-[13px]"
+                  style={{ border: "1px solid var(--border)", background: "var(--surface)", color: "var(--foreground)" }}
+                >
+                  <option value="todas">{t('myHistory.allEtiquetas')}</option>
+                  {etiquetas.map((et) => (
+                    <option key={et.id} value={et.id}>{et.nombre}</option>
                   ))}
                 </select>
               )}
