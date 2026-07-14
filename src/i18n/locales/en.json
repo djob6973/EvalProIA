@@ -821,7 +821,19 @@
     "noFiltered": "No results with the selected filters.",
     "noCompleted": "You haven't completed any evaluations yet.",
     "attemptOf": "Attempt {{n}} of {{total}}",
-    "viewResults": "View Results"
+    "viewResults": "View Results",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "filterCategoria": "Category",
+    "filterEtiqueta": "Tag",
+    "allEtiquetas": "All tags",
+    "trendDesc": "Evolution of your average score",
+    "viewWeek": "Week",
+    "viewMonth": "Month",
+    "viewQuarter": "Quarter",
+    "noData": "No data for the selected period",
+    "session": "session",
+    "sessions": "sessions"
   },
   "myResults": {
     "pageTitle": "My Results — EvalPro",

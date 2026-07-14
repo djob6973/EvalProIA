@@ -821,7 +821,19 @@
     "noFiltered": "Sem resultados com os filtros selecionados.",
     "noCompleted": "Você ainda não concluiu nenhuma avaliação.",
     "attemptOf": "Tentativa {{n}} de {{total}}",
-    "viewResults": "Ver Resultados"
+    "viewResults": "Ver Resultados",
+    "filterFrom": "De",
+    "filterTo": "Até",
+    "filterCategoria": "Categoria",
+    "filterEtiqueta": "Etiqueta",
+    "allEtiquetas": "Todas as etiquetas",
+    "trendDesc": "Evolução da sua pontuação média",
+    "viewWeek": "Semana",
+    "viewMonth": "Mês",
+    "viewQuarter": "Trimestre",
+    "noData": "Sem dados para o período selecionado",
+    "session": "sessão",
+    "sessions": "sessões"
   },
   "myResults": {
     "pageTitle": "Meus Resultados — EvalPro",

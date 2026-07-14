@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { resultsService } from "@/lib/services/evaluations";
+import { resultsService, etiquetasService, type Etiqueta } from "@/lib/services/evaluations";
 import { Calendar, CheckCircle, Tag, Search, Filter, TrendingUp } from "lucide-react";
 import {
   LineChart,
@@ -19,9 +19,39 @@ import {
 } from "recharts";
 
 export const Route = createFileRoute("/my-history")({
-  head: () => ({ meta: [{ title: "Mi Historial — EvalPro" }] }), // static head, translated at runtime in component
+  head: () => ({ meta: [{ title: "Mi Historial — EvalPro" }] }),
   component: HistoryPage,
 });
+
+type TrendView = "week" | "month" | "quarter";
+
+function getISOWeekInfo(date: Date): { year: number; week: number; label: string } {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return { year: d.getFullYear(), week, label: `S${week}` };
+}
+
+function getTrendBucket(date: Date, view: TrendView, locale: string): { sortKey: string; label: string } {
+  if (view === "week") {
+    const { year, week, label } = getISOWeekInfo(date);
+    return { sortKey: `${year}-${String(week).padStart(2, "0")}`, label };
+  }
+  if (view === "month") {
+    const y = date.getFullYear();
+    const m = date.getMonth();
+    const raw = date.toLocaleDateString(locale, { month: "short", year: "2-digit" });
+    return {
+      sortKey: `${y}-${String(m + 1).padStart(2, "0")}`,
+      label: raw.charAt(0).toUpperCase() + raw.slice(1),
+    };
+  }
+  const y = date.getFullYear();
+  const q = Math.floor(date.getMonth() / 3) + 1;
+  return { sortKey: `${y}-Q${q}`, label: `T${q} ${String(y).slice(2)}` };
+}
 
 function formatDateTime(isoString: string): string {
   return new Date(isoString).toLocaleString("es-ES", {
@@ -46,28 +76,6 @@ function monthLabel(key: string): string {
   });
 }
 
-// ISO week number (1–53)
-function getISOWeek(date: Date): number {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
-}
-
-// Monday of a given ISO week
-function mondayOfWeek(year: number, week: number): Date {
-  const jan4 = new Date(year, 0, 4); // Jan 4 always in week 1
-  const weekStart = new Date(jan4);
-  weekStart.setDate(jan4.getDate() - ((jan4.getDay() || 7) - 1) + (week - 1) * 7);
-  return weekStart;
-}
-
-function weekLabel(year: number, week: number): string {
-  const d = mondayOfWeek(year, week);
-  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short" });
-}
-
 function ScoreBadge({ score }: { score: number }) {
   const style =
     score >= 80
@@ -85,47 +93,41 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
+const FILTER_LABEL = "mb-1 block text-[10px] font-semibold uppercase tracking-wide" as const;
+
 function HistoryPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { profile } = useAuth();
 
-  function CustomTooltip({ active, payload, label }: any) {
-    if (!active || !payload?.length) return null;
-    const { promedio } = payload[0].payload;
-    return (
-      <div
-        className="rounded-[12px] px-4 py-3 text-[13px]"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          boxShadow: "var(--shadow-md)",
-        }}
-      >
-        <p className="font-medium" style={{ color: "var(--foreground)" }}>{t('myHistory.weekOf', { label })}</p>
-        <p className="mt-1 font-mono font-bold" style={{ color: "var(--accent)" }}>{t('myHistory.weekAvgTooltip', { pct: promedio })}</p>
-      </div>
-    );
-  }
   const [results, setResults] = useState<any[]>([]);
+  const [etiquetas, setEtiquetas] = useState<Etiqueta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filtros de tarjetas
+  // Chart + KPI filters
+  const currentYear = new Date().getFullYear();
+  const [chartFilterFrom, setChartFilterFrom] = useState(`${currentYear}-01-01`);
+  const [chartFilterTo, setChartFilterTo] = useState(`${currentYear}-12-31`);
+  const [chartFilterCategoria, setChartFilterCategoria] = useState<string>("todas");
+  const [chartFilterEtiqueta, setChartFilterEtiqueta] = useState<string>("todas");
+  const [chartView, setChartView] = useState<TrendView>("week");
+
+  // Card-only filters
   const [filterCategory, setFilterCategory] = useState<string>("todas");
   const [filterMonth, setFilterMonth] = useState<string>("todos");
   const [query, setQuery] = useState("");
 
-  // Filtro de gráfico
-  const currentYear = new Date().getFullYear();
-  const [chartYear, setChartYear] = useState<number>(currentYear);
-
   useEffect(() => {
-    async function loadResults() {
+    async function loadData() {
       if (!profile?.id) return;
       try {
         setLoading(true);
-        const data = await resultsService.getByUserId(profile.id);
+        const [data, tags] = await Promise.all([
+          resultsService.getByUserId(profile.id),
+          etiquetasService.getAll(),
+        ]);
         setResults(data);
+        setEtiquetas(tags);
       } catch (err) {
         console.error("Error loading results:", err);
         setError(t('myHistory.loadError'));
@@ -133,66 +135,10 @@ function HistoryPage() {
         setLoading(false);
       }
     }
-    loadResults();
+    loadData();
   }, [profile?.id]);
 
-  // KPIs
-  const scores = results.map((r) => r.score).filter((s) => s !== null);
-  const averageScore =
-    scores.length > 0
-      ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
-      : 0;
-  const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
-
-  const kpis = [
-    { label: t('myHistory.completed'), value: String(results.length) },
-    { label: t('myHistory.avgScore'), value: `${averageScore}%` },
-    { label: t('myHistory.bestScore'), value: `${bestScore}%` },
-  ];
-
-  // Años disponibles para el gráfico
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    results.forEach((r) => {
-      if (r.completed_at) years.add(new Date(r.completed_at).getFullYear());
-    });
-    if (years.size === 0) years.add(currentYear);
-    return Array.from(years).sort((a, b) => b - a);
-  }, [results, currentYear]);
-
-  // Datos semanales para el gráfico
-  const weeklyData = useMemo(() => {
-    const yearResults = results.filter(
-      (r) => r.completed_at && new Date(r.completed_at).getFullYear() === chartYear
-    );
-
-    const weekMap = new Map<number, number[]>();
-    yearResults.forEach((r) => {
-      const week = getISOWeek(new Date(r.completed_at));
-      if (!weekMap.has(week)) weekMap.set(week, []);
-      weekMap.get(week)!.push(r.score);
-    });
-
-    return Array.from(weekMap.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([week, weekScores]) => ({
-        label: weekLabel(chartYear, week),
-        week,
-        promedio: Math.round(
-          weekScores.reduce((s, v) => s + v, 0) / weekScores.length
-        ),
-        count: weekScores.length,
-      }));
-  }, [results, chartYear]);
-
-  const chartAverage =
-    weeklyData.length > 0
-      ? Math.round(
-          weeklyData.reduce((s, d) => s + d.promedio, 0) / weeklyData.length
-        )
-      : 0;
-
-  // Filtros de tarjetas
+  // All categories (from all results, for filter dropdowns)
   const allCategories = useMemo(() => {
     const cats = new Set<string>();
     results.forEach((r) =>
@@ -201,6 +147,62 @@ function HistoryPage() {
     return Array.from(cats).sort();
   }, [results]);
 
+  // Results filtered by chart/KPI filters
+  const chartFiltered = useMemo(() => {
+    return results.filter((r) => {
+      if (!r.completed_at) return false;
+      const d = new Date(r.completed_at);
+      if (chartFilterFrom && d < new Date(chartFilterFrom)) return false;
+      if (chartFilterTo && d > new Date(chartFilterTo + "T23:59:59")) return false;
+      if (chartFilterCategoria !== "todas") {
+        const cats: string[] = r.evaluations?.categorias || [];
+        if (!cats.includes(chartFilterCategoria)) return false;
+      }
+      if (chartFilterEtiqueta !== "todas") {
+        if (r.etiqueta_id !== chartFilterEtiqueta) return false;
+      }
+      return true;
+    });
+  }, [results, chartFilterFrom, chartFilterTo, chartFilterCategoria, chartFilterEtiqueta]);
+
+  // KPIs from chartFiltered
+  const scores = chartFiltered.map((r) => r.score).filter((s) => s !== null);
+  const averageScore =
+    scores.length > 0
+      ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length)
+      : 0;
+  const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
+
+  const kpis = [
+    { label: t('myHistory.completed'), value: String(chartFiltered.length) },
+    { label: t('myHistory.avgScore'), value: `${averageScore}%` },
+    { label: t('myHistory.bestScore'), value: `${bestScore}%` },
+  ];
+
+  // Trend data for chart
+  const trendData = useMemo(() => {
+    const buckets = new Map<string, { label: string; scores: number[] }>();
+    chartFiltered.forEach((r) => {
+      if (!r.completed_at || r.score == null) return;
+      const { sortKey, label } = getTrendBucket(new Date(r.completed_at), chartView, i18n.language);
+      if (!buckets.has(sortKey)) buckets.set(sortKey, { label, scores: [] });
+      buckets.get(sortKey)!.scores.push(r.score);
+    });
+    return Array.from(buckets.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([, { label, scores: s }]) => ({
+        periodo: label,
+        promedio: Math.round(s.reduce((acc, v) => acc + v, 0) / s.length),
+        count: s.length,
+      }));
+  }, [chartFiltered, chartView, i18n.language]);
+
+  const chartAverage =
+    trendData.length > 0
+      ? Math.round(trendData.reduce((s, d) => s + d.promedio, 0) / trendData.length)
+      : 0;
+
+  // Months for card filter
   const allMonths = useMemo(() => {
     const months = new Map<string, string>();
     results.forEach((r) => {
@@ -232,6 +234,7 @@ function HistoryPage() {
     return { attemptMap, totalMap };
   }, [results]);
 
+  // Card-only filtered results
   const filtered = useMemo(() => {
     return results.filter((r) => {
       if (query) {
@@ -248,6 +251,12 @@ function HistoryPage() {
       return true;
     });
   }, [results, query, filterCategory, filterMonth]);
+
+  const SELECT_STYLE = {
+    border: "1px solid var(--border)",
+    background: "var(--surface-2)",
+    color: "var(--foreground)",
+  } as const;
 
   if (loading) {
     return (
@@ -284,7 +293,69 @@ function HistoryPage() {
     <AppShell>
       <PageHeader title={t('myHistory.title')} subtitle={t('myHistory.subtitle')} />
       <div className="flex flex-col gap-[28px]">
-        {/* KPIs */}
+
+        {/* ── Filter bar (affects KPIs + chart) ── */}
+        <div
+          className="rounded-[16px] px-[20px] py-[16px]"
+          style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+        >
+          <div className="flex flex-wrap gap-[16px]">
+            <div className="flex flex-col gap-[4px] min-w-[130px]">
+              <span className={FILTER_LABEL} style={{ color: "var(--muted-foreground)" }}>{t('myHistory.filterFrom')}</span>
+              <input
+                type="date"
+                value={chartFilterFrom}
+                onChange={(e) => setChartFilterFrom(e.target.value)}
+                className="rounded-[8px] border px-3 py-1.5 text-[13px]"
+                style={SELECT_STYLE}
+              />
+            </div>
+            <div className="flex flex-col gap-[4px] min-w-[130px]">
+              <span className={FILTER_LABEL} style={{ color: "var(--muted-foreground)" }}>{t('myHistory.filterTo')}</span>
+              <input
+                type="date"
+                value={chartFilterTo}
+                onChange={(e) => setChartFilterTo(e.target.value)}
+                className="rounded-[8px] border px-3 py-1.5 text-[13px]"
+                style={SELECT_STYLE}
+              />
+            </div>
+            {allCategories.length > 0 && (
+              <div className="flex flex-col gap-[4px] min-w-[150px]">
+                <span className={FILTER_LABEL} style={{ color: "var(--muted-foreground)" }}>{t('myHistory.filterCategoria')}</span>
+                <select
+                  value={chartFilterCategoria}
+                  onChange={(e) => setChartFilterCategoria(e.target.value)}
+                  className="rounded-[8px] border px-3 py-1.5 text-[13px]"
+                  style={SELECT_STYLE}
+                >
+                  <option value="todas">{t('myHistory.allCategories')}</option>
+                  {allCategories.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {etiquetas.length > 0 && (
+              <div className="flex flex-col gap-[4px] min-w-[150px]">
+                <span className={FILTER_LABEL} style={{ color: "var(--muted-foreground)" }}>{t('myHistory.filterEtiqueta')}</span>
+                <select
+                  value={chartFilterEtiqueta}
+                  onChange={(e) => setChartFilterEtiqueta(e.target.value)}
+                  className="rounded-[8px] border px-3 py-1.5 text-[13px]"
+                  style={SELECT_STYLE}
+                >
+                  <option value="todas">{t('myHistory.allEtiquetas')}</option>
+                  {etiquetas.map((et) => (
+                    <option key={et.id} value={et.id}>{et.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── KPI cards (react to filters) ── */}
         <div className="grid gap-[16px] sm:grid-cols-3">
           {kpis.map((k) => (
             <div
@@ -308,25 +379,18 @@ function HistoryPage() {
 
         {results.length > 0 && (
           <>
-            {/* Gráfico de promedio semanal */}
-            <div
-              className="overflow-hidden rounded-[20px]"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-sm)",
-              }}
-            >
-              <div
-                className="flex items-center justify-between px-[22px] py-[18px] border-b flex-wrap gap-3"
-                style={{ borderColor: "var(--border)" }}
-              >
+            {/* ── Trend chart ── */}
+            <div className="rounded-xl border border-border bg-card shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-5 pb-4">
                 <div className="flex items-center gap-[10px]">
                   <TrendingUp className="size-4" style={{ color: "var(--accent)" }} />
-                  <h2 className="font-display text-[17px] font-medium m-0" style={{ color: "var(--foreground)" }}>
-                    {t('myHistory.weeklyAvg')}
-                  </h2>
-                  {weeklyData.length > 0 && (
+                  <div>
+                    <h2 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{t('myHistory.weeklyAvg')}</h2>
+                    <p className="mt-0.5 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                      {t('myHistory.trendDesc')}
+                    </p>
+                  </div>
+                  {trendData.length > 0 && (
                     <span
                       className="rounded-full px-[10px] py-0.5 font-mono text-[9px] font-bold uppercase tracking-[.08em]"
                       style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
@@ -335,40 +399,64 @@ function HistoryPage() {
                     </span>
                   )}
                 </div>
-                <select
-                  value={chartYear}
-                  onChange={(e) => setChartYear(Number(e.target.value))}
-                  className="rounded-[8px] border px-3 py-1.5 text-[13px]"
-                  style={{ border: "1px solid var(--border)", background: "var(--surface-2)", color: "var(--foreground)" }}
-                >
-                  {availableYears.map((y) => (
-                    <option key={y} value={y}>{y}</option>
+                {/* Semana / Mes / Trimestre toggle */}
+                <div className="flex gap-1 rounded-lg border border-border bg-[var(--surface-2)] p-1">
+                  {(["week", "month", "quarter"] as const).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setChartView(v)}
+                      className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                        chartView === v
+                          ? "bg-accent text-accent-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {v === "week" ? t('myHistory.viewWeek') : v === "month" ? t('myHistory.viewMonth') : t('myHistory.viewQuarter')}
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
-              <div className="p-[22px]">
-                {weeklyData.length === 0 ? (
-                  <div className="flex h-48 items-center justify-center text-[13px]" style={{ color: "var(--muted-foreground)" }}>
-                    {t('myHistory.noDataYear', { year: chartYear })}
+              <div className="h-64 px-2 pb-4">
+                {trendData.length === 0 ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-2.5">
+                    <div className="grid size-10 place-items-center rounded-xl bg-[var(--surface-2)]">
+                      <TrendingUp className="size-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t('myHistory.noData')}</p>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={weeklyData} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={trendData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                        dataKey="periodo"
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                        axisLine={{ stroke: "var(--border)" }}
                         tickLine={false}
-                        axisLine={false}
                       />
                       <YAxis
                         domain={[0, 100]}
                         tickFormatter={(v) => `${v}%`}
-                        tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
-                        tickLine={false}
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
                         axisLine={false}
+                        tickLine={false}
+                        width={36}
                       />
-                      <Tooltip content={<CustomTooltip />} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "var(--card)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "10px",
+                          fontSize: "12px",
+                          color: "var(--foreground)",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                        }}
+                        cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
+                        formatter={(value: number, _n: string, entry: any) => [
+                          `${value}% · ${entry.payload.count} ${entry.payload.count === 1 ? t('myHistory.session') : t('myHistory.sessions')}`,
+                          t('myHistory.avgScore'),
+                        ]}
+                      />
                       <ReferenceLine
                         y={chartAverage}
                         stroke="var(--border-strong)"
@@ -390,7 +478,7 @@ function HistoryPage() {
               </div>
             </div>
 
-            {/* Filtros */}
+            {/* ── Card filters ── */}
             <div className="flex flex-wrap items-center gap-[10px]">
               <div className="relative min-w-[200px] flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2" style={{ color: "var(--muted-foreground)" }} />
@@ -439,7 +527,7 @@ function HistoryPage() {
               </span>
             </div>
 
-            {/* Tarjetas de historial */}
+            {/* ── History cards ── */}
             {filtered.length === 0 ? (
               <div
                 className="rounded-[20px] p-10 text-center"
