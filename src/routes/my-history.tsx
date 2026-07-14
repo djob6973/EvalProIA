@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { resultsService, etiquetasService, type Etiqueta } from "@/lib/services/evaluations";
-import { Calendar, CheckCircle, Tag, Search, Filter, TrendingUp } from "lucide-react";
+import { Calendar, CheckCircle, Tag, Search, Filter, TrendingUp, ClipboardList, Trophy } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -174,9 +174,9 @@ function HistoryPage() {
   const bestScore = scores.length > 0 ? Math.max(...scores) : 0;
 
   const kpis = [
-    { label: t('myHistory.completed'), value: String(chartFiltered.length) },
-    { label: t('myHistory.avgScore'), value: `${averageScore}%` },
-    { label: t('myHistory.bestScore'), value: `${bestScore}%` },
+    { label: t('myHistory.completed'), value: String(chartFiltered.length), Icon: ClipboardList },
+    { label: t('myHistory.avgScore'), value: `${averageScore}%`, Icon: TrendingUp },
+    { label: t('myHistory.bestScore'), value: `${bestScore}%`, Icon: Trophy },
   ];
 
   // Trend data for chart
@@ -368,9 +368,9 @@ function HistoryPage() {
 
         {/* ── KPI cards (react to filters) ── */}
         <div className="grid gap-[16px] sm:grid-cols-3">
-          {kpis.map((k) => (
+          {kpis.map(({ label, value, Icon }) => (
             <div
-              key={k.label}
+              key={label}
               className="rounded-[20px] p-[22px]"
               style={{
                 background: "var(--surface)",
@@ -378,11 +378,19 @@ function HistoryPage() {
                 boxShadow: "var(--shadow-sm)",
               }}
             >
-              <div className="font-mono text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--muted-foreground)" }}>
-                {k.label}
+              <div className="flex items-center gap-[8px]">
+                <div
+                  className="grid size-8 shrink-0 place-items-center rounded-[10px]"
+                  style={{ background: "var(--coral-soft)" }}
+                >
+                  <Icon className="size-4" style={{ color: "var(--coral-text)" }} strokeWidth={1.8} />
+                </div>
+                <div className="font-mono text-[10px] font-bold uppercase tracking-[.1em]" style={{ color: "var(--muted-foreground)" }}>
+                  {label}
+                </div>
               </div>
-              <div className="mt-[10px] font-display text-[34px] font-medium leading-none tracking-tight tabular-nums" style={{ color: "var(--foreground)" }}>
-                {k.value}
+              <div className="mt-[12px] font-display text-[34px] font-medium leading-none tracking-tight tabular-nums" style={{ color: "var(--foreground)" }}>
+                {value}
               </div>
             </div>
           ))}
