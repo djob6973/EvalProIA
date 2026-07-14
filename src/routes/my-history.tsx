@@ -426,7 +426,7 @@ function HistoryPage() {
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trendData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
+                    <LineChart data={trendData} margin={{ top: 8, right: 16, left: 4, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                       <XAxis
                         dataKey="periodo"
