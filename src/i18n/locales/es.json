@@ -826,6 +826,8 @@
     "noCompleted": "No has completado ninguna evaluación todavía.",
     "attemptOf": "Intento {{n}} de {{total}}",
     "viewResults": "Ver Resultados",
+    "filters": "Filtros",
+    "clearFilters": "Limpiar filtros",
     "filterFrom": "Desde",
     "filterTo": "Hasta",
     "filterCategoria": "Categoría",

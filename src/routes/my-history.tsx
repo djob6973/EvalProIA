@@ -295,11 +295,22 @@ function HistoryPage() {
       <div className="flex flex-col gap-[28px]">
 
         {/* ── Filter bar (affects KPIs + chart) ── */}
-        <div
-          className="rounded-[16px] px-[20px] py-[16px]"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
-        >
-          <div className="flex flex-wrap gap-[16px]">
+        <div className="rounded-xl border border-border bg-card px-5 py-4 shadow-sm">
+          <div className="flex items-center justify-between pb-3">
+            <div className="flex items-center gap-2">
+              <Filter className="size-4 text-accent" strokeWidth={2.5} />
+              <span className="text-sm font-semibold text-foreground">{t('myHistory.filters')}</span>
+            </div>
+            {(chartFilterFrom !== `${currentYear}-01-01` || chartFilterTo !== `${currentYear}-12-31` || chartFilterCategoria !== "todas" || chartFilterEtiqueta !== "todas") && (
+              <button
+                onClick={() => { setChartFilterFrom(`${currentYear}-01-01`); setChartFilterTo(`${currentYear}-12-31`); setChartFilterCategoria("todas"); setChartFilterEtiqueta("todas"); }}
+                className="text-xs text-accent hover:underline"
+              >
+                {t('myHistory.clearFilters')}
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-[16px] border-t border-border pt-3">
             <div className="flex flex-col gap-[4px] min-w-[130px]">
               <span className={FILTER_LABEL} style={{ color: "var(--muted-foreground)" }}>{t('myHistory.filterFrom')}</span>
               <input
