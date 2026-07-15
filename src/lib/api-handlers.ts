@@ -177,28 +177,6 @@ async function route(
     return json({ results, questions });
   }
 
-  // ── Temporary one-off score correction endpoint (remove after use) ───────
-  if (res === "fix-scores" && m === "POST") {
-    const key = url.searchParams.get("key");
-    if (key !== "DATAICO_DIAG_2026") return json({ error: "Forbidden" }, 403);
-    const body = await request.json();
-    const evalId: string | undefined = body?.eval;
-    const updates: Array<{ id: string; score: number }> = body?.updates ?? [];
-    if (!evalId || !Array.isArray(updates) || updates.length === 0) {
-      return json({ error: "eval and updates[] required" }, 400);
-    }
-    const updated = [];
-    for (const u of updates) {
-      const [row] = await db`
-        UPDATE results SET score = ${u.score}
-        WHERE id = ${u.id} AND evaluation_id = ${evalId}
-        RETURNING id, score
-      `;
-      if (row) updated.push(row);
-    }
-    return json({ updated });
-  }
-
   // ── System settings ──────────────────────────────────────────────────────
   if (res === "settings") {
     if (!id && m === "GET") return getSettings();
