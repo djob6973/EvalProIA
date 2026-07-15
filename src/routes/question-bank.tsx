@@ -340,7 +340,8 @@ function QuestionBankPage() {
       showToast(t('questionBank.deleted'));
     } catch (error) {
       console.error('Error deleting question:', error);
-      showToast(t('questionBank.deleteError'), "error");
+      const message = error instanceof Error && error.message ? error.message : t('questionBank.deleteError');
+      showToast(message, "error");
     }
   };
 

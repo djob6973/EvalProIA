@@ -1368,7 +1368,8 @@ function EvaluationsPage() {
       showToast(t('evaluations.deleted'));
     } catch (err) {
       console.error('Error deleting evaluation:', err);
-      showToast(t('evaluations.deleteError'), "error");
+      const message = err instanceof Error && err.message ? err.message : t('evaluations.deleteError');
+      showToast(message, "error");
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);

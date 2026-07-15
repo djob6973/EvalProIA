@@ -454,6 +454,15 @@ async function deleteEvaluation(request: Request, id: string): Promise<Response>
   const adminOrErr = await requireAdmin(request);
   if (adminOrErr instanceof Response) return adminOrErr;
 
+  const [{ count }] = await db`
+    SELECT COUNT(*)::int AS count FROM results WHERE evaluation_id = ${id}
+  `;
+  if (count > 0) {
+    return json({
+      error: `No se puede eliminar: ${count} participante(s) ya respondieron esta evaluación. Desactívala en su lugar.`,
+    }, 409);
+  }
+
   await db`DELETE FROM evaluations WHERE id = ${id}`;
   return json({ success: true });
 }
@@ -662,6 +671,15 @@ async function recalcScoresForQuestion(questionId: string): Promise<void> {
 async function deleteQuestion(request: Request, id: string): Promise<Response> {
   const adminOrErr = await requireAdmin(request);
   if (adminOrErr instanceof Response) return adminOrErr;
+
+  const [{ count }] = await db`
+    SELECT COUNT(*)::int AS count FROM results WHERE answers ? ${id}
+  `;
+  if (count > 0) {
+    return json({
+      error: `No se puede eliminar: ${count} resultado(s) ya respondieron esta pregunta. Desactívala en su lugar.`,
+    }, 409);
+  }
 
   const result = await db`DELETE FROM questions WHERE id = ${id} RETURNING id`;
   if (result.length === 0) return json({ error: "No encontrado" }, 404);
