@@ -429,6 +429,16 @@ export async function calculateEvaluationScore(
     }
   }
 
+  // Asegurar que toda pregunta respondida esté incluida en el cálculo, incluso si
+  // ya no está asociada a la evaluación (evita que el peso/denominador quede desincronizado
+  // respecto a lo que el participante realmente respondió)
+  const knownIds = new Set(questions.map(q => q.id));
+  const missingAnsweredIds = Object.keys(userAnswers).filter(id => !knownIds.has(id));
+  if (missingAnsweredIds.length > 0) {
+    const missingQuestions = await questionsService.getByIds(missingAnsweredIds);
+    questions = [...questions, ...missingQuestions];
+  }
+
   if (questions.length === 0) return 0;
 
   const questionWeight = 100 / questions.length;

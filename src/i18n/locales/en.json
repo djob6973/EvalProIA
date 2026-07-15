@@ -908,6 +908,7 @@
     "colTime": "Time",
     "attemptBadge": "Attempt {{n}}",
     "noAnswers": "No answers available for this result",
+    "questionDeleted": "This question no longer exists in the question bank (it was deleted or modified).",
     "questionN": "Question {{index}}: {{text}}",
     "partialDetail": "{{correct}} of {{total}} correct options selected",
     "analyticsTitle": "Question Analytics",

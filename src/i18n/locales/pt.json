@@ -908,6 +908,7 @@
     "colTime": "Tempo",
     "attemptBadge": "Tentativa {{n}}",
     "noAnswers": "Nenhuma resposta disponível para este resultado",
+    "questionDeleted": "Esta pergunta não existe mais no banco de perguntas (foi excluída ou modificada).",
     "questionN": "Pergunta {{index}}: {{text}}",
     "partialDetail": "{{correct}} de {{total}} opções corretas selecionadas",
     "analyticsTitle": "Analytics por Pergunta",

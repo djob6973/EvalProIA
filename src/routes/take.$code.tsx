@@ -100,26 +100,26 @@ function TakeEvaluationRoute() {
         // Cargar preguntas asociadas a la evaluación
         let questionsData = await questionsService.getByEvaluationId(code);
 
-        // Si no hay preguntas directamente asociadas, cargar del banco de preguntas
-        if (questionsData.length === 0) {
-          // Al reanudar, cargar exactamente las preguntas del progreso guardado
-          // para que los IDs coincidan con question_order y answers
-          const questionOrder: string[] = Array.isArray(progress?.question_order)
-            ? progress.question_order
-            : (typeof progress?.question_order === 'string' ? JSON.parse(progress.question_order) : []);
-          if (progress && questionOrder.length > 0) {
-            questionsData = await questionsService.getByIds(questionOrder);
-          } else {
-            // Query with filters at DB level — avoids downloading the full question bank
-            const filteredQuestions = await questionsService.getFiltered({
-              categorias: evalData.categorias,
-              dificultad: evalData.config?.dificultad,
-            });
+        // Al reanudar, cargar exactamente las preguntas del progreso guardado
+        // para que los IDs coincidan con question_order y answers, incluso si
+        // el banco de preguntas de la evaluación cambió después de iniciar el intento
+        const questionOrder: string[] = Array.isArray(progress?.question_order)
+          ? progress.question_order
+          : (typeof progress?.question_order === 'string' ? JSON.parse(progress.question_order) : []);
 
-            const shuffled = shuffleArray(filteredQuestions);
-            const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
-            questionsData = shuffled.slice(0, numPreguntas);
-          }
+        if (progress && questionOrder.length > 0) {
+          questionsData = await questionsService.getByIds(questionOrder);
+        } else if (questionsData.length === 0) {
+          // Sin preguntas asociadas ni progreso: cargar del banco de preguntas
+          // Query with filters at DB level — avoids downloading the full question bank
+          const filteredQuestions = await questionsService.getFiltered({
+            categorias: evalData.categorias,
+            dificultad: evalData.config?.dificultad,
+          });
+
+          const shuffled = shuffleArray(filteredQuestions);
+          const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
+          questionsData = shuffled.slice(0, numPreguntas);
         }
 
         setQuestions(questionsData);

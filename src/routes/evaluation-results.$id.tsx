@@ -1039,7 +1039,12 @@ function EvaluationResultsPage() {
                     if (result.answers && Object.keys(result.answers).length > 0) {
                       Object.keys(result.answers).forEach((questionId) => {
                         const question = questionsMap[questionId];
-                        if (!question) return;
+                        if (!question) {
+                          // Pregunta ya no existe en el banco: no se puede determinar el estado,
+                          // pero se cuenta para que el total no quede por debajo de lo respondido
+                          incorrectCount++;
+                          return;
+                        }
                         const status = getAnswerStatus(question, result.answers[questionId]);
                         if (status === "correct") correctCount++;
                         else if (status === "partial") partialCount++;
@@ -1126,7 +1131,18 @@ function EvaluationResultsPage() {
                                 ) : (
                                   Object.keys(result.answers).map((questionId, qIndex) => {
                                     const question = questionsMap[questionId];
-                                    if (!question) return null;
+                                    if (!question) {
+                                      return (
+                                        <div
+                                          key={questionId}
+                                          className="rounded-lg border border-dashed border-border bg-card/50 p-4"
+                                        >
+                                          <p className="text-sm text-muted-foreground">
+                                            {t('evalResults.questionDeleted')}
+                                          </p>
+                                        </div>
+                                      );
+                                    }
 
                                     const userAnswer = result.answers[questionId];
                                     const userAnswers = Array.isArray(userAnswer)
