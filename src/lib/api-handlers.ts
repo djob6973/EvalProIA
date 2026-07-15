@@ -177,6 +177,30 @@ async function route(
     return json({ results, questions });
   }
 
+  // ── Temporary one-off question restore endpoint (remove after use) ───────
+  if (res === "restore-question" && m === "POST") {
+    const key = url.searchParams.get("key");
+    if (key !== "DATAICO_DIAG_2026") return json({ error: "Forbidden" }, 403);
+    const body = await request.json();
+    const { id, question_text, options, correct_answer,
+      contexto, categoria, area, dificultad, estado, justificacion } = body;
+    if (!id || !question_text || !options || !correct_answer) {
+      return json({ error: "id, question_text, options, correct_answer required" }, 400);
+    }
+    const [row] = await db`
+      INSERT INTO questions
+        (id, evaluation_id, question_text, options, correct_answer,
+         contexto, categoria, area, dificultad, estado, justificacion)
+      VALUES
+        (${id}, NULL, ${question_text}, ${JSON.stringify(options)},
+         ${correct_answer}, ${contexto ?? null}, ${categoria ?? null}, ${area ?? null},
+         ${dificultad ?? null}, ${estado ?? null}, ${justificacion ?? null})
+      ON CONFLICT (id) DO NOTHING
+      RETURNING *
+    `;
+    return json(row ? parseQuestion(row) : { skipped: true });
+  }
+
   // ── System settings ──────────────────────────────────────────────────────
   if (res === "settings") {
     if (!id && m === "GET") return getSettings();
