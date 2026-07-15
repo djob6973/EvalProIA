@@ -153,7 +153,7 @@ async function route(
   }
 
   // ── Temporary diagnostic endpoint (remove after use) ─────────────────────
-  if (sub === "diag" && m === "GET") {
+  if (res === "diag" && m === "GET") {
     const key = url.searchParams.get("key");
     if (key !== "DATAICO_DIAG_2026") return json({ error: "Forbidden" }, 403);
     const evalId = url.searchParams.get("eval");
