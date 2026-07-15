@@ -677,7 +677,7 @@ async function deleteQuestion(request: Request, id: string): Promise<Response> {
   `;
   if (count > 0) {
     return json({
-      error: `No se puede eliminar: ${count} resultado(s) ya respondieron esta pregunta. Desactívala en su lugar.`,
+      error: `No se puede eliminar: ${count} participante(s) ya respondieron esta pregunta. Desactívala en su lugar.`,
     }, 409);
   }
 
