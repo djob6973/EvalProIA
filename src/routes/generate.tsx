@@ -97,6 +97,7 @@ function GeneratePage() {
 
   // Generation + review
   const [generating, setGenerating] = useState(false);
+  const [generateProgress, setGenerateProgress] = useState<{ current: number; total: number } | null>(null);
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -178,28 +179,61 @@ function GeneratePage() {
     setDistribucion({ ...distribucion, [tipo]: value });
   }
 
+  const CLIENT_BATCH_SIZE = 10;
+
   async function generate() {
     setGenerating(true);
+    setGenerateProgress(null);
     setQuestions([]);
     setSelected(new Set());
     setSaved(false);
-    
+
     try {
       const customSystemPrompt = getSystemPrompt();
       const { model, temperature, maxTokens, retries } = getModelConfig();
-      const questionsArray = await generateQuestionsFn({
-        data: { extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma },
-      });
 
-      setQuestions(questionsArray);
-      // pre-select all
-      setSelected(new Set(questionsArray.map((q) => q.id)));
+      // Split into client-side batches to avoid nginx timeout
+      const batches: number[] = [];
+      let remaining = numPreguntas;
+      while (remaining > 0) {
+        batches.push(Math.min(remaining, CLIENT_BATCH_SIZE));
+        remaining -= CLIENT_BATCH_SIZE;
+      }
+
+      const allQuestions: GeneratedQuestion[] = [];
+
+      for (let i = 0; i < batches.length; i++) {
+        setGenerateProgress({ current: i + 1, total: batches.length });
+        const batchQuestions = await generateQuestionsFn({
+          data: {
+            extractedText,
+            numPreguntas: batches[i],
+            dificultad,
+            categoria,
+            area,
+            distribucion,
+            customSystemPrompt,
+            model,
+            temperature,
+            maxTokens,
+            retries,
+            idioma,
+          },
+        });
+        allQuestions.push(...batchQuestions);
+      }
+
+      // Re-number IDs sequentially across all batches
+      const numbered = allQuestions.map((q, i) => ({ ...q, id: i + 1 }));
+      setQuestions(numbered);
+      setSelected(new Set(numbered.map((q) => q.id)));
     } catch (error) {
       console.error('❌ Error generating questions:', error);
       alert(t('generate.generateError', { error: (error as Error).message }));
     }
-    
+
     setGenerating(false);
+    setGenerateProgress(null);
   }
 
   function toggle(id: number) {
@@ -679,7 +713,10 @@ function GeneratePage() {
               >
                 {generating ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> {t('generate.generatingButton')}
+                    <Loader2 className="size-4 animate-spin" />
+                    {generateProgress && generateProgress.total > 1
+                      ? `${t('generate.generatingButton')} (${generateProgress.current}/${generateProgress.total})`
+                      : t('generate.generatingButton')}
                   </>
                 ) : (
                   <>
