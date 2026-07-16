@@ -498,11 +498,11 @@ function GeneratePage() {
               disabled={!extractedText}
             >
               <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                <Field label={t('generate.numQuestions')} hint="1 – 50">
+                <Field label={t('generate.numQuestions')} hint="1 – 100">
                   <input
                     type="number"
                     min={1}
-                    max={50}
+                    max={100}
                     value={numPreguntas}
                     onChange={(e) => setNumPreguntas(parseInt(e.target.value) || 1)}
                     className="field-base"
