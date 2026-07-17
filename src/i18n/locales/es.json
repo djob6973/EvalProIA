@@ -486,6 +486,7 @@
     "regenerateError": "Error al regenerar la pregunta: {{error}}",
     "extractError": "Error al extraer el texto: {{error}}",
     "generateError": "Error al generar preguntas: {{error}}",
+    "partialGenerationTitle": "Generación incompleta",
     "partialGeneration": "Se generaron {{generated}} de las {{requested}} preguntas solicitadas. El documento no parece tener suficiente contenido distinto para generar más preguntas únicas sin repetir enunciados.",
     "saveError": "Error al guardar las preguntas: {{error}}",
     "cancelEditing": "Cancelar edición",

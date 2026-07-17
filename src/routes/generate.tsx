@@ -21,6 +21,7 @@ import {
   EyeOff,
   Pencil,
   RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
@@ -107,6 +108,7 @@ function GeneratePage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState<GeneratedQuestion | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<number | null>(null);
+  const [partialWarning, setPartialWarning] = useState<{ generated: number; requested: number } | null>(null);
 
   const total = Object.values(distribucion).reduce((s, v) => s + v, 0);
   
@@ -187,6 +189,7 @@ function GeneratePage() {
     setQuestions([]);
     setSelected(new Set());
     setSaved(false);
+    setPartialWarning(null);
 
     try {
       const customSystemPrompt = getSystemPrompt();
@@ -230,7 +233,7 @@ function GeneratePage() {
       setSelected(new Set(numbered.map((q) => q.id)));
 
       if (numbered.length < numPreguntas) {
-        alert(t('generate.partialGeneration', { generated: numbered.length, requested: numPreguntas }));
+        setPartialWarning({ generated: numbered.length, requested: numPreguntas });
       }
     } catch (error) {
       console.error('❌ Error generating questions:', error);
@@ -730,6 +733,32 @@ function GeneratePage() {
                   </>
                 )}
               </Button>
+
+              {partialWarning && (
+                <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 animate-slide-down">
+                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="size-4" />
+                  </div>
+                  <div className="flex-1 text-sm">
+                    <p className="font-semibold text-amber-700 dark:text-amber-400">
+                      {t('generate.partialGenerationTitle')}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      {t('generate.partialGeneration', {
+                        generated: partialWarning.generated,
+                        requested: partialWarning.requested,
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setPartialWarning(null)}
+                    className="grid size-6 shrink-0 place-items-center rounded-md text-amber-600 transition-colors hover:bg-amber-500/15 dark:text-amber-400"
+                    aria-label={t('common.close')}
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                </div>
+              )}
             </Card>
           </div>
 
