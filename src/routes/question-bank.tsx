@@ -561,7 +561,7 @@ function QuestionBankPage() {
                 )}
               </div>
             )}
-            <ul className="space-y-1">
+            <ul className="space-y-1 max-h-[420px] overflow-y-auto pr-1">
               {!catSearch && (
                 <li>
                   <button
