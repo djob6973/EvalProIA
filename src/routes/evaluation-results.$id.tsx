@@ -9,6 +9,7 @@ import React from "react";
 import { resultsService, evaluationsService, questionsService, areasService, getAnswerStatus } from "@/lib/services/evaluations";
 import { ArrowLeft, TrendingUp, Users, Award, CheckCircle, XCircle, Download, ChevronDown, ChevronRight, Clock, CalendarDays, Building2, Hash, Percent, RefreshCw, CalendarCheck, CalendarOff, ImageDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 export const Route = createFileRoute("/evaluation-results/$id")({
   head: () => ({ meta: [{ title: "Resultados de Evaluación — EvalPro" }] }),
@@ -51,8 +52,8 @@ async function drawResultsCard(
   areaObj: any | null,
   resultsData: any[],
   stats: { totalParticipants: number; averageScore: number; passRate: number; bestScore: number },
-  analytics: { text: string; errorRate: number; attempts: number }[],
-  passingThreshold: number
+  passingThreshold: number,
+  brandLogo?: string | null
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -66,7 +67,6 @@ async function drawResultsCard(
   const hasArea = !!areaObj?.name;
   const hasDates = !!(ev?.created_at || ev?.fecha_vencimiento);
   const rows = resultsData;
-  const qRows = analytics;
 
   let H = 68;
   H += 28;
@@ -76,7 +76,6 @@ async function drawResultsCard(
   if (hasDates) H += 64 + 8;
   H += 16 + 12 + 96 + 8;
   if (rows.length > 0) H += 16 + 12 + 28 + rows.length * 40 + 8;
-  if (qRows.length > 0) H += 16 + 12 + qRows.length * 44 + 8;
   H += 60;
 
   canvas.width = W * 2;
@@ -159,6 +158,18 @@ async function drawResultsCard(
   const evalW = ctx.measureText("Eval").width;
   const blockW = LOGO_H + 10 + evalW + ctx.measureText("Pro").width;
   const blockX = bX - 20 - blockW;
+
+  // Org logo on the left
+  if (brandLogo) {
+    try {
+      const orgImg = await loadImage(brandLogo);
+      const maxH = LOGO_H;
+      const scale = Math.min(maxH / orgImg.naturalHeight, 120 / orgImg.naturalWidth);
+      const dW = orgImg.naturalWidth * scale;
+      const dH = orgImg.naturalHeight * scale;
+      ctx.drawImage(orgImg, PAD, 14 + (maxH - dH) / 2, dW, dH);
+    } catch { /* skip */ }
+  }
 
   try {
     const blob = new Blob([EVALPRO_LOGO_SVG], { type: "image/svg+xml" });
@@ -423,65 +434,6 @@ async function drawResultsCard(
     y += 8;
   }
 
-  // Analytics
-  if (qRows.length > 0) {
-    y += 16;
-    secLabel("ANALYTICS POR PREGUNTA", y);
-    y += 12;
-
-    qRows.forEach((q: any, idx: number) => {
-      const ry = y;
-      if (idx % 2 === 0) {
-        ctx.fillStyle = "#fafafa";
-        ctx.fillRect(PAD, ry, SW, 44);
-      }
-      const errColor = q.errorRate >= 70 ? "#ef4444" : q.errorRate >= 40 ? "#d97706" : "#059669";
-
-      ctx.font = "bold 10px system-ui, sans-serif";
-      ctx.fillStyle = "#94a3b8";
-      ctx.textAlign = "left";
-      ctx.fillText(String(idx + 1), PAD + 8, ry + 18);
-
-      ctx.font = "12px system-ui, sans-serif";
-      ctx.fillStyle = "#334155";
-      ctx.fillText(trunc(q.text, SW - 120), PAD + 24, ry + 18);
-
-      ctx.font = "bold 11px system-ui, sans-serif";
-      ctx.fillStyle = errColor;
-      ctx.textAlign = "right";
-      ctx.fillText(`${q.errorRate}% errores`, W - PAD - 8, ry + 18);
-
-      const BX = PAD + 24;
-      const BW = SW - 100;
-      ctx.fillStyle = "#f1f5f9";
-      ctx.beginPath();
-      ctx.roundRect(BX, ry + 26, BW, 6, 3);
-      ctx.fill();
-      const fw = BW * (q.errorRate / 100);
-      if (fw > 0) {
-        ctx.fillStyle = errColor;
-        ctx.beginPath();
-        ctx.roundRect(BX, ry + 26, fw, 6, 3);
-        ctx.fill();
-      }
-
-      ctx.font = "10px system-ui, sans-serif";
-      ctx.fillStyle = "#94a3b8";
-      ctx.textAlign = "right";
-      ctx.fillText(`${q.attempts} part.`, W - PAD - 8, ry + 38);
-
-      ctx.strokeStyle = "#f1f5f9";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(PAD, ry + 44);
-      ctx.lineTo(W - PAD, ry + 44);
-      ctx.stroke();
-
-      y += 44;
-    });
-    y += 8;
-  }
-
   // Footer
   const fY = H - 60;
   ctx.fillStyle = "#f8fafc";
@@ -541,6 +493,7 @@ function EvaluationResultsPage() {
   const [expandedResultId, setExpandedResultId] = useState<string | null>(null);
   const [attemptFilter, setAttemptFilter] = useState<number | null>(null);
   const [capturing, setCapturing] = useState(false);
+  const { settings } = useSystemSettings();
 
   useEffect(() => {
     async function loadData() {
@@ -744,8 +697,8 @@ function EvaluationResultsPage() {
         area,
         resultsWithAttempt,
         stats,
-        questionAnalytics,
-        evaluation?.config?.porcentaje_aprobacion ?? 60
+        evaluation?.config?.porcentaje_aprobacion ?? 60,
+        settings?.brand_logo ?? null
       );
       const url = canvas.toDataURL("image/png");
       const a = document.createElement("a");
