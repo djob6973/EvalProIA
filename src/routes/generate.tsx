@@ -228,6 +228,10 @@ function GeneratePage() {
       const numbered = allQuestions.map((q, i) => ({ ...q, id: i + 1 }));
       setQuestions(numbered);
       setSelected(new Set(numbered.map((q) => q.id)));
+
+      if (numbered.length < numPreguntas) {
+        alert(t('generate.partialGeneration', { generated: numbered.length, requested: numPreguntas }));
+      }
     } catch (error) {
       console.error('❌ Error generating questions:', error);
       alert(t('generate.generateError', { error: (error as Error).message }));

@@ -482,6 +482,7 @@
     "regenerateError": "Error regenerating question: {{error}}",
     "extractError": "Error extracting text: {{error}}",
     "generateError": "Error generating questions: {{error}}",
+    "partialGeneration": "{{generated}} of the {{requested}} requested questions were generated. The document doesn't seem to have enough distinct content to generate more unique questions without repeating statements.",
     "saveError": "Error saving questions: {{error}}",
     "cancelEditing": "Cancel editing",
     "selectQuestion": "Select question"

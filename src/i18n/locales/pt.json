@@ -482,6 +482,7 @@
     "regenerateError": "Erro ao regenerar pergunta: {{error}}",
     "extractError": "Erro ao extrair texto: {{error}}",
     "generateError": "Erro ao gerar perguntas: {{error}}",
+    "partialGeneration": "Foram geradas {{generated}} das {{requested}} perguntas solicitadas. O documento não parece ter conteúdo suficientemente distinto para gerar mais perguntas únicas sem repetir enunciados.",
     "saveError": "Erro ao salvar perguntas: {{error}}",
     "cancelEditing": "Cancelar edição",
     "selectQuestion": "Selecionar pergunta"

@@ -307,9 +307,11 @@ async function generateUniqueBatch(
 
   for (let attempt = 0; attempt < MAX_DEDUPE_ATTEMPTS && accepted.length < numPreguntas; attempt++) {
     const stillNeeded = numPreguntas - accepted.length;
+    // En reintentos, sube la temperatura para favorecer contenido distinto al ya generado
+    const attemptTemperature = attempt === 0 ? temperature : Math.min(1, temperature + attempt * 0.15);
     const batch = await generateBatch(
       openai, extractedText, stillNeeded, dificultad, categoria, area, distribucion,
-      customSystemPrompt, model, temperature, maxTokens, retries, idioma, knownQuestions
+      customSystemPrompt, model, attemptTemperature, maxTokens, retries, idioma, knownQuestions
     );
     for (const q of batch) {
       const key = normalizeQuestionText(q.pregunta);
