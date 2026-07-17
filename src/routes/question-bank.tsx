@@ -5,6 +5,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Plus,
@@ -571,50 +572,52 @@ function QuestionBankPage() {
                 )}
               </div>
             )}
-            <ul className="space-y-1 max-h-[420px] overflow-y-auto pr-1">
-              {!catSearch && (
-                <li>
-                  <button
-                    onClick={() => setFilterCat("todas")}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
-                      filterCat === "todas"
-                        ? "bg-coral-soft text-coral-text"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    }`}
-                  >
-                    <span>{t('questionBank.all')}</span>
-                    <span className="font-mono text-[10px] font-bold">{counts.Todas}</span>
-                  </button>
-                </li>
-              )}
-              {categoriesForArea
-                .filter((c) => c.toLowerCase().includes(catSearch.toLowerCase()))
-                .map((c: string, idx: number) => (
-                  <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
+            <ScrollArea className="max-h-[420px]">
+              <ul className="space-y-1 pr-3">
+                {!catSearch && (
+                  <li>
                     <button
-                      onClick={() => { setFilterCat(c); setCatSearch(""); }}
-                      className={`flex w-full items-start justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-300 ${
-                        filterCat === c
+                      onClick={() => setFilterCat("todas")}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-all duration-300 ${
+                        filterCat === "todas"
                           ? "bg-coral-soft text-coral-text"
                           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       }`}
                     >
-                      <span className="break-words leading-snug">{c}</span>
-                      <span className="font-mono text-[10px] font-bold shrink-0 pt-0.5">{counts[c] ?? 0}</span>
+                      <span>{t('questionBank.all')}</span>
+                      <span className="font-mono text-[10px] font-bold">{counts.Todas}</span>
                     </button>
                   </li>
-                ))}
-              {catSearch && categoriesForArea.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase())).length === 0 && (
-                <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                  Sin resultados
-                </li>
-              )}
-              {!catSearch && categoriesForArea.length === 0 && (
-                <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
-                  {t('questionBank.emptyFilters')}
-                </li>
-              )}
-            </ul>
+                )}
+                {categoriesForArea
+                  .filter((c) => c.toLowerCase().includes(catSearch.toLowerCase()))
+                  .map((c: string, idx: number) => (
+                    <li key={c} style={{ animation: `slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 25}ms both` }}>
+                      <button
+                        onClick={() => { setFilterCat(c); setCatSearch(""); }}
+                        className={`flex w-full items-start justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-300 ${
+                          filterCat === c
+                            ? "bg-coral-soft text-coral-text"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        }`}
+                      >
+                        <span className="break-words leading-snug">{c}</span>
+                        <span className="font-mono text-[10px] font-bold shrink-0 pt-0.5">{counts[c] ?? 0}</span>
+                      </button>
+                    </li>
+                  ))}
+                {catSearch && categoriesForArea.filter((c) => c.toLowerCase().includes(catSearch.toLowerCase())).length === 0 && (
+                  <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    Sin resultados
+                  </li>
+                )}
+                {!catSearch && categoriesForArea.length === 0 && (
+                  <li className="px-3 py-2 text-xs" style={{ color: "var(--muted-foreground)" }}>
+                    {t('questionBank.emptyFilters')}
+                  </li>
+                )}
+              </ul>
+            </ScrollArea>
           </div>
         </aside>
 
