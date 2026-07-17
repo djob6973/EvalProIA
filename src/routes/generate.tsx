@@ -218,6 +218,7 @@ function GeneratePage() {
             maxTokens,
             retries,
             idioma,
+            previousQuestions: allQuestions.map((q) => q.pregunta),
           },
         });
         allQuestions.push(...batchQuestions);
@@ -284,6 +285,7 @@ function GeneratePage() {
           temperature,
           maxTokens,
           retries,
+          previousQuestions: questions.filter((item) => item.id !== q.id).map((item) => item.pregunta),
         },
       });
       // Keep original id so selection state is preserved
@@ -930,7 +932,7 @@ function GeneratePage() {
                           <div className="ml-auto flex items-center gap-1">
                             <button
                               onClick={() => regenerateQuestion(q)}
-                              disabled={regeneratingId === q.id || editingId === q.id || generating}
+                              disabled={regeneratingId !== null || editingId === q.id || generating}
                               className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
                               title="Regenerar esta pregunta"
                             >
@@ -942,7 +944,7 @@ function GeneratePage() {
                             </button>
                             <button
                               onClick={() => editingId === q.id ? cancelEdit() : startEdit(q)}
-                              disabled={regeneratingId === q.id}
+                              disabled={regeneratingId !== null}
                               className="flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium text-muted-foreground transition-all duration-300 hover:bg-secondary hover:text-accent disabled:opacity-40 disabled:cursor-not-allowed"
                               aria-label={editingId === q.id ? t('generate.cancelEditing') : t('common.edit')}
                             >

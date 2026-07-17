@@ -162,8 +162,13 @@ function buildPrompt(
   area: string,
   distribucion: Record<QuestionType, number>,
   extractedText: string,
-  idioma = "Español"
+  idioma = "Español",
+  previousQuestions: string[] = []
 ): string {
+  const previousQuestionsBlock = previousQuestions.length > 0
+    ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
+    : '';
+
   return `Eres un experto diseñador de evaluaciones. Genera ${numPreguntas} preguntas de evaluación basadas en el siguiente texto.
 
 Parámetros:
@@ -175,7 +180,7 @@ Parámetros:
   * Selección única: ${distribucion.seleccion_unica}%
   * Selección múltiple: ${distribucion.seleccion_multiple}%
   * Verdadero/Falso: ${distribucion.verdadero_falso}%
-
+${previousQuestionsBlock}
 Texto del documento:
 ${extractedText}
 
@@ -221,9 +226,10 @@ async function generateBatch(
   temperature: number,
   maxTokens: number,
   retries: number,
-  idioma = "Español"
+  idioma = "Español",
+  previousQuestions: string[] = []
 ): Promise<GeneratedQuestion[]> {
-  const prompt = buildPrompt(numPreguntas, dificultad, categoria, area, distribucion, extractedText, idioma);
+  const prompt = buildPrompt(numPreguntas, dificultad, categoria, area, distribucion, extractedText, idioma, previousQuestions);
   let lastError: Error = new Error('Error desconocido al generar preguntas');
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -265,6 +271,58 @@ async function generateBatch(
   throw lastError;
 }
 
+function normalizeQuestionText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+const MAX_DEDUPE_ATTEMPTS = 3;
+
+// Genera `numPreguntas` preguntas nuevas evitando duplicar `previousQuestions`.
+// Si el modelo repite alguna a pesar de la instrucción, reintenta solo el faltante
+// (hasta MAX_DEDUPE_ATTEMPTS veces) en vez de aceptar duplicados o quedarse corto.
+async function generateUniqueBatch(
+  openai: OpenAI,
+  extractedText: string,
+  numPreguntas: number,
+  dificultad: string,
+  categoria: string,
+  area: string,
+  distribucion: Record<QuestionType, number>,
+  customSystemPrompt: string | undefined,
+  model: string,
+  temperature: number,
+  maxTokens: number,
+  retries: number,
+  idioma: string,
+  previousQuestions: string[]
+): Promise<GeneratedQuestion[]> {
+  const seen = new Set(previousQuestions.map(normalizeQuestionText));
+  const knownQuestions = [...previousQuestions];
+  const accepted: GeneratedQuestion[] = [];
+
+  for (let attempt = 0; attempt < MAX_DEDUPE_ATTEMPTS && accepted.length < numPreguntas; attempt++) {
+    const stillNeeded = numPreguntas - accepted.length;
+    const batch = await generateBatch(
+      openai, extractedText, stillNeeded, dificultad, categoria, area, distribucion,
+      customSystemPrompt, model, temperature, maxTokens, retries, idioma, knownQuestions
+    );
+    for (const q of batch) {
+      const key = normalizeQuestionText(q.pregunta);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      knownQuestions.push(q.pregunta);
+      accepted.push(q);
+    }
+  }
+
+  return accepted;
+}
+
 export async function generateQuestionsServer(
   extractedText: string,
   numPreguntas: number,
@@ -277,7 +335,8 @@ export async function generateQuestionsServer(
   temperature = 0.3,
   maxTokens = 8192,
   retries = 3,
-  idioma = "Español"
+  idioma = "Español",
+  previousQuestions: string[] = []
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -288,7 +347,7 @@ export async function generateQuestionsServer(
   const openai = new OpenAI({ apiKey, timeout: 120_000 });
 
   if (numPreguntas <= BATCH_SIZE) {
-    return generateBatch(openai, extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma);
+    return generateUniqueBatch(openai, extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma, previousQuestions);
   }
 
   // Divide en lotes de BATCH_SIZE para evitar timeouts en generaciones grandes
@@ -300,12 +359,14 @@ export async function generateQuestionsServer(
   }
 
   const allQuestions: GeneratedQuestion[] = [];
+  let knownQuestions = [...previousQuestions];
   for (const batchCount of batches) {
-    const batchQuestions = await generateBatch(
+    const batchQuestions = await generateUniqueBatch(
       openai, extractedText, batchCount, dificultad, categoria, area, distribucion,
-      customSystemPrompt, model, temperature, maxTokens, retries, idioma
+      customSystemPrompt, model, temperature, maxTokens, retries, idioma, knownQuestions
     );
     allQuestions.push(...batchQuestions);
+    knownQuestions = knownQuestions.concat(batchQuestions.map((q) => q.pregunta));
   }
 
   return allQuestions.map((q, i) => ({ ...q, id: i + 1 }));
@@ -355,6 +416,7 @@ type GenerateQuestionsInput = {
   maxTokens?: number;
   retries?: number;
   idioma?: string;
+  previousQuestions?: string[];
 };
 
 export const generateQuestionsFn = createServerFn({ method: 'POST' })
@@ -372,7 +434,8 @@ export const generateQuestionsFn = createServerFn({ method: 'POST' })
       data.temperature,
       data.maxTokens,
       data.retries,
-      data.idioma
+      data.idioma,
+      data.previousQuestions
     );
   });
 
