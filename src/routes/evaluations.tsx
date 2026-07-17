@@ -379,7 +379,7 @@ async function drawShareCard(canvas: HTMLCanvasElement, ev: Evaluation, areaName
 
     // Vence
     if (ev.fecha_vencimiento) {
-      const vStr = new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      const vStr = new Date(ev.fecha_vencimiento).toLocaleString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
       const vX = createdDate ? W - PAD - STATS_W / 4 : W / 2;
       ctx.font = "bold 9px system-ui, sans-serif";
       ctx.fillStyle = expired ? "#ef444480" : "#94a3b8";

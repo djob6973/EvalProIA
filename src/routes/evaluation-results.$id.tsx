@@ -308,7 +308,7 @@ async function drawResultsCard(
     }
 
     if (ev?.fecha_vencimiento) {
-      const vStr = new Date(ev.fecha_vencimiento).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+      const vStr = new Date(ev.fecha_vencimiento).toLocaleString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
       const vx = createdDate ? W - PAD - SW / 4 : W / 2;
       ctx.font = "bold 9px system-ui, sans-serif";
       ctx.fillStyle = "#94a3b8";
