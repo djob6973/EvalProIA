@@ -237,6 +237,8 @@ function QuestionBankPage() {
   const areaComboRef = useRef<HTMLDivElement>(null);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filtered = useMemo(
     () =>
@@ -332,16 +334,24 @@ function QuestionBankPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('questionBank.confirmDelete'))) return;
+  const handleDelete = (id: string) => {
+    setDeletingId(id);
+  };
+
+  const executeDelete = async () => {
+    if (!deletingId) return;
+    setIsDeleting(true);
     try {
-      await questionsService.delete(id);
-      setItems((p) => p.filter((q) => q.id !== id));
+      await questionsService.delete(deletingId);
+      setItems((p) => p.filter((q) => q.id !== deletingId));
       showToast(t('questionBank.deleted'));
+      setDeletingId(null);
     } catch (error) {
       console.error('Error deleting question:', error);
       const message = error instanceof Error && error.message ? error.message : t('questionBank.deleteError');
       showToast(message, "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -1157,6 +1167,18 @@ function QuestionBankPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deletingId}
+        title={t('questionBank.confirmDelete')}
+        description={t('questionBank.confirmDeleteDesc')}
+        confirmLabel={t('common.delete')}
+        loadingLabel={t('common.deleting')}
+        loading={isDeleting}
+        variant="destructive"
+        onConfirm={executeDelete}
+        onCancel={() => setDeletingId(null)}
+      />
     </AppShell>
   );
 }

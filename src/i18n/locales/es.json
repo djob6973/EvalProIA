@@ -638,6 +638,7 @@
     "validCorrect": "Marca al menos una respuesta correcta",
     "validSingleChoice": "Selección única: solo una correcta",
     "confirmDelete": "¿Eliminar esta pregunta?",
+    "confirmDeleteDesc": "Esta acción no se puede deshacer.",
     "confirmCreate": "¿Crear pregunta?",
     "confirmCreateDesc": "Confirma que deseas agregar esta pregunta al banco.",
     "confirmSave": "¿Guardar cambios?",

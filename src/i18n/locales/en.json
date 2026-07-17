@@ -634,6 +634,7 @@
     "validCorrect": "Mark at least one correct answer",
     "validSingleChoice": "Single choice: only one correct",
     "confirmDelete": "Delete this question?",
+    "confirmDeleteDesc": "This action cannot be undone.",
     "confirmCreate": "Create question?",
     "confirmCreateDesc": "Confirm you want to add this question to the bank.",
     "confirmSave": "Save changes?",
