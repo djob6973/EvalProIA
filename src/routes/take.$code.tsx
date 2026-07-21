@@ -554,9 +554,16 @@ function QuizRunner({
   const q = questions[i];
   const progress = ((i + 1) / questions.length) * 100;
   const showCaseIntro = !!q.caso_id && !seenCaseIntros.has(q.caso_id);
-  const caseSiblings = q.caso_id ? questions.filter((x) => x.caso_id === q.caso_id) : [];
+  // Ordenado y por posición real dentro de las preguntas del caso presentes en ESTA
+  // evaluación (no por caso_orden crudo), para que la numeración no tenga huecos si
+  // solo se incluyó una parte de las preguntas originales del caso.
+  const caseSiblings = q.caso_id
+    ? questions
+        .filter((x) => x.caso_id === q.caso_id)
+        .sort((a, b) => (a.caso_orden ?? 0) - (b.caso_orden ?? 0))
+    : [];
   const caseTotal = caseSiblings.length;
-  const caseIndex = (q.caso_orden ?? 0) + 1;
+  const caseIndex = caseSiblings.findIndex((x) => x.id === q.id) + 1;
 
   // Refs para que el intervalo del timer siempre acceda a los valores más recientes
   // sin necesitar estar en sus dependencias (evita reiniciar el countdown en cada respuesta)
