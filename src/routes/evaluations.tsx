@@ -1260,7 +1260,7 @@ function EvaluationsPage() {
     setEditing(ev);
     setForm({
       ...ev,
-      config: { ...ev.config },
+      config: { ...DEFAULT_CONFIG, ...ev.config },
       categorias: [...ev.categorias],
       fecha_vencimiento: ev.fecha_vencimiento ? toLocalDateTimeInput(ev.fecha_vencimiento) : "",
       area_id: ev.area_id ?? null,
