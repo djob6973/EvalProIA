@@ -41,6 +41,9 @@ type Question = {
   opciones: string[];
   correctas: number[]; // indices
   justificacion?: string;
+  /** Narrativa del caso práctico, si esta pregunta pertenece a uno. */
+  escenario?: string;
+  tipoCaso?: string;
 };
 
 const DEFAULT_CATEGORIES = [
@@ -139,6 +142,8 @@ function emptyQuestion(): Question {
     opciones: ["", "", "", ""],
     correctas: [],
     justificacion: "",
+    escenario: "",
+    tipoCaso: "",
   };
 }
 
@@ -183,7 +188,9 @@ function QuestionBankPage() {
           estado: (q.estado as Status) || 'activa',
           opciones: q.options || [],
           correctas: q.correct_answer ? q.correct_answer.split(',').map(Number) : [],
-          justificacion: q.justificacion || ''
+          justificacion: q.justificacion || '',
+          escenario: q.escenario || '',
+          tipoCaso: q.tipo_caso || '',
         }));
 
         setItems(mappedItems);
@@ -445,7 +452,10 @@ function QuestionBankPage() {
           area: form.area,
           dificultad: form.dificultad,
           estado: form.estado,
-          justificacion: form.justificacion
+          justificacion: form.justificacion,
+          escenario: form.escenario || '',
+          tipo_caso: form.tipoCaso || '',
+          es_caso_practico: !!form.escenario?.trim(),
         });
         setItems((p) => p.map((q) => (q.id === editing.id ? { ...form, id: editing.id } : q)));
         showToast(t('questionBank.updated'));
@@ -461,7 +471,10 @@ function QuestionBankPage() {
           area: form.area,
           dificultad: form.dificultad,
           estado: form.estado,
-          justificacion: form.justificacion
+          justificacion: form.justificacion,
+          escenario: form.escenario || '',
+          tipo_caso: form.tipoCaso || '',
+          es_caso_practico: !!form.escenario?.trim(),
         });
 
         // Optimistic insert — avoids a full getAll() round-trip after every create
@@ -478,6 +491,8 @@ function QuestionBankPage() {
           opciones: created.options || [],
           correctas: created.correct_answer ? created.correct_answer.split(',').map(Number) : [],
           justificacion: created.justificacion || '',
+          escenario: created.escenario || '',
+          tipoCaso: created.tipo_caso || '',
         };
         setItems((prev) => [mappedItem, ...prev]);
         showToast(t('questionBank.created'));
@@ -715,11 +730,21 @@ function QuestionBankPage() {
                           >
                             {q.estado === "activa" ? "ACTIVA" : q.estado === "borrador" ? "BORRADOR" : "INACTIVA"}
                           </span>
+                          {!!q.escenario && (
+                            <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
+                              📋 {t('questionBank.caseBadge')}{q.tipoCaso ? ` · ${q.tipoCaso}` : ''}
+                            </span>
+                          )}
                         </div>
                         <p className="mb-2 text-sm leading-relaxed transition-colors duration-300" style={{ color: "var(--foreground)" }}>{q.enunciado}</p>
                         {q.contexto && (
                           <p className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--muted-foreground)" }}>
                             <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.context')}</strong> {q.contexto}
+                          </p>
+                        )}
+                        {!!q.escenario && (
+                          <p className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
+                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.scenario')}</strong> {q.escenario}
                           </p>
                         )}
                         <ul className="space-y-2">
@@ -854,6 +879,32 @@ function QuestionBankPage() {
                 />
               </div>
 
+              <div className="animate-fade-in" style={{ animationDelay: "75ms" }}>
+                <label className="mb-1 block text-xs font-medium transition-colors duration-300" style={{ color: "var(--muted-foreground)" }}>
+                  {t('questionBank.scenarioLabel')}
+                  <span className="ml-1 font-normal normal-case transition-colors duration-300" style={{ color: "var(--muted-foreground)/70" }}>
+                    {t('questionBank.scenarioHint')}
+                  </span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={form.escenario ?? ''}
+                  onChange={(e) => setForm({ ...form, escenario: e.target.value })}
+                  placeholder={t('questionBank.scenarioDesc')}
+                  className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                  style={{ borderColor: "var(--border)", background: "var(--background)" }}
+                />
+                {!!form.escenario?.trim() && (
+                  <input
+                    type="text"
+                    value={form.tipoCaso ?? ''}
+                    onChange={(e) => setForm({ ...form, tipoCaso: e.target.value })}
+                    placeholder={t('questionBank.caseTypeDesc')}
+                    className="mt-2 w-full rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
+                    style={{ borderColor: "var(--border)", background: "var(--background)" }}
+                  />
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                 <div className="col-span-2 animate-fade-in" style={{ animationDelay: "100ms" }}>

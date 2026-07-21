@@ -183,6 +183,7 @@ function MyResultPage() {
           return {
             enunciado: question.question_text,
             contexto: question.contexto ?? '',
+            escenario: question.escenario ?? '',
             tipo: inferQuestionType(question),
             categoria: question.categoria ?? '',
             opciones: question.options ?? [],

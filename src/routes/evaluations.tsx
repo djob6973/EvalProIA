@@ -1400,6 +1400,26 @@ function EvaluationsPage() {
     return a;
   }
 
+  // Agrupa las preguntas de un mismo caso práctico (mismo caso_id) en un bloque
+  // indivisible, ordenado por caso_orden — mismo criterio que usa la pantalla real
+  // del participante (take.$code.tsx), para que esta vista previa no corte un caso
+  // a la mitad al limitar por num_preguntas.
+  function groupIntoCaseBlocks<T extends { caso_id?: string; caso_orden?: number }>(qs: T[]): T[][] {
+    const seen = new Set<string>();
+    const blocks: T[][] = [];
+    for (const q of qs) {
+      if (!q.caso_id) {
+        blocks.push([q]);
+        continue;
+      }
+      if (seen.has(q.caso_id)) continue;
+      seen.add(q.caso_id);
+      const siblings = qs.filter((x) => x.caso_id === q.caso_id).sort((a, b) => (a.caso_orden ?? 0) - (b.caso_orden ?? 0));
+      blocks.push(siblings);
+    }
+    return blocks;
+  }
+
   const openPreview = async (ev: Evaluation) => {
     setPreviewEval(ev);
     setLoadingPreview(true);
@@ -1410,8 +1430,15 @@ function EvaluationsPage() {
         categorias: ev.categorias?.length > 0 ? ev.categorias : undefined,
         dificultad: ev.config?.dificultad,
       });
-      const ordered = ev.config?.aleatorio ? shuffleArray(questions) : questions;
-      setPreviewQuestions(ordered.slice(0, ev.config?.num_preguntas ?? 10));
+      const blocks = groupIntoCaseBlocks(questions);
+      const orderedBlocks = ev.config?.aleatorio ? shuffleArray(blocks) : blocks;
+      const maxCount = ev.config?.num_preguntas ?? 10;
+      const picked: typeof questions = [];
+      for (const block of orderedBlocks) {
+        if (picked.length > 0 && picked.length + block.length > maxCount) break;
+        picked.push(...block);
+      }
+      setPreviewQuestions(picked);
     } catch (err) {
       console.error("Error loading preview questions:", err);
     } finally {
@@ -1742,13 +1769,26 @@ function EvaluationsPage() {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {previewQuestions.map((q, idx) => (
+                  {previewQuestions.map((q, idx) => {
+                    const caseSiblings = q.caso_id
+                      ? previewQuestions
+                          .filter((x) => x.caso_id === q.caso_id)
+                          .sort((a, b) => (a.caso_orden ?? 0) - (b.caso_orden ?? 0))
+                      : [];
+                    const caseTotal = caseSiblings.length;
+                    const caseIndex = caseSiblings.findIndex((x) => x.id === q.id) + 1;
+                    return (
                     <div key={q.id} style={{ animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 30}ms both` }}>
                       <div className="flex items-start gap-3">
                         <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full transition-all duration-300 font-mono text-xs font-bold" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
                           {idx + 1}
                         </span>
                         <div className="flex-1 space-y-3">
+                          {q.es_caso_practico && (
+                            <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition-all duration-300" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
+                              📋 {t('evaluations.casePreviewBadge')}{q.tipo_caso ? ` · ${q.tipo_caso}` : ''} · {caseIndex}/{caseTotal}
+                            </span>
+                          )}
                           {q.contexto && (
                             <p className="rounded border-l-2 px-3 py-1.5 text-xs transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--muted-foreground)" }}>
                               {q.contexto}
@@ -1775,7 +1815,8 @@ function EvaluationsPage() {
                         <div className="mt-6 border-b border-border transition-all duration-300" />
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
