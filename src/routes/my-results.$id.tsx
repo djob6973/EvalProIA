@@ -9,6 +9,7 @@ import { resultsService, evaluationsService, questionsService, getAnswerStatus }
 import type { Evaluation } from "@/lib/services/evaluations";
 import { generateResultFeedbackFn, type FeedbackBreakdownItem } from "@/lib/services/openai-server";
 import { ResultFeedbackCard } from "@/components/ResultFeedbackCard";
+import { stripHtmlToText } from "@/lib/sanitizeHtml";
 import { QuestionResultCard } from "@/components/QuestionResultCard";
 import { Paginator } from "@/components/Paginator";
 import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
@@ -183,7 +184,7 @@ function MyResultPage() {
           return {
             enunciado: question.question_text,
             contexto: question.contexto ?? '',
-            escenario: question.escenario ?? '',
+            escenario: stripHtmlToText(question.escenario),
             tipo: inferQuestionType(question),
             categoria: question.categoria ?? '',
             opciones: question.options ?? [],

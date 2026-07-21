@@ -10,6 +10,7 @@ import { CommentThread } from "@/components/foro/CommentThread";
 import { ArrowLeft, Eye, Pencil, Trash2, FileText, Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
+import { sanitizeHtml } from "@/lib/sanitizeHtml";
 import { foroService, ForoArticulo, ForoArticuloInput } from "@/lib/services/foro";
 
 export const Route = createFileRoute("/foro/$id")({
@@ -158,7 +159,7 @@ function ForoDetailPage() {
 
         <div
           className="prose prose-sm mt-5 max-w-none dark:prose-invert [&_table]:w-full [&_td]:border [&_th]:border [&_td]:border-[var(--border)] [&_th]:border-[var(--border)] [&_td]:p-2 [&_th]:p-2 [&_img]:max-w-full [&_img]:rounded-lg"
-          dangerouslySetInnerHTML={{ __html: articulo.contenido }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(articulo.contenido) }}
         />
 
         {articulo.etiquetas?.length > 0 && (

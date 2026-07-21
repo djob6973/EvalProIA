@@ -610,6 +610,20 @@
     "removeFile": "Quitar archivo",
     "removeTagFilter": "Quitar filtro de etiqueta"
   },
+  "richText": {
+    "toolbarHeading": "Título",
+    "toolbarBold": "Negrita",
+    "toolbarUnderline": "Subrayado",
+    "toolbarBulletList": "Lista",
+    "toolbarOrderedList": "Lista numerada",
+    "toolbarQuote": "Cita",
+    "toolbarImage": "Imagen",
+    "toolbarVideo": "Insertar video (YouTube/Vimeo)",
+    "imageTooLarge": "\"{{name}}\" supera el límite de 3MB",
+    "imageTypeNotAllowed": "Tipo de imagen no permitido: {{name}}",
+    "videoPrompt": "Pega el link del video (YouTube o Vimeo)",
+    "videoInvalid": "El link no es de YouTube ni de Vimeo, o no es válido."
+  },
   "questionBank": {
     "pageTitle": "Banco de Preguntas — EvalPro",
     "title": "Banco de Preguntas",

@@ -499,8 +499,9 @@ INSTRUCCIONES PARA CADA CASO PRÁCTICO:
 1. Identifica un proceso, situación o procedimiento relevante del documento.
 2. Construye un escenario realista y coherente: crea un personaje con un rol creíble dentro de la organización y una situación concreta relacionada con ese proceso.
 3. El campo "escenario" debe contener la narrativa completa (personaje, rol, contexto, situación) — a diferencia del campo "contexto" de cada pregunta, el "escenario" SÍ puede y debe incluir el detalle necesario para que las preguntas tengan sentido.
-4. A partir de ese escenario, formula las preguntas indicadas, evaluando análisis, interpretación o toma de decisiones sobre la situación planteada — no preguntas memorísticas sueltas.
-5. Todas las preguntas de un mismo caso deben ser consistentes entre sí y con el escenario; no deben contradecirse.
+4. "escenario" debe ser HTML (no texto plano ni markdown), usando ÚNICAMENTE estas etiquetas para darle estructura: <h2> para un título breve del caso, <p> para párrafos, <strong> para negrita, <u> para subrayado, <ul>/<ol>/<li> para listas, <blockquote> para una cita o nota destacada. No incluyas <img>, <iframe>, <a>, ni ningún otro tag — las imágenes y videos del caso los agrega el editor humano después, no la IA.
+5. A partir de ese escenario, formula las preguntas indicadas, evaluando análisis, interpretación o toma de decisiones sobre la situación planteada — no preguntas memorísticas sueltas.
+6. Todas las preguntas de un mismo caso deben ser consistentes entre sí y con el escenario; no deben contradecirse.
 
 Genera un JSON válido con el siguiente formato exacto:
 {
@@ -508,7 +509,7 @@ Genera un JSON válido con el siguiente formato exacto:
     {
       "id": 1,
       "tipo_caso": "tipo del caso según las instrucciones",
-      "escenario": "narrativa completa del caso práctico",
+      "escenario": "<h2>Título breve</h2><p>Narrativa completa del caso práctico, en HTML según la instrucción 4.</p>",
       "preguntas": [
         {
           "tipo": "seleccion_unica|seleccion_multiple|verdadero_falso",
@@ -530,6 +531,7 @@ REGLAS OBLIGATORIAS — incumplirlas invalida el caso:
 - Devuelve exactamente ${caseSizes.length} caso(s), con la cantidad exacta de preguntas indicada arriba para cada uno.
 - Todos los campos son requeridos; nunca los omitas ni los dejes vacíos.
 - "escenario" debe tener al menos 20 caracteres y no puede estar vacío.
+- "escenario" debe ser HTML válido usando solo h2, p, strong, u, ul, ol, li, blockquote — nunca img, iframe, a, script, ni atributos style/class/onXXX.
 - "pregunta" y "justificacion" deben tener al menos 10 caracteres cada uno.
 - "opciones" debe tener exactamente 4 elementos para seleccion_unica y seleccion_multiple, y exactamente 2 para verdadero_falso.
 - "respuesta_correcta" contiene los índices base-0 de las opciones correctas dentro del array "opciones"; debe tener al menos un elemento válido.

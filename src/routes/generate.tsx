@@ -5,6 +5,8 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { RichTextField } from "@/components/RichTextField";
+import { renderEscenarioHtml } from "@/lib/sanitizeHtml";
 import {
   Check,
   CheckCircle2,
@@ -1104,7 +1106,10 @@ function GeneratePage() {
                             {t('generate.caseBadge')} · {q.tipo_caso}
                           </span>
                         </div>
-                        <p className="text-xs leading-relaxed text-foreground">{q.escenario}</p>
+                        <div
+                          className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                          dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
+                        />
                       </div>
                     )}
                     <div
@@ -1203,11 +1208,9 @@ function GeneratePage() {
                             {editDraft.es_caso_practico && (
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editScenario')}</label>
-                                <textarea
-                                  rows={4}
+                                <RichTextField
                                   value={editDraft.escenario ?? ''}
-                                  onChange={(e) => setEditDraft({ ...editDraft, escenario: e.target.value })}
-                                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                                  onChange={(html) => setEditDraft({ ...editDraft, escenario: html })}
                                 />
                               </div>
                             )}

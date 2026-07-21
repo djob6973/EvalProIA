@@ -606,6 +606,20 @@
     "removeFile": "Remove file",
     "removeTagFilter": "Remove tag filter"
   },
+  "richText": {
+    "toolbarHeading": "Heading",
+    "toolbarBold": "Bold",
+    "toolbarUnderline": "Underline",
+    "toolbarBulletList": "Bullet list",
+    "toolbarOrderedList": "Numbered list",
+    "toolbarQuote": "Quote",
+    "toolbarImage": "Image",
+    "toolbarVideo": "Insert video (YouTube/Vimeo)",
+    "imageTooLarge": "\"{{name}}\" exceeds the 3MB limit",
+    "imageTypeNotAllowed": "Image type not allowed: {{name}}",
+    "videoPrompt": "Paste the video link (YouTube or Vimeo)",
+    "videoInvalid": "That link isn't from YouTube or Vimeo, or isn't valid."
+  },
   "questionBank": {
     "pageTitle": "Question Bank — EvalPro",
     "title": "Question Bank",

@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowRight, Clock, FileText, Play, Tag, CheckCircle, Refresh
 import { useAuth } from "@/hooks/useAuth";
 import { evaluationsService, questionsService, resultsService, calculateEvaluationScore, evaluationProgressService, evaluationParticipantsService } from "@/lib/services/evaluations";
 import { useTranslation } from "react-i18next";
+import { renderEscenarioHtml } from "@/lib/sanitizeHtml";
 
 export const Route = createFileRoute("/take/$code")({
   head: () => ({ meta: [{ title: "Realizar Evaluación — EvalPro" }] }),
@@ -739,9 +740,11 @@ function QuizRunner({
               <div className="mb-[10px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>
                 📋 {t('common.caseStudy')}{q.tipo_caso ? ` · ${q.tipo_caso}` : ''}
               </div>
-              <p className="text-[15px] leading-relaxed" style={{ color: "var(--foreground)" }}>
-                {q.escenario}
-              </p>
+              <div
+                className="prose prose-sm max-w-none text-[15px] leading-relaxed dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                style={{ color: "var(--foreground)" }}
+                dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
+              />
               <p className="mt-[14px] text-[12px]" style={{ color: "var(--muted-foreground)" }}>
                 {t('take.caseQuestionsCount', { count: caseTotal })}
               </p>
@@ -762,11 +765,10 @@ function QuizRunner({
                   </button>
                   {showFullScenario && (
                     <div
-                      className="mt-[8px] rounded-[12px] p-[14px] text-[13px] leading-relaxed"
+                      className="prose prose-sm mt-[8px] max-w-none rounded-[12px] p-[14px] text-[13px] leading-relaxed dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
                       style={{ background: "var(--coral-soft)", borderLeft: "3px solid var(--accent)", color: "var(--foreground)" }}
-                    >
-                      {q.escenario}
-                    </div>
+                      dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
+                    />
                   )}
                 </div>
               )}

@@ -19,6 +19,8 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useRolePermissions } from "@/hooks/useRolePermissions";
 import { questionsService } from "@/lib/services/evaluations";
+import { RichTextField } from "@/components/RichTextField";
+import { renderEscenarioHtml, stripHtmlToText } from "@/lib/sanitizeHtml";
 
 export const Route = createFileRoute("/question-bank")({
   head: () => ({ meta: [{ title: "Banco de Preguntas — EvalPro" }] }), // translated at runtime via useTranslation
@@ -455,7 +457,7 @@ function QuestionBankPage() {
           justificacion: form.justificacion,
           escenario: form.escenario || '',
           tipo_caso: form.tipoCaso || '',
-          es_caso_practico: !!form.escenario?.trim(),
+          es_caso_practico: !!stripHtmlToText(form.escenario).trim(),
         });
         setItems((p) => p.map((q) => (q.id === editing.id ? { ...form, id: editing.id } : q)));
         showToast(t('questionBank.updated'));
@@ -474,7 +476,7 @@ function QuestionBankPage() {
           justificacion: form.justificacion,
           escenario: form.escenario || '',
           tipo_caso: form.tipoCaso || '',
-          es_caso_practico: !!form.escenario?.trim(),
+          es_caso_practico: !!stripHtmlToText(form.escenario).trim(),
         });
 
         // Optimistic insert — avoids a full getAll() round-trip after every create
@@ -743,9 +745,13 @@ function QuestionBankPage() {
                           </p>
                         )}
                         {!!q.escenario && (
-                          <p className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
-                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.scenario')}</strong> {q.escenario}
-                          </p>
+                          <div className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
+                            <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.scenario')}</strong>
+                            <div
+                              className="prose prose-sm mt-1 max-w-none dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                              dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
+                            />
+                          </div>
                         )}
                         <ul className="space-y-2">
                           {q.opciones.map((o, i) => {
@@ -886,15 +892,12 @@ function QuestionBankPage() {
                     {t('questionBank.scenarioHint')}
                   </span>
                 </label>
-                <textarea
-                  rows={4}
+                <RichTextField
                   value={form.escenario ?? ''}
-                  onChange={(e) => setForm({ ...form, escenario: e.target.value })}
+                  onChange={(html) => setForm({ ...form, escenario: html })}
                   placeholder={t('questionBank.scenarioDesc')}
-                  className="w-full resize-none rounded-lg border px-3 py-2 text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent hover:border-accent/50"
-                  style={{ borderColor: "var(--border)", background: "var(--background)" }}
                 />
-                {!!form.escenario?.trim() && (
+                {!!stripHtmlToText(form.escenario).trim() && (
                   <input
                     type="text"
                     value={form.tipoCaso ?? ''}
