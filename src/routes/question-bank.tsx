@@ -5,7 +5,6 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   Plus,
@@ -572,7 +571,7 @@ function QuestionBankPage() {
                 )}
               </div>
             )}
-            <ScrollArea className="max-h-[420px]">
+            <div className="max-h-[420px] overflow-y-auto">
               <ul className="space-y-1 pr-3">
                 {!catSearch && (
                   <li>
@@ -617,7 +616,7 @@ function QuestionBankPage() {
                   </li>
                 )}
               </ul>
-            </ScrollArea>
+            </div>
           </div>
         </aside>
 
