@@ -84,6 +84,11 @@ export async function runMigrations(): Promise<void> {
   // Idempotent for installs whose questions table predates the 'area' column
   await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS area TEXT`;
 
+  // Idempotent for installs whose questions table predates casos prácticos
+  await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS escenario TEXT`;
+  await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS tipo_caso TEXT`;
+  await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS es_caso_practico BOOLEAN DEFAULT false`;
+
   await db`
     CREATE TABLE IF NOT EXISTS results (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

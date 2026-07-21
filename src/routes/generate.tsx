@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/PageHeader";
@@ -53,9 +53,47 @@ function getTypeLabels(t: (key: string) => string): Record<QuestionType, string>
   };
 }
 
+const CASE_TYPES = [
+  "Automático",
+  "Operativo",
+  "Atención al Cliente",
+  "Seguridad de la Información",
+  "Administrativo",
+  "Legal",
+  "Financiero",
+  "Comercial",
+  "Tecnológico",
+] as const;
+
+const CASE_LENGTHS = ["Corta", "Media", "Detallada"] as const;
+
+function getCaseTypeLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    "Automático": t('generate.caseTypeAuto'),
+    "Operativo": t('generate.caseTypeOperational'),
+    "Atención al Cliente": t('generate.caseTypeCustomerService'),
+    "Seguridad de la Información": t('generate.caseTypeInfoSecurity'),
+    "Administrativo": t('generate.caseTypeAdministrative'),
+    "Legal": t('generate.caseTypeLegal'),
+    "Financiero": t('generate.caseTypeFinancial'),
+    "Comercial": t('generate.caseTypeCommercial'),
+    "Tecnológico": t('generate.caseTypeTechnological'),
+  };
+}
+
+function getCaseLengthLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    "Corta": t('generate.caseLengthShort'),
+    "Media": t('generate.caseLengthMedium'),
+    "Detallada": t('generate.caseLengthDetailed'),
+  };
+}
+
 function GeneratePage() {
   const { t } = useTranslation();
   const TYPE_LABELS = getTypeLabels(t);
+  const CASE_TYPE_LABELS = getCaseTypeLabels(t);
+  const CASE_LENGTH_LABELS = getCaseLengthLabels(t);
   const { profile } = useAuth();
   const isAdmin = profile ? profile.role !== 'participant' : false;
   const { canAccess, loading: permLoading } = useRolePermissions();
@@ -95,6 +133,12 @@ function GeneratePage() {
     seleccion_multiple: 33,
     verdadero_falso: 34,
   });
+
+  // Casos prácticos (modo adicional, opcional)
+  const [generarCasos, setGenerarCasos] = useState(false);
+  const [tipoCaso, setTipoCaso] = useState("Automático");
+  const [longitudCaso, setLongitudCaso] = useState("Media");
+  const [preguntasPorCaso, setPreguntasPorCaso] = useState(1);
 
   // Generation + review
   const [generating, setGenerating] = useState(false);
@@ -183,6 +227,26 @@ function GeneratePage() {
 
   const CLIENT_BATCH_SIZE = 10;
 
+  // Trocea `total` en trozos de tamaño máximo `maxPerChunk`, sin partir ninguna
+  // "unidad" (caso) de tamaño `unitSize` entre dos trozos. Solo se usa en modo casos prácticos.
+  function buildCaseAwareBatches(total: number, unitSize: number, maxPerChunk: number): number[] {
+    const totalUnits = Math.ceil(total / unitSize);
+    const unitSizes = Array.from({ length: totalUnits }, (_, i) =>
+      i < totalUnits - 1 ? unitSize : total - unitSize * (totalUnits - 1)
+    );
+    const chunks: number[] = [];
+    let current = 0;
+    for (const size of unitSizes) {
+      if (current > 0 && current + size > maxPerChunk) {
+        chunks.push(current);
+        current = 0;
+      }
+      current += size;
+    }
+    if (current > 0) chunks.push(current);
+    return chunks;
+  }
+
   async function generate() {
     setGenerating(true);
     setGenerateProgress(null);
@@ -194,14 +258,23 @@ function GeneratePage() {
     try {
       const customSystemPrompt = getSystemPrompt();
       const { model, temperature, maxTokens, retries } = getModelConfig();
+      const casosPracticos = generarCasos
+        ? { habilitado: true, tipo: tipoCaso, longitud: longitudCaso, preguntasPorCaso }
+        : undefined;
 
-      // Split into client-side batches to avoid nginx timeout
-      const batches: number[] = [];
-      let remaining = numPreguntas;
-      while (remaining > 0) {
-        batches.push(Math.min(remaining, CLIENT_BATCH_SIZE));
-        remaining -= CLIENT_BATCH_SIZE;
-      }
+      // Split into client-side batches to avoid nginx timeout.
+      // En modo casos prácticos, se trocea por caso completo, nunca por pregunta suelta.
+      const batches: number[] = casosPracticos
+        ? buildCaseAwareBatches(numPreguntas, preguntasPorCaso, CLIENT_BATCH_SIZE)
+        : (() => {
+            const arr: number[] = [];
+            let remaining = numPreguntas;
+            while (remaining > 0) {
+              arr.push(Math.min(remaining, CLIENT_BATCH_SIZE));
+              remaining -= CLIENT_BATCH_SIZE;
+            }
+            return arr;
+          })();
 
       const allQuestions: GeneratedQuestion[] = [];
 
@@ -222,9 +295,15 @@ function GeneratePage() {
             retries,
             idioma,
             previousQuestions: allQuestions.map((q) => q.pregunta),
+            casosPracticos,
           },
         });
-        allQuestions.push(...batchQuestions);
+        // El servidor numera los caso_id desde 0 en cada llamada; se prefija con el
+        // índice del lote para que sigan siendo únicos al combinar todos los lotes.
+        const taggedBatch = casosPracticos
+          ? batchQuestions.map((q) => (q.caso_id ? { ...q, caso_id: `${i}-${q.caso_id}` } : q))
+          : batchQuestions;
+        allQuestions.push(...taggedBatch);
       }
 
       // Re-number IDs sequentially across all batches
@@ -293,11 +372,25 @@ function GeneratePage() {
           maxTokens,
           retries,
           previousQuestions: questions.filter((item) => item.id !== q.id).map((item) => item.pregunta),
+          // Si la pregunta pertenece a un caso práctico, el escenario no se reinventa:
+          // se le pide al modelo una pregunta nueva atada al mismo caso ya existente.
+          escenarioFijo: q.es_caso_practico ? q.escenario : undefined,
         },
       });
-      // Keep original id so selection state is preserved
+      // Keep original id so selection state is preserved. Si era una pregunta de caso
+      // práctico, se conserva el escenario/tipo/caso_id originales (no vienen del modelo).
       setQuestions((prev) =>
-        prev.map((item) => (item.id === q.id ? { ...newQ, id: q.id } : item))
+        prev.map((item) =>
+          item.id === q.id
+            ? {
+                ...newQ,
+                id: q.id,
+                ...(q.es_caso_practico
+                  ? { escenario: q.escenario, tipo_caso: q.tipo_caso, es_caso_practico: true, caso_id: q.caso_id }
+                  : {}),
+              }
+            : item
+        )
       );
     } catch (error) {
       alert(t('generate.regenerateError', { error: (error as Error).message }));
@@ -357,7 +450,10 @@ function GeneratePage() {
         area: q.area,
         dificultad: q.dificultad,
         estado: 'activa',
-        justificacion: q.justificacion ?? ''
+        justificacion: q.justificacion ?? '',
+        escenario: q.escenario ?? '',
+        tipo_caso: q.tipo_caso ?? '',
+        es_caso_practico: q.es_caso_practico ?? false,
       }));
 
       const savedResult = await questionsService.createBatch(questionsToSave);
@@ -714,6 +810,67 @@ function GeneratePage() {
                 ))}
               </div>
 
+              <div className="mt-6 space-y-4 p-5 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-fade-in">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={generarCasos}
+                    onChange={(e) => setGenerarCasos(e.target.checked)}
+                    className="size-4 accent-accent"
+                    style={{ accentColor: "var(--accent)" }}
+                  />
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">
+                      {t('generate.casesTitle')}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-[var(--text-faint)]">
+                      {t('generate.casesDesc')}
+                    </p>
+                  </div>
+                </label>
+
+                {generarCasos && (
+                  <div className="grid grid-cols-3 gap-4 animate-fade-in">
+                    <Field label={t('generate.caseType')}>
+                      <select
+                        value={tipoCaso}
+                        onChange={(e) => setTipoCaso(e.target.value)}
+                        className="field-base"
+                      >
+                        {CASE_TYPES.map((ct) => (
+                          <option key={ct} value={ct}>{CASE_TYPE_LABELS[ct]}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t('generate.caseLength')}>
+                      <select
+                        value={longitudCaso}
+                        onChange={(e) => setLongitudCaso(e.target.value)}
+                        className="field-base"
+                      >
+                        {CASE_LENGTHS.map((cl) => (
+                          <option key={cl} value={cl}>{CASE_LENGTH_LABELS[cl]}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field
+                      label={t('generate.questionsPerCase')}
+                      hint={t('generate.caseCountHint', { count: Math.ceil(numPreguntas / preguntasPorCaso) })}
+                    >
+                      <select
+                        value={preguntasPorCaso}
+                        onChange={(e) => setPreguntasPorCaso(parseInt(e.target.value))}
+                        className="field-base"
+                      >
+                        <option value={1}>1</option>
+                        <option value={2}>2</option>
+                        <option value={3}>3</option>
+                      </select>
+                    </Field>
+                  </div>
+                )}
+              </div>
+
               <Button
                 onClick={() => generate()}
                 disabled={!extractedText || generating || total !== 100}
@@ -913,20 +1070,41 @@ function GeneratePage() {
 
             {/* Questions Grid - Card Layout */}
             <div className="grid gap-4 p-6 md:grid-cols-2 lg:grid-cols-1">
-              {questions.map((q, idx) => {
+              {(() => {
+                // Las preguntas de un mismo caso práctico llegan contiguas (se generan y
+                // acumulan juntas); se marca el inicio de cada grupo para mostrar su escenario una sola vez.
+                let lastCasoId: string | undefined;
+                return questions.map((q) => {
+                  const isGroupStart = !!q.caso_id && q.caso_id !== lastCasoId;
+                  lastCasoId = q.caso_id;
+                  return isGroupStart;
+                });
+              })().map((showCaseHeader, idx) => {
+                const q = questions[idx];
                 const isSel = selected.has(q.id);
                 return (
-                  <div
-                    key={q.id}
-                    className={`group rounded-lg border transition-all duration-300 p-5 ${
-                      isSel 
-                        ? "border-accent/40 bg-accent/10 shadow-md hover:shadow-lg hover:border-accent/60" 
-                        : "border-border bg-card hover:border-accent/20 hover:shadow-md"
-                    }`}
-                    style={{
-                      animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 30}ms both`
-                    }}
-                  >
+                  <Fragment key={q.id}>
+                    {showCaseHeader && (
+                      <div className="col-span-full rounded-lg border border-accent/40 bg-accent/5 p-4 animate-fade-in">
+                        <div className="mb-1.5 flex items-center gap-2">
+                          <span className="text-sm">📋</span>
+                          <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-accent">
+                            {t('generate.caseBadge')} · {q.tipo_caso}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed text-foreground">{q.escenario}</p>
+                      </div>
+                    )}
+                    <div
+                      className={`group rounded-lg border transition-all duration-300 p-5 ${
+                        isSel
+                          ? "border-accent/40 bg-accent/10 shadow-md hover:shadow-lg hover:border-accent/60"
+                          : "border-border bg-card hover:border-accent/20 hover:shadow-md"
+                      }`}
+                      style={{
+                        animation: `slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) ${idx * 30}ms both`
+                      }}
+                    >
                     <div className="flex gap-4">
                       {/* Checkbox */}
                       <button
@@ -951,6 +1129,11 @@ function GeneratePage() {
                           <span className="rounded bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                             {TYPE_LABELS[q.tipo]}
                           </span>
+                          {q.es_caso_practico && (
+                            <span className="rounded bg-accent/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
+                              📋 {t('generate.caseBadge')}
+                            </span>
+                          )}
                           <span className="rounded bg-accent/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-accent">
                             {editingId === q.id && editDraft ? editDraft.dificultad : q.dificultad}
                           </span>
@@ -1003,6 +1186,19 @@ function GeneratePage() {
                                 className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
                               />
                             </div>
+
+                            {/* Escenario del caso práctico (solo si aplica) */}
+                            {editDraft.es_caso_practico && (
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('generate.editScenario')}</label>
+                                <textarea
+                                  rows={4}
+                                  value={editDraft.escenario ?? ''}
+                                  onChange={(e) => setEditDraft({ ...editDraft, escenario: e.target.value })}
+                                  className="w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                              </div>
+                            )}
 
                             {/* Contexto */}
                             <div className="space-y-1">
@@ -1149,6 +1345,7 @@ function GeneratePage() {
                       </div>
                     </div>
                   </div>
+                  </Fragment>
                 );
               })}
             </div>

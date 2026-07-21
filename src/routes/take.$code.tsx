@@ -670,6 +670,17 @@ function QuizRunner({
             boxShadow: "var(--shadow-sm)",
           }}
         >
+          {q.escenario && (
+            <div
+              className="mb-[16px] rounded-[12px] p-[16px] text-[13px] leading-relaxed"
+              style={{ background: "var(--coral-soft)", borderLeft: "3px solid var(--accent)", color: "var(--foreground)" }}
+            >
+              <div className="mb-[6px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>
+                📋 {t('common.caseStudy')}{q.tipo_caso ? ` · ${q.tipo_caso}` : ''}
+              </div>
+              {q.escenario}
+            </div>
+          )}
           {q.contexto && (
             <div
               className="mb-[16px] rounded-[12px] p-[14px] text-[13px]"

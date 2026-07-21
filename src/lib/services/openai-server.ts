@@ -133,6 +133,32 @@ export type GeneratedQuestion = {
   dificultad: string;
   categoria: string;
   area: string;
+  /** Narrativa del caso práctico al que pertenece esta pregunta, si aplica. */
+  escenario?: string;
+  tipo_caso?: string;
+  es_caso_practico?: boolean;
+  /** Solo transitorio en cliente/servidor — agrupa preguntas hermanas del mismo caso antes de guardar. */
+  caso_id?: string;
+};
+
+export type CaseType =
+  | "Automático"
+  | "Operativo"
+  | "Atención al Cliente"
+  | "Seguridad de la Información"
+  | "Administrativo"
+  | "Legal"
+  | "Financiero"
+  | "Comercial"
+  | "Tecnológico";
+
+export type CaseLength = "Corta" | "Media" | "Detallada";
+
+export type CasosPracticosConfig = {
+  habilitado: boolean;
+  tipo: CaseType;
+  longitud: CaseLength;
+  preguntasPorCaso: number;
 };
 
 const BATCH_SIZE = 20;
@@ -163,10 +189,15 @@ function buildPrompt(
   distribucion: Record<QuestionType, number>,
   extractedText: string,
   idioma = "Español",
-  previousQuestions: string[] = []
+  previousQuestions: string[] = [],
+  escenarioFijo?: string
 ): string {
   const previousQuestionsBlock = previousQuestions.length > 0
     ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
+    : '';
+
+  const escenarioFijoBlock = escenarioFijo
+    ? `\nCASO PRÁCTICO YA DEFINIDO (no lo modifiques, no lo repitas ni lo resumas en el campo "contexto"; la(s) pregunta(s) deben evaluar la aplicación de este mismo escenario, sin inventar uno nuevo):\n${escenarioFijo}\n`
     : '';
 
   return `Eres un experto diseñador de evaluaciones. Genera ${numPreguntas} preguntas de evaluación basadas en el siguiente texto.
@@ -180,7 +211,7 @@ Parámetros:
   * Selección única: ${distribucion.seleccion_unica}%
   * Selección múltiple: ${distribucion.seleccion_multiple}%
   * Verdadero/Falso: ${distribucion.verdadero_falso}%
-${previousQuestionsBlock}
+${previousQuestionsBlock}${escenarioFijoBlock}
 Texto del documento:
 ${extractedText}
 
@@ -227,9 +258,10 @@ async function generateBatch(
   maxTokens: number,
   retries: number,
   idioma = "Español",
-  previousQuestions: string[] = []
+  previousQuestions: string[] = [],
+  escenarioFijo?: string
 ): Promise<GeneratedQuestion[]> {
-  const prompt = buildPrompt(numPreguntas, dificultad, categoria, area, distribucion, extractedText, idioma, previousQuestions);
+  const prompt = buildPrompt(numPreguntas, dificultad, categoria, area, distribucion, extractedText, idioma, previousQuestions, escenarioFijo);
   let lastError: Error = new Error('Error desconocido al generar preguntas');
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -299,7 +331,8 @@ async function generateUniqueBatch(
   maxTokens: number,
   retries: number,
   idioma: string,
-  previousQuestions: string[]
+  previousQuestions: string[],
+  escenarioFijo?: string
 ): Promise<GeneratedQuestion[]> {
   const seen = new Set(previousQuestions.map(normalizeQuestionText));
   const knownQuestions = [...previousQuestions];
@@ -311,7 +344,7 @@ async function generateUniqueBatch(
     const attemptTemperature = attempt === 0 ? temperature : Math.min(1, temperature + attempt * 0.15);
     const batch = await generateBatch(
       openai, extractedText, stillNeeded, dificultad, categoria, area, distribucion,
-      customSystemPrompt, model, attemptTemperature, maxTokens, retries, idioma, knownQuestions
+      customSystemPrompt, model, attemptTemperature, maxTokens, retries, idioma, knownQuestions, escenarioFijo
     );
     for (const q of batch) {
       const key = normalizeQuestionText(q.pregunta);
@@ -338,7 +371,8 @@ export async function generateQuestionsServer(
   maxTokens = 8192,
   retries = 3,
   idioma = "Español",
-  previousQuestions: string[] = []
+  previousQuestions: string[] = [],
+  escenarioFijo?: string
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY;
 
@@ -349,7 +383,7 @@ export async function generateQuestionsServer(
   const openai = new OpenAI({ apiKey, timeout: 120_000 });
 
   if (numPreguntas <= BATCH_SIZE) {
-    return generateUniqueBatch(openai, extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma, previousQuestions);
+    return generateUniqueBatch(openai, extractedText, numPreguntas, dificultad, categoria, area, distribucion, customSystemPrompt, model, temperature, maxTokens, retries, idioma, previousQuestions, escenarioFijo);
   }
 
   // Divide en lotes de BATCH_SIZE para evitar timeouts en generaciones grandes
@@ -405,6 +439,305 @@ function normalizeQuestion(q: unknown, index: number): GeneratedQuestion | null 
   };
 }
 
+// ── Casos prácticos: modo adicional de generación (escenario + N preguntas asociadas) ──
+
+const CASE_LENGTH_INSTRUCTIONS: Record<CaseLength, string> = {
+  Corta: 'Escribe un escenario muy breve: 2 a 3 frases, lo mínimo para establecer quién, qué situación y qué debe resolver.',
+  Media: 'Escribe un escenario de longitud media: un párrafo de 4 a 6 frases, con el personaje, su rol y la situación concreta que enfrenta.',
+  Detallada: 'Escribe un escenario detallado: 2 a 3 párrafos, incluyendo el personaje, su rol, el contexto organizacional, y los detalles del procedimiento o situación relevantes para responder las preguntas.',
+};
+
+function caseTypeInstruction(tipo: CaseType): string {
+  if (tipo === 'Automático') {
+    return 'Elige libremente el tipo de caso (operativo, atención al cliente, seguridad de la información, administrativo, legal, financiero, comercial, tecnológico, etc.) según lo que mejor se ajuste al contenido del documento, e indícalo en "tipo_caso".';
+  }
+  return `Enmarca cada escenario dentro del ámbito "${tipo}" e indícalo tal cual en "tipo_caso".`;
+}
+
+function buildCasePrompt(
+  caseSizes: number[],
+  dificultad: string,
+  categoria: string,
+  area: string,
+  distribucion: Record<QuestionType, number>,
+  extractedText: string,
+  idioma: string,
+  tipo: CaseType,
+  longitud: CaseLength,
+  previousQuestions: string[] = []
+): string {
+  const previousQuestionsBlock = previousQuestions.length > 0
+    ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
+    : '';
+
+  const casosDescripcion = caseSizes
+    .map((size, i) => `  * Caso ${i + 1}: exactamente ${size} pregunta(s) asociada(s).`)
+    .join('\n');
+
+  return `Eres un experto diseñador de evaluaciones basadas en casos prácticos. Genera ${caseSizes.length} caso(s) práctico(s) a partir del siguiente texto, cada uno con su escenario y sus preguntas de aplicación asociadas.
+
+Parámetros:
+- Idioma de salida: ${idioma} (TODO el contenido debe estar en ${idioma})
+- Dificultad: ${dificultad}
+- Categoría: ${categoria || 'General'}
+- Área: ${area || 'General'}
+- Distribución por tipo de pregunta (aplica al conjunto de todas las preguntas de todos los casos):
+  * Selección única: ${distribucion.seleccion_unica}%
+  * Selección múltiple: ${distribucion.seleccion_multiple}%
+  * Verdadero/Falso: ${distribucion.verdadero_falso}%
+- Cantidad de casos y preguntas por caso:
+${casosDescripcion}
+- Longitud del escenario: ${longitud}. ${CASE_LENGTH_INSTRUCTIONS[longitud]}
+- Tipo de caso: ${caseTypeInstruction(tipo)}
+${previousQuestionsBlock}
+Texto del documento:
+${extractedText}
+
+INSTRUCCIONES PARA CADA CASO PRÁCTICO:
+1. Identifica un proceso, situación o procedimiento relevante del documento.
+2. Construye un escenario realista y coherente: crea un personaje con un rol creíble dentro de la organización y una situación concreta relacionada con ese proceso.
+3. El campo "escenario" debe contener la narrativa completa (personaje, rol, contexto, situación) — a diferencia del campo "contexto" de cada pregunta, el "escenario" SÍ puede y debe incluir el detalle necesario para que las preguntas tengan sentido.
+4. A partir de ese escenario, formula las preguntas indicadas, evaluando análisis, interpretación o toma de decisiones sobre la situación planteada — no preguntas memorísticas sueltas.
+5. Todas las preguntas de un mismo caso deben ser consistentes entre sí y con el escenario; no deben contradecirse.
+
+Genera un JSON válido con el siguiente formato exacto:
+{
+  "casos": [
+    {
+      "id": 1,
+      "tipo_caso": "tipo del caso según las instrucciones",
+      "escenario": "narrativa completa del caso práctico",
+      "preguntas": [
+        {
+          "tipo": "seleccion_unica|seleccion_multiple|verdadero_falso",
+          "pregunta": "enunciado completo de la pregunta, referido al escenario",
+          "contexto": "introducción breve al tema general, máximo 2 frases, SIN repetir el escenario ni revelar la respuesta",
+          "opciones": ["opción A", "opción B", "opción C", "opción D"],
+          "respuesta_correcta": [0],
+          "justificacion": "explicación de por qué esa opción es correcta en el contexto del caso",
+          "dificultad": "${dificultad}",
+          "categoria": "${categoria || 'General'}",
+          "area": "${area || 'General'}"
+        }
+      ]
+    }
+  ]
+}
+
+REGLAS OBLIGATORIAS — incumplirlas invalida el caso:
+- Devuelve exactamente ${caseSizes.length} caso(s), con la cantidad exacta de preguntas indicada arriba para cada uno.
+- Todos los campos son requeridos; nunca los omitas ni los dejes vacíos.
+- "escenario" debe tener al menos 20 caracteres y no puede estar vacío.
+- "pregunta" y "justificacion" deben tener al menos 10 caracteres cada uno.
+- "opciones" debe tener exactamente 4 elementos para seleccion_unica y seleccion_multiple, y exactamente 2 para verdadero_falso.
+- "respuesta_correcta" contiene los índices base-0 de las opciones correctas dentro del array "opciones"; debe tener al menos un elemento válido.
+- El JSON no debe contener comentarios ni texto fuera del objeto raíz.
+Mantén precisión pedagógica y calibra la dificultad al nivel solicitado.`;
+}
+
+type CaseGroup = {
+  tipo_caso: string;
+  escenario: string;
+  questions: GeneratedQuestion[];
+};
+
+function normalizeCase(raw: unknown): CaseGroup | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const obj = raw as Record<string, unknown>;
+
+  const escenario = typeof obj.escenario === 'string' ? obj.escenario.trim() : '';
+  if (!escenario) return null;
+
+  const tipo_caso = typeof obj.tipo_caso === 'string' && obj.tipo_caso.trim() ? obj.tipo_caso.trim() : 'General';
+
+  const preguntasRaw: unknown[] = Array.isArray(obj.preguntas) ? obj.preguntas : [];
+  const questions = preguntasRaw
+    .map((q, i) => normalizeQuestion(q, i))
+    .filter((q): q is GeneratedQuestion => q !== null)
+    .map((q) => ({ ...q, escenario, tipo_caso, es_caso_practico: true }));
+  if (questions.length === 0) return null;
+
+  return { tipo_caso, escenario, questions };
+}
+
+async function generateCaseBatch(
+  openai: OpenAI,
+  extractedText: string,
+  caseSizes: number[],
+  dificultad: string,
+  categoria: string,
+  area: string,
+  distribucion: Record<QuestionType, number>,
+  customSystemPrompt: string | undefined,
+  model: string,
+  temperature: number,
+  maxTokens: number,
+  retries: number,
+  idioma: string,
+  tipo: CaseType,
+  longitud: CaseLength,
+  previousQuestions: string[] = []
+): Promise<CaseGroup[]> {
+  const prompt = buildCasePrompt(caseSizes, dificultad, categoria, area, distribucion, extractedText, idioma, tipo, longitud, previousQuestions);
+  let lastError: Error = new Error('Error desconocido al generar casos prácticos');
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) {
+      await sleep(Math.min(1000 * Math.pow(2, attempt - 1), 10_000));
+    }
+    try {
+      const response = await openai.chat.completions.create({
+        model,
+        messages: [
+          { role: 'system', content: customSystemPrompt ?? DEFAULT_SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ],
+        temperature,
+        max_tokens: maxTokens,
+        response_format: { type: 'json_object' }
+      });
+
+      if (response.choices[0].finish_reason === 'length') {
+        throw new Error('truncated: respuesta cortada por límite de tokens; aumenta maxTokens en Configuración');
+      }
+
+      const content = response.choices[0].message.content;
+      if (!content) throw new Error('No se recibió respuesta de OpenAI');
+
+      const parsed = JSON.parse(content);
+      const raw: unknown[] = Array.isArray(parsed.casos) ? parsed.casos : [];
+      return raw
+        .map((c) => normalizeCase(c))
+        .filter((c): c is CaseGroup => c !== null);
+    } catch (err) {
+      lastError = err as Error;
+      if (!isRetryableError(err)) break;
+    }
+  }
+  throw lastError;
+}
+
+const MAX_DEDUPE_ATTEMPTS_CASOS = 3;
+
+// Genera los casos indicados por `caseSizes`, evitando duplicar preguntas de `previousQuestions`.
+// Si un caso completo contiene alguna pregunta duplicada, se descarta el caso entero (no la pregunta suelta)
+// y se reintenta, igual que `generateUniqueBatch` pero a nivel de caso.
+async function generateUniqueCaseBatch(
+  openai: OpenAI,
+  extractedText: string,
+  caseSizes: number[],
+  dificultad: string,
+  categoria: string,
+  area: string,
+  distribucion: Record<QuestionType, number>,
+  customSystemPrompt: string | undefined,
+  model: string,
+  temperature: number,
+  maxTokens: number,
+  retries: number,
+  idioma: string,
+  tipo: CaseType,
+  longitud: CaseLength,
+  previousQuestions: string[]
+): Promise<CaseGroup[]> {
+  const seen = new Set(previousQuestions.map(normalizeQuestionText));
+  const knownQuestions = [...previousQuestions];
+  const accepted: CaseGroup[] = [];
+  let remainingSizes = [...caseSizes];
+
+  for (let attempt = 0; attempt < MAX_DEDUPE_ATTEMPTS_CASOS && remainingSizes.length > 0; attempt++) {
+    const attemptTemperature = attempt === 0 ? temperature : Math.min(1, temperature + attempt * 0.15);
+    const groups = await generateCaseBatch(
+      openai, extractedText, remainingSizes, dificultad, categoria, area, distribucion,
+      customSystemPrompt, model, attemptTemperature, maxTokens, retries, idioma, tipo, longitud, knownQuestions
+    );
+
+    let acceptedCount = 0;
+    for (const group of groups) {
+      const hasDuplicate = group.questions.some((q) => seen.has(normalizeQuestionText(q.pregunta)));
+      if (hasDuplicate) continue;
+      group.questions.forEach((q) => {
+        seen.add(normalizeQuestionText(q.pregunta));
+        knownQuestions.push(q.pregunta);
+      });
+      accepted.push(group);
+      acceptedCount++;
+    }
+    remainingSizes = remainingSizes.slice(acceptedCount);
+  }
+
+  return accepted;
+}
+
+const CASE_BATCH_SIZE = 12;
+
+// Analogía de `generateQuestionsServer` para el modo de casos prácticos.
+// Función completamente nueva y separada: no reemplaza ni altera el flujo plano existente.
+export async function generateCaseQuestionsServer(
+  extractedText: string,
+  numPreguntas: number,
+  dificultad: string,
+  categoria: string,
+  area: string,
+  distribucion: Record<QuestionType, number>,
+  casosPracticos: CasosPracticosConfig,
+  customSystemPrompt?: string,
+  model = "gpt-4o-mini",
+  temperature = 0.3,
+  maxTokens = 8192,
+  retries = 3,
+  idioma = "Español",
+  previousQuestions: string[] = []
+): Promise<GeneratedQuestion[]> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY no está configurada en las variables de entorno del servidor');
+  }
+
+  const openai = new OpenAI({ apiKey, timeout: 120_000 });
+
+  const preguntasPorCaso = Math.max(1, casosPracticos.preguntasPorCaso);
+  const totalCases = Math.ceil(numPreguntas / preguntasPorCaso);
+  const allCaseSizes: number[] = Array.from({ length: totalCases }, (_, i) =>
+    i < totalCases - 1 ? preguntasPorCaso : numPreguntas - preguntasPorCaso * (totalCases - 1)
+  );
+
+  // Trocea por caso (nunca por pregunta suelta) para no partir un caso entre dos llamadas.
+  const chunks: number[][] = [];
+  let current: number[] = [];
+  let currentSum = 0;
+  for (const size of allCaseSizes) {
+    if (current.length > 0 && currentSum + size > CASE_BATCH_SIZE) {
+      chunks.push(current);
+      current = [];
+      currentSum = 0;
+    }
+    current.push(size);
+    currentSum += size;
+  }
+  if (current.length > 0) chunks.push(current);
+
+  const allQuestions: GeneratedQuestion[] = [];
+  let knownQuestions = [...previousQuestions];
+  let caseCounter = 0;
+
+  for (const chunkSizes of chunks) {
+    const groups = await generateUniqueCaseBatch(
+      openai, extractedText, chunkSizes, dificultad, categoria, area, distribucion,
+      customSystemPrompt, model, temperature, maxTokens, retries, idioma,
+      casosPracticos.tipo, casosPracticos.longitud, knownQuestions
+    );
+    for (const group of groups) {
+      const caso_id = `caso-${caseCounter++}`;
+      const taggedQuestions = group.questions.map((q) => ({ ...q, caso_id }));
+      allQuestions.push(...taggedQuestions);
+      knownQuestions = knownQuestions.concat(taggedQuestions.map((q) => q.pregunta));
+    }
+  }
+
+  return allQuestions.map((q, i) => ({ ...q, id: i + 1 }));
+}
+
 type GenerateQuestionsInput = {
   extractedText: string;
   numPreguntas: number;
@@ -419,11 +752,36 @@ type GenerateQuestionsInput = {
   retries?: number;
   idioma?: string;
   previousQuestions?: string[];
+  casosPracticos?: {
+    habilitado: boolean;
+    tipo: string;
+    longitud: string;
+    preguntasPorCaso: number;
+  };
+  escenarioFijo?: string;
 };
 
 export const generateQuestionsFn = createServerFn({ method: 'POST' })
   .inputValidator((data: GenerateQuestionsInput) => data)
   .handler(async ({ data }) => {
+    if (data.casosPracticos?.habilitado) {
+      return generateCaseQuestionsServer(
+        data.extractedText,
+        data.numPreguntas,
+        data.dificultad,
+        data.categoria,
+        data.area,
+        data.distribucion as Record<QuestionType, number>,
+        data.casosPracticos as CasosPracticosConfig,
+        data.customSystemPrompt,
+        data.model,
+        data.temperature,
+        data.maxTokens,
+        data.retries,
+        data.idioma,
+        data.previousQuestions
+      );
+    }
     return generateQuestionsServer(
       data.extractedText,
       data.numPreguntas,
@@ -437,7 +795,8 @@ export const generateQuestionsFn = createServerFn({ method: 'POST' })
       data.maxTokens,
       data.retries,
       data.idioma,
-      data.previousQuestions
+      data.previousQuestions,
+      data.escenarioFijo
     );
   });
 

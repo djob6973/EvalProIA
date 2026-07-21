@@ -55,6 +55,9 @@ export interface Question {
   dificultad?: string
   estado?: string
   justificacion?: string
+  escenario?: string
+  tipo_caso?: string
+  es_caso_practico?: boolean
 }
 
 export type MasteryLevel = 'alto' | 'medio' | 'bajo'
