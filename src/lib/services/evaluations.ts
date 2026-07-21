@@ -33,6 +33,7 @@ export interface Evaluation {
   /** Solo lectura: id del artículo del Foro asociado, únicamente si ya está publicado. */
   foro_articulo_id?: string | null
   etiqueta_id?: string | null
+  detalle_respuestas_trigger?: FeedbackTrigger
 }
 
 export interface Etiqueta {

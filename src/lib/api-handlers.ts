@@ -304,7 +304,7 @@ async function listEvaluations(): Promise<Response> {
   const rows = await db`
     SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
-           feedback_trigger, feedback_documento_nombre, etiqueta_id
+           feedback_trigger, feedback_documento_nombre, etiqueta_id, detalle_respuestas_trigger
     FROM evaluations ORDER BY created_at DESC
   `;
   return json(rows.map(parseEvaluation));
@@ -314,7 +314,7 @@ async function activeEvaluations(): Promise<Response> {
   const rows = await db`
     SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
-           feedback_trigger, feedback_documento_nombre, etiqueta_id
+           feedback_trigger, feedback_documento_nombre, etiqueta_id, detalle_respuestas_trigger
     FROM evaluations
     WHERE activa = true
       AND (fecha_vencimiento IS NULL OR fecha_vencimiento > now())
@@ -343,25 +343,29 @@ async function createEvaluation(request: Request): Promise<Response> {
     title, description, created_by, area_id, activa,
     tiempo_limite, intentos_permitidos, categorias, config, fecha_vencimiento,
     feedback_trigger, feedback_documento_texto, feedback_documento_nombre, feedback_documento_idioma,
-    etiqueta_id,
+    etiqueta_id, detalle_respuestas_trigger,
   } = body;
 
   const feedbackTriggerFinal = ["ninguno", "al_finalizar", "inactiva"].includes(feedback_trigger)
     ? feedback_trigger
+    : "ninguno";
+  const detalleRespuestasTriggerFinal = ["ninguno", "al_finalizar", "inactiva"].includes(detalle_respuestas_trigger)
+    ? detalle_respuestas_trigger
     : "ninguno";
 
   const [row] = await db`
     INSERT INTO evaluations
       (title, description, created_by, area_id, activa, tiempo_limite,
        intentos_permitidos, categorias, config, fecha_vencimiento,
-       feedback_trigger, feedback_documento_texto, feedback_documento_nombre, etiqueta_id)
+       feedback_trigger, feedback_documento_texto, feedback_documento_nombre, etiqueta_id,
+       detalle_respuestas_trigger)
     VALUES
       (${title}, ${description ?? null}, ${created_by ?? null}, ${area_id ?? null},
        ${activa ?? true}, ${tiempo_limite ?? null}, ${intentos_permitidos ?? 1},
        ${db.json(categorias ?? [])}, ${db.json(config ?? {})},
        ${fecha_vencimiento ?? null},
        ${feedbackTriggerFinal}, ${feedback_documento_texto ?? null}, ${feedback_documento_nombre ?? null},
-       ${etiqueta_id ?? null})
+       ${etiqueta_id ?? null}, ${detalleRespuestasTriggerFinal})
     RETURNING *
   `;
 
@@ -410,14 +414,14 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
     "intentos_permitidos", "categorias", "config", "area_id",
     "fecha_vencimiento", "created_by",
     "feedback_trigger", "feedback_documento_texto", "feedback_documento_nombre",
-    "etiqueta_id",
+    "etiqueta_id", "detalle_respuestas_trigger",
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) {
       if (k === "categorias" || k === "config") {
         patch[k] = db.json(body[k]);
-      } else if (k === "feedback_trigger") {
+      } else if (k === "feedback_trigger" || k === "detalle_respuestas_trigger") {
         patch[k] = ["ninguno", "al_finalizar", "inactiva"].includes(body[k]) ? body[k] : "ninguno";
       } else {
         patch[k] = body[k];

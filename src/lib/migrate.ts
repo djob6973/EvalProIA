@@ -339,5 +339,11 @@ export async function runMigrations(): Promise<void> {
   `;
   await db`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS etiqueta_id UUID REFERENCES etiquetas(id) ON DELETE SET NULL`;
 
+  // Detalle de respuestas visible al participante al finalizar/inactivar una evaluación
+  await db`
+    ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS detalle_respuestas_trigger TEXT NOT NULL DEFAULT 'ninguno'
+      CHECK (detalle_respuestas_trigger IN ('ninguno','al_finalizar','inactiva'))
+  `;
+
   done = true;
 }

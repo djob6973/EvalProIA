@@ -57,6 +57,10 @@ type Config = {
   dist_vf: number;
   aleatorio: boolean;
   porcentaje_aprobacion: number;
+  mostrar_opciones: boolean;
+  mostrar_respuesta_seleccionada: boolean;
+  mostrar_respuesta_correcta: boolean;
+  mostrar_justificacion: boolean;
 };
 
 type Evaluation = {
@@ -75,6 +79,7 @@ type Evaluation = {
   feedback_documento_texto: string;
   feedback_documento_nombre: string;
   etiqueta_id: string | null;
+  detalle_respuestas_trigger: FeedbackTrigger;
 };
 
 function toLocalDateTimeInput(isoString: string): string {
@@ -464,6 +469,10 @@ const DEFAULT_CONFIG: Config = {
   dist_vf: 20,
   aleatorio: true,
   porcentaje_aprobacion: 60,
+  mostrar_opciones: true,
+  mostrar_respuesta_seleccionada: true,
+  mostrar_respuesta_correcta: true,
+  mostrar_justificacion: true,
 };
 
 type AssignModalProps = {
@@ -1112,6 +1121,7 @@ function EvaluationsPage() {
           feedback_documento_texto: evaluation.feedback_documento_texto ?? '',
           feedback_documento_nombre: evaluation.feedback_documento_nombre ?? '',
           etiqueta_id: evaluation.etiqueta_id ?? null,
+          detalle_respuestas_trigger: evaluation.detalle_respuestas_trigger ?? 'ninguno',
           };
         });
 
@@ -1180,6 +1190,7 @@ function EvaluationsPage() {
     feedback_documento_texto: "",
     feedback_documento_nombre: "",
     etiqueta_id: null,
+    detalle_respuestas_trigger: "ninguno",
   };
   const [form, setForm] = useState<Evaluation>(emptyForm);
   const [extractingFeedbackDoc, setExtractingFeedbackDoc] = useState(false);
@@ -1293,6 +1304,7 @@ function EvaluationsPage() {
           feedback_documento_nombre: form.feedback_documento_nombre || null,
           feedback_documento_idioma: docIdioma,
           etiqueta_id: form.etiqueta_id ?? null,
+          detalle_respuestas_trigger: form.detalle_respuestas_trigger,
         });
 
         setItems((p) => p.map((x) => (x.id === editing.id ? { ...form, id: editing.id, fecha_vencimiento: form.fecha_vencimiento || undefined } : x)));
@@ -1318,6 +1330,7 @@ function EvaluationsPage() {
           feedback_documento_nombre: form.feedback_documento_nombre || null,
           feedback_documento_idioma: docIdioma,
           etiqueta_id: form.etiqueta_id ?? null,
+          detalle_respuestas_trigger: form.detalle_respuestas_trigger,
         });
         if ((newEvaluation as any).foro_articulo_error) {
           showToast(t('evaluations.foroArticleGenerationError'), 'error');
@@ -1339,6 +1352,7 @@ function EvaluationsPage() {
           feedback_documento_texto: form.feedback_documento_texto,
           feedback_documento_nombre: form.feedback_documento_nombre,
           etiqueta_id: form.etiqueta_id ?? null,
+          detalle_respuestas_trigger: form.detalle_respuestas_trigger,
         };
 
         setItems((p) => [mappedItem, ...p]);
@@ -1422,6 +1436,8 @@ function EvaluationsPage() {
         feedback_trigger: ev.feedback_trigger,
         feedback_documento_texto: ev.feedback_documento_texto || null,
         feedback_documento_nombre: ev.feedback_documento_nombre || null,
+        etiqueta_id: ev.etiqueta_id ?? null,
+        detalle_respuestas_trigger: ev.detalle_respuestas_trigger,
       });
 
       const mappedItem: Evaluation = {
@@ -1438,6 +1454,8 @@ function EvaluationsPage() {
         feedback_trigger: ev.feedback_trigger,
         feedback_documento_texto: ev.feedback_documento_texto,
         feedback_documento_nombre: ev.feedback_documento_nombre,
+        etiqueta_id: ev.etiqueta_id ?? null,
+        detalle_respuestas_trigger: ev.detalle_respuestas_trigger,
       };
 
       setItems((prev) => [mappedItem, ...prev]);
@@ -2117,6 +2135,61 @@ function EvaluationsPage() {
                           <p className="mt-1 text-xs text-muted-foreground">{t('evaluations.feedbackArticleHint')}</p>
                         </div>
                       )}
+                    </div>
+                  )}
+                </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="detalle_resultados">
+                <AccordionTrigger>
+                  <span className="flex items-center gap-2">
+                    <Eye className="size-4 text-accent" />
+                    <span className="text-sm font-semibold">{t('evaluations.resultDetailTitle')}</span>
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent>
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                      {t('evaluations.resultDetailTriggerLabel')}
+                    </label>
+                    <select
+                      value={form.detalle_respuestas_trigger}
+                      onChange={(e) =>
+                        setForm({ ...form, detalle_respuestas_trigger: e.target.value as FeedbackTrigger })
+                      }
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+                    >
+                      <option value="ninguno">{t('evaluations.resultDetailNone')}</option>
+                      <option value="al_finalizar">{t('evaluations.resultDetailOnFinish')}</option>
+                      <option value="inactiva">{t('evaluations.resultDetailOnInactive')}</option>
+                    </select>
+                  </div>
+                  {form.detalle_respuestas_trigger !== 'ninguno' && (
+                    <div className="space-y-2">
+                      {(
+                        [
+                          { key: "mostrar_opciones", label: t('evaluations.showOptions') },
+                          { key: "mostrar_respuesta_seleccionada", label: t('evaluations.showSelectedAnswer') },
+                          { key: "mostrar_respuesta_correcta", label: t('evaluations.showCorrectAnswer') },
+                          { key: "mostrar_justificacion", label: t('evaluations.showJustification') },
+                        ] as const
+                      ).map(({ key, label }) => (
+                        <label key={key} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            checked={form.config[key]}
+                            onChange={(e) =>
+                              setForm({
+                                ...form,
+                                config: { ...form.config, [key]: e.target.checked },
+                              })
+                            }
+                          />
+                          {label}
+                        </label>
+                      ))}
                     </div>
                   )}
                 </div>

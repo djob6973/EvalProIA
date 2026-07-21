@@ -9,8 +9,9 @@ import { resultsService, evaluationsService, questionsService, getAnswerStatus }
 import type { Evaluation } from "@/lib/services/evaluations";
 import { generateResultFeedbackFn, type FeedbackBreakdownItem } from "@/lib/services/openai-server";
 import { ResultFeedbackCard } from "@/components/ResultFeedbackCard";
+import { QuestionResultCard } from "@/components/QuestionResultCard";
 import { Paginator } from "@/components/Paginator";
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2, BookOpen } from "lucide-react";
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, RefreshCw, Sparkles, Loader2, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/my-results/$id")({
@@ -33,6 +34,7 @@ function MyResultPage() {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [answersPage, setAnswersPage] = useState(1);
   const ANSWERS_PAGE_SIZE = 10;
+  const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -149,6 +151,16 @@ function MyResultPage() {
   const feedbackEligible =
     feedbackTrigger === 'al_finalizar' ||
     (feedbackTrigger === 'inactiva' && (evaluation?.activa === false || evaluacionVencida));
+
+  const detalleTrigger = evaluation?.detalle_respuestas_trigger ?? 'ninguno';
+  const detalleEligible =
+    detalleTrigger === 'al_finalizar' ||
+    (detalleTrigger === 'inactiva' && (evaluation?.activa === false || evaluacionVencida));
+  const showOptions = evaluation?.config?.mostrar_opciones ?? true;
+  const showSelectedAnswer = evaluation?.config?.mostrar_respuesta_seleccionada ?? true;
+  const showCorrectAnswer = evaluation?.config?.mostrar_respuesta_correcta ?? true;
+  const showJustification = evaluation?.config?.mostrar_justificacion ?? true;
+  const hasDetail = detalleEligible && (showOptions || showJustification);
 
   const inferQuestionType = (question: any): string => {
     if (question.options?.length === 2 && question.options[0] === 'Verdadero') return 'vf';
@@ -366,6 +378,8 @@ function MyResultPage() {
                     ? { label: t('myResults.partialBadge'), icon: <TrendingUp className="size-3" />, card: "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40", badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" }
                     : { label: t('myResults.incorrectBadge'), icon: <XCircle className="size-3" />, card: "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/40", badge: "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-300", text: "text-foreground dark:text-foreground", sub: "text-muted-foreground" };
 
+                  const isExpanded = expandedQuestionId === questionId;
+
                   return (
                     <div key={questionId} className={`rounded-lg border p-4 ${statusConfig.card}`}>
                       <div className="flex items-start justify-between gap-3">
@@ -378,6 +392,36 @@ function MyResultPage() {
                           {statusConfig.label}
                         </span>
                       </div>
+                      {hasDetail && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedQuestionId(isExpanded ? null : questionId)}
+                          className="mt-3 flex items-center gap-1 rounded-lg border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground hover:border-accent"
+                        >
+                          {isExpanded ? (
+                            <>
+                              <ChevronDown className="size-3" /> {t('common.hide')}
+                            </>
+                          ) : (
+                            <>
+                              <ChevronRight className="size-3" /> {t('myResults.viewDetail')}
+                            </>
+                          )}
+                        </button>
+                      )}
+                      {isExpanded && (
+                        <div className="mt-3">
+                          <QuestionResultCard
+                            question={question}
+                            userAnswer={userAnswer}
+                            index={qIndex}
+                            showOptions={showOptions}
+                            showSelectedAnswer={showSelectedAnswer}
+                            showCorrectAnswer={showCorrectAnswer}
+                            showJustification={showJustification}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
