@@ -88,6 +88,9 @@ export async function runMigrations(): Promise<void> {
   await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS escenario TEXT`;
   await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS tipo_caso TEXT`;
   await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS es_caso_practico BOOLEAN DEFAULT false`;
+  // Agrupa y ordena las preguntas de un mismo caso práctico al presentarlas al participante
+  await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS caso_id TEXT`;
+  await db`ALTER TABLE questions ADD COLUMN IF NOT EXISTS caso_orden SMALLINT`;
 
   await db`
     CREATE TABLE IF NOT EXISTS results (

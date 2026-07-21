@@ -440,21 +440,33 @@ function GeneratePage() {
         alert(t('generate.skippedQuestions', { count: skipped }));
       }
 
-      const questionsToSave = validQuestions.map(q => ({
-        evaluation_id: null,
-        question_text: q.pregunta,
-        options: q.opciones,
-        correct_answer: q.respuesta_correcta.join(','),
-        contexto: q.contexto ?? '',
-        categoria: q.categoria,
-        area: q.area,
-        dificultad: q.dificultad,
-        estado: 'activa',
-        justificacion: q.justificacion ?? '',
-        escenario: q.escenario ?? '',
-        tipo_caso: q.tipo_caso ?? '',
-        es_caso_practico: q.es_caso_practico ?? false,
-      }));
+      // Posición secuencial (0,1,2...) de cada pregunta dentro de su propio caso,
+      // solo entre las que efectivamente se van a guardar (si se deselecciona alguna hermana).
+      const casoOrdenCounters = new Map<string, number>();
+      const questionsToSave = validQuestions.map(q => {
+        let caso_orden: number | undefined;
+        if (q.caso_id) {
+          caso_orden = casoOrdenCounters.get(q.caso_id) ?? 0;
+          casoOrdenCounters.set(q.caso_id, caso_orden + 1);
+        }
+        return {
+          evaluation_id: null,
+          question_text: q.pregunta,
+          options: q.opciones,
+          correct_answer: q.respuesta_correcta.join(','),
+          contexto: q.contexto ?? '',
+          categoria: q.categoria,
+          area: q.area,
+          dificultad: q.dificultad,
+          estado: 'activa',
+          justificacion: q.justificacion ?? '',
+          escenario: q.escenario ?? '',
+          tipo_caso: q.tipo_caso ?? '',
+          es_caso_practico: q.es_caso_practico ?? false,
+          caso_id: q.caso_id ?? '',
+          caso_orden,
+        };
+      });
 
       const savedResult = await questionsService.createBatch(questionsToSave);
 

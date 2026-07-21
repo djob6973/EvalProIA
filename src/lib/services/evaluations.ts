@@ -58,6 +58,8 @@ export interface Question {
   escenario?: string
   tipo_caso?: string
   es_caso_practico?: boolean
+  caso_id?: string
+  caso_orden?: number
 }
 
 export type MasteryLevel = 'alto' | 'medio' | 'bajo'

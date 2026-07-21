@@ -560,18 +560,19 @@ async function createQuestion(request: Request): Promise<Response> {
   const body = await request.json();
   const { evaluation_id, question_text, options, correct_answer,
     contexto, categoria, area, dificultad, estado, justificacion,
-    escenario, tipo_caso, es_caso_practico } = body;
+    escenario, tipo_caso, es_caso_practico, caso_id, caso_orden } = body;
 
   const [row] = await db`
     INSERT INTO questions
       (evaluation_id, question_text, options, correct_answer,
        contexto, categoria, area, dificultad, estado, justificacion,
-       escenario, tipo_caso, es_caso_practico)
+       escenario, tipo_caso, es_caso_practico, caso_id, caso_orden)
     VALUES
       (${evaluation_id ?? null}, ${question_text}, ${JSON.stringify(options)},
        ${correct_answer}, ${contexto ?? null}, ${categoria ?? null}, ${area ?? null},
        ${dificultad ?? null}, ${estado ?? null}, ${justificacion ?? null},
-       ${escenario ?? null}, ${tipo_caso ?? null}, ${es_caso_practico ?? false})
+       ${escenario ?? null}, ${tipo_caso ?? null}, ${es_caso_practico ?? false},
+       ${caso_id ?? null}, ${caso_orden ?? null})
     RETURNING *
   `;
   return json(parseQuestion(row), 201);
@@ -599,6 +600,8 @@ async function createQuestionsBatch(request: Request): Promise<Response> {
       escenario: q.escenario ?? null,
       tipo_caso: q.tipo_caso ?? null,
       es_caso_practico: q.es_caso_practico ?? false,
+      caso_id: q.caso_id ?? null,
+      caso_orden: q.caso_orden ?? null,
     })))}
     RETURNING *
   `;
@@ -613,7 +616,7 @@ async function updateQuestion(request: Request, id: string): Promise<Response> {
   const allowed = [
     "evaluation_id", "question_text", "options", "correct_answer",
     "contexto", "categoria", "area", "dificultad", "estado", "justificacion",
-    "escenario", "tipo_caso", "es_caso_practico",
+    "escenario", "tipo_caso", "es_caso_practico", "caso_id", "caso_orden",
   ];
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {

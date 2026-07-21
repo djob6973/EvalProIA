@@ -24,6 +24,50 @@ function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
+// Agrupa las preguntas de un mismo caso práctico (mismo `caso_id`) en un bloque
+// indivisible, ordenado internamente por `caso_orden`. Las preguntas sin caso_id
+// son bloques de tamaño 1.
+function groupIntoCaseBlocks<T extends { caso_id?: string; caso_orden?: number }>(questions: T[]): T[][] {
+  const seen = new Set<string>();
+  const blocks: T[][] = [];
+  for (const q of questions) {
+    if (!q.caso_id) {
+      blocks.push([q]);
+      continue;
+    }
+    if (seen.has(q.caso_id)) continue;
+    seen.add(q.caso_id);
+    const siblings = questions
+      .filter((x) => x.caso_id === q.caso_id)
+      .sort((a, b) => (a.caso_orden ?? 0) - (b.caso_orden ?? 0));
+    blocks.push(siblings);
+  }
+  return blocks;
+}
+
+// Mezcla las preguntas igual que shuffleArray, pero tratando cada caso práctico como
+// un bloque indivisible. Para una evaluación sin casos prácticos, todos los bloques
+// son de tamaño 1 y esto es idéntico a shuffleArray(questions).
+function shuffleKeepingCaseGroupsTogether<T extends { caso_id?: string; caso_orden?: number }>(questions: T[]): T[] {
+  return shuffleArray(groupIntoCaseBlocks(questions)).flat();
+}
+
+// Igual que shuffleKeepingCaseGroupsTogether, pero además limita el resultado a
+// `maxCount` preguntas sin partir ningún caso a la mitad — toma bloques completos
+// hasta acercarse al límite (puede quedar levemente por debajo, nunca corta un caso).
+function shuffleAndLimitKeepingCaseGroupsTogether<T extends { caso_id?: string; caso_orden?: number }>(
+  questions: T[],
+  maxCount: number
+): T[] {
+  const blocks = shuffleArray(groupIntoCaseBlocks(questions));
+  const picked: T[] = [];
+  for (const block of blocks) {
+    if (picked.length > 0 && picked.length + block.length > maxCount) break;
+    picked.push(...block);
+  }
+  return picked;
+}
+
 function TakeEvaluationRoute() {
   const { t } = useTranslation();
   const { code } = useParams({ from: "/take/$code" });
@@ -117,9 +161,8 @@ function TakeEvaluationRoute() {
             dificultad: evalData.config?.dificultad,
           });
 
-          const shuffled = shuffleArray(filteredQuestions);
-          const numPreguntas = evalData.config?.num_preguntas || shuffled.length;
-          questionsData = shuffled.slice(0, numPreguntas);
+          const numPreguntas = evalData.config?.num_preguntas || filteredQuestions.length;
+          questionsData = shuffleAndLimitKeepingCaseGroupsTogether(filteredQuestions, numPreguntas);
         }
 
         setQuestions(questionsData);
@@ -179,8 +222,8 @@ function TakeEvaluationRoute() {
         }
       });
 
-      // Mezclar solo las preguntas no respondidas
-      const shuffledUnanswered = shuffleArray(unansweredQuestions);
+      // Mezclar solo las preguntas no respondidas (manteniendo juntas las de un mismo caso práctico)
+      const shuffledUnanswered = shuffleKeepingCaseGroupsTogether(unansweredQuestions);
 
       // Combinar: respondidas en orden original + no respondidas mezcladas
       limitedQuestions = [...answeredQuestions, ...shuffledUnanswered];
@@ -190,10 +233,9 @@ function TakeEvaluationRoute() {
       initialQuestionIndex = answeredQuestions.length;
 
     } else {
-      // Iniciar nueva evaluación
-      const shuffled = shuffleArray(questions);
+      // Iniciar nueva evaluación (manteniendo juntas las preguntas de un mismo caso práctico)
       const numPreguntas = evaluation.config?.num_preguntas || questions.length;
-      limitedQuestions = shuffled.slice(0, numPreguntas);
+      limitedQuestions = shuffleAndLimitKeepingCaseGroupsTogether(questions, numPreguntas);
 
       // Crear registro de progreso inicial
       if (profile?.id && code) {
@@ -504,8 +546,17 @@ function QuizRunner({
     () => new Set(Object.keys(initialState?.answers || {}))
   );
   const [showLockedMessage, setShowLockedMessage] = useState(false);
+  // Casos prácticos: se muestra la lectura completa del caso una sola vez (por caso_id,
+  // no por índice) antes de sus preguntas asociadas; luego cada pregunta del caso solo
+  // muestra una referencia compacta, expandible bajo demanda.
+  const [seenCaseIntros, setSeenCaseIntros] = useState<Set<string>>(new Set());
+  const [showFullScenario, setShowFullScenario] = useState(false);
   const q = questions[i];
   const progress = ((i + 1) / questions.length) * 100;
+  const showCaseIntro = !!q.caso_id && !seenCaseIntros.has(q.caso_id);
+  const caseSiblings = q.caso_id ? questions.filter((x) => x.caso_id === q.caso_id) : [];
+  const caseTotal = caseSiblings.length;
+  const caseIndex = (q.caso_orden ?? 0) + 1;
 
   // Refs para que el intervalo del timer siempre acceda a los valores más recientes
   // sin necesitar estar en sus dependencias (evita reiniciar el countdown en cada respuesta)
@@ -558,6 +609,11 @@ function QuizRunner({
     const saveTimer = setTimeout(saveProgress, 2000);
     return () => clearTimeout(saveTimer);
   }, [i, answers, userId, code]);
+
+  // Colapsar el escenario expandido al cambiar de pregunta
+  useEffect(() => {
+    setShowFullScenario(false);
+  }, [q.id]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -670,93 +726,121 @@ function QuizRunner({
             boxShadow: "var(--shadow-sm)",
           }}
         >
-          {q.escenario && (
-            <div
-              className="mb-[16px] rounded-[12px] p-[16px] text-[13px] leading-relaxed"
-              style={{ background: "var(--coral-soft)", borderLeft: "3px solid var(--accent)", color: "var(--foreground)" }}
-            >
-              <div className="mb-[6px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>
+          {showCaseIntro ? (
+            /* ── LECTURA DEL CASO PRÁCTICO (una sola vez, antes de sus preguntas) ── */
+            <>
+              <div className="mb-[10px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--accent)" }}>
                 📋 {t('common.caseStudy')}{q.tipo_caso ? ` · ${q.tipo_caso}` : ''}
               </div>
-              {q.escenario}
-            </div>
-          )}
-          {q.contexto && (
-            <div
-              className="mb-[16px] rounded-[12px] p-[14px] text-[13px]"
-              style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
-            >
-              <div className="mb-[4px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--text-faint)" }}>
-                {t('common.context')}
-              </div>
-              {q.contexto}
-            </div>
-          )}
-          <div className="flex items-start gap-[10px] flex-wrap mb-[18px]">
-            <h2 className="flex-1 text-[17px] font-medium leading-snug" style={{ color: "var(--foreground)" }}>
-              {q.question_text}
-            </h2>
-            {isMultipleChoice && (
-              <span
-                className="shrink-0 rounded-full px-[10px] py-[3px] font-mono text-[9px] font-bold uppercase tracking-[.1em]"
-                style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
-              >
-                {t('take.multipleChoice')}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-col gap-[10px]">
-            {q.options.map((opt: string, idx: number) => {
-              const isSelected = isMultipleChoice
-                ? (answers[q.id] as string[] || []).includes(idx.toString())
-                : answers[q.id] === idx.toString();
-
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleSelectOption(idx)}
-                  disabled={submitting}
-                  className="flex w-full items-center gap-[14px] rounded-[12px] border px-[16px] py-[12px] text-left text-[14px] transition-all"
-                  style={
-                    isLocked
-                      ? isSelected
-                        ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)", cursor: "not-allowed", opacity: 0.85 }
-                        : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--muted-foreground)", cursor: "not-allowed", opacity: 0.45 }
-                      : isSelected
-                        ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)" }
-                        : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--foreground)", opacity: submitting ? 0.5 : 1 }
-                  }
-                >
-                  <div
-                    className="grid size-[26px] shrink-0 place-items-center rounded-[7px] font-mono text-[11px] font-bold"
-                    style={
-                      isSelected
-                        ? { background: "var(--accent)", color: "#fff", border: "none" }
-                        : { background: "var(--surface)", border: "1px solid var(--border-strong)", color: "var(--muted-foreground)" }
-                    }
+              <p className="text-[15px] leading-relaxed" style={{ color: "var(--foreground)" }}>
+                {q.escenario}
+              </p>
+              <p className="mt-[14px] text-[12px]" style={{ color: "var(--muted-foreground)" }}>
+                {t('take.caseQuestionsCount', { count: caseTotal })}
+              </p>
+            </>
+          ) : (
+            <>
+              {q.es_caso_practico && (
+                <div className="mb-[16px]">
+                  <button
+                    onClick={() => setShowFullScenario((v) => !v)}
+                    className="flex flex-wrap items-center gap-[6px] font-mono text-[9px] font-bold uppercase tracking-[.14em]"
+                    style={{ color: "var(--accent)" }}
                   >
-                    {isMultipleChoice ? (
-                      isSelected ? (
-                        <CheckCircle className="size-[14px]" />
-                      ) : (
-                        <div className="size-[10px] rounded-full border-2 border-current" />
-                      )
-                    ) : (
-                      String.fromCharCode(65 + idx)
-                    )}
+                    <span>📋 {t('common.caseStudy')}{q.tipo_caso ? ` · ${q.tipo_caso}` : ''} · {t('take.caseQuestionOf', { index: caseIndex, total: caseTotal })}</span>
+                    <span style={{ textDecoration: "underline" }}>
+                      {showFullScenario ? t('take.hideCase') : t('take.viewCase')}
+                    </span>
+                  </button>
+                  {showFullScenario && (
+                    <div
+                      className="mt-[8px] rounded-[12px] p-[14px] text-[13px] leading-relaxed"
+                      style={{ background: "var(--coral-soft)", borderLeft: "3px solid var(--accent)", color: "var(--foreground)" }}
+                    >
+                      {q.escenario}
+                    </div>
+                  )}
+                </div>
+              )}
+              {q.contexto && (
+                <div
+                  className="mb-[16px] rounded-[12px] p-[14px] text-[13px]"
+                  style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--muted-foreground)" }}
+                >
+                  <div className="mb-[4px] font-mono text-[9px] font-bold uppercase tracking-[.14em]" style={{ color: "var(--text-faint)" }}>
+                    {t('common.context')}
                   </div>
-                  {opt}
-                </button>
-              );
-            })}
-          </div>
-          {showLockedMessage && (
-            <div
-              className="mt-[10px] rounded-[10px] px-[14px] py-[10px] text-[13px] font-medium"
-              style={{ background: "var(--coral-soft)", color: "var(--coral-text)", border: "1px solid var(--accent)" }}
-            >
-              {t('take.lockedAnswer')}
-            </div>
+                  {q.contexto}
+                </div>
+              )}
+              <div className="flex items-start gap-[10px] flex-wrap mb-[18px]">
+                <h2 className="flex-1 text-[17px] font-medium leading-snug" style={{ color: "var(--foreground)" }}>
+                  {q.question_text}
+                </h2>
+                {isMultipleChoice && (
+                  <span
+                    className="shrink-0 rounded-full px-[10px] py-[3px] font-mono text-[9px] font-bold uppercase tracking-[.1em]"
+                    style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}
+                  >
+                    {t('take.multipleChoice')}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-[10px]">
+                {q.options.map((opt: string, idx: number) => {
+                  const isSelected = isMultipleChoice
+                    ? (answers[q.id] as string[] || []).includes(idx.toString())
+                    : answers[q.id] === idx.toString();
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handleSelectOption(idx)}
+                      disabled={submitting}
+                      className="flex w-full items-center gap-[14px] rounded-[12px] border px-[16px] py-[12px] text-left text-[14px] transition-all"
+                      style={
+                        isLocked
+                          ? isSelected
+                            ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)", cursor: "not-allowed", opacity: 0.85 }
+                            : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--muted-foreground)", cursor: "not-allowed", opacity: 0.45 }
+                          : isSelected
+                            ? { borderColor: "var(--accent)", background: "var(--coral-soft)", color: "var(--foreground)" }
+                            : { borderColor: "var(--border)", background: "var(--surface-2)", color: "var(--foreground)", opacity: submitting ? 0.5 : 1 }
+                      }
+                    >
+                      <div
+                        className="grid size-[26px] shrink-0 place-items-center rounded-[7px] font-mono text-[11px] font-bold"
+                        style={
+                          isSelected
+                            ? { background: "var(--accent)", color: "#fff", border: "none" }
+                            : { background: "var(--surface)", border: "1px solid var(--border-strong)", color: "var(--muted-foreground)" }
+                        }
+                      >
+                        {isMultipleChoice ? (
+                          isSelected ? (
+                            <CheckCircle className="size-[14px]" />
+                          ) : (
+                            <div className="size-[10px] rounded-full border-2 border-current" />
+                          )
+                        ) : (
+                          String.fromCharCode(65 + idx)
+                        )}
+                      </div>
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {showLockedMessage && (
+                <div
+                  className="mt-[10px] rounded-[10px] px-[14px] py-[10px] text-[13px] font-medium"
+                  style={{ background: "var(--coral-soft)", color: "var(--coral-text)", border: "1px solid var(--accent)" }}
+                >
+                  {t('take.lockedAnswer')}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -769,7 +853,11 @@ function QuizRunner({
           >
             <ArrowLeft className="size-4" /> {t('take.previous')}
           </Button>
-          {i < questions.length - 1 ? (
+          {showCaseIntro ? (
+            <Button onClick={() => setSeenCaseIntros((prev) => new Set(prev).add(q.caso_id))}>
+              {t('take.continue')} <ArrowRight className="size-4" />
+            </Button>
+          ) : i < questions.length - 1 ? (
             <Button onClick={() => isLocked ? setI(i + 1) : setShowNextConfirm(true)} disabled={!hasAnswer || submitting}>
               {t('take.next')} <ArrowRight className="size-4" />
             </Button>

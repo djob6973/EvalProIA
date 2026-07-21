@@ -137,8 +137,10 @@ export type GeneratedQuestion = {
   escenario?: string;
   tipo_caso?: string;
   es_caso_practico?: boolean;
-  /** Solo transitorio en cliente/servidor — agrupa preguntas hermanas del mismo caso antes de guardar. */
+  /** Agrupa preguntas hermanas del mismo caso; se persiste al guardar. */
   caso_id?: string;
+  /** Posición (0-based) de esta pregunta dentro de su caso; se calcula al guardar. */
+  caso_orden?: number;
 };
 
 export type CaseType =
