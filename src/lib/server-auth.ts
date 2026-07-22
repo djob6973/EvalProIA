@@ -52,6 +52,27 @@ export async function getAuthContext(request: Request): Promise<AuthUser | null>
   return user as unknown as AuthUser;
 }
 
+// Mirrors UsersTab.tsx's EDITABLE_ROLES — keep both in sync. Defines which
+// roles a given caller role is allowed to assign/edit/delete.
+const EDITABLE_ROLES: Record<string, string[]> = {
+  super_admin: ["super_admin", "admin", "supervisor", "leader", "participant", "both"],
+  both:        ["super_admin", "admin", "supervisor", "leader", "participant", "both"],
+  admin:       ["admin", "supervisor", "leader", "participant", "both"],
+  supervisor:  ["leader", "participant"],
+  leader:      ["leader", "participant"],
+  participant: [],
+};
+
+export function canActOnRole(callerRole: string, targetRole: string): boolean {
+  return (EDITABLE_ROLES[callerRole] ?? []).includes(targetRole);
+}
+
+// "Staff" = any role above plain participant — used to gate access to
+// data (like correct answers) that must never reach someone taking an exam.
+export function isStaffRole(role: string): boolean {
+  return role !== "participant" && role !== "Pendiente";
+}
+
 export type PermissionLevel = "none" | "ver" | "editar" | "full";
 
 const LEVEL_RANK: Record<PermissionLevel, number> = { none: 0, ver: 1, editar: 2, full: 3 };

@@ -47,7 +47,10 @@ export interface Question {
   evaluation_id: string | null
   question_text: string
   options: string[]
+  /** Ausente cuando el servidor lo oculta (examen en curso) — ver `is_multiple`. */
   correct_answer: string
+  /** Solo presente cuando el servidor omite correct_answer (participante en examen activo). */
+  is_multiple?: boolean
   created_at: string
   contexto?: string
   categoria?: string
@@ -234,7 +237,9 @@ export const resultsService = {
     return apiFetch(`/api/data/results/by-evaluation/${evaluationId}`);
   },
 
-  async create(result: Omit<Result, 'id' | 'completed_at'>): Promise<Result> {
+  // user_id and score are always derived server-side (never trust the client
+  // for who submitted an attempt or what they scored).
+  async create(result: Omit<Result, 'id' | 'completed_at' | 'user_id' | 'score'>): Promise<Result> {
     return apiFetch('/api/data/results', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

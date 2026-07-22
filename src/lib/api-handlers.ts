@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { getAuthContext, AuthUser, getPermissionLevel, levelAtLeast } from "./server-auth";
+import { getAuthContext, AuthUser, getPermissionLevel, levelAtLeast, canActOnRole, isStaffRole } from "./server-auth";
 import { normalizeResultFeedback, generateForoArticuloServer } from "./services/openai-server";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,9 +24,23 @@ async function requireAuth(request: Request): Promise<AuthUser | Response> {
 async function requireAdmin(request: Request): Promise<AuthUser | Response> {
   const user = await requireAuth(request);
   if (user instanceof Response) return user;
-  if (user.role === "participant" || user.role === "Pendiente")
+  if (!isStaffRole(user.role))
     return json({ error: "Se requieren permisos de administrador" }, 403);
   return user;
+}
+
+// Mirrors config.tsx's visibleTabs check for the "roles" tab: built-in admin
+// roles always get in, everyone else needs an explicitly delegated
+// config.roles permission. Editing role_permissions is equivalent to
+// self-granting any access, so this must be stricter than plain requireAdmin
+// (which would let any leader/supervisor rewrite the whole permission matrix).
+async function requireRolesConfigAccess(request: Request): Promise<AuthUser | Response> {
+  const user = await requireAuth(request);
+  if (user instanceof Response) return user;
+  if (user.role === "super_admin" || user.role === "admin" || user.role === "both") return user;
+  const level = await getPermissionLevel(user, "config.roles");
+  if (levelAtLeast(level, "editar")) return user;
+  return json({ error: "No tienes permiso para modificar los permisos de rol" }, 403);
 }
 
 // ── Main router ───────────────────────────────────────────────────────────────
@@ -82,20 +96,20 @@ async function route(
       if (m === "DELETE") return deleteEvaluation(request, id);
     }
     if (id && sub2 === "with-questions" && m === "GET")
-      return evalWithQuestions(id);
+      return evalWithQuestions(request, id);
   }
 
   // ── Questions ─────────────────────────────────────────────────────────────
   if (res === "questions") {
     if (!id) {
-      if (m === "GET") return listQuestions();
+      if (m === "GET") return listQuestions(request);
       if (m === "POST") return createQuestion(request);
     }
     if (id === "batch" && m === "POST") return createQuestionsBatch(request);
-    if (id === "by-ids" && m === "GET") return questionsByIds(url);
-    if (id === "filtered" && m === "GET") return questionsFiltered(url);
+    if (id === "by-ids" && m === "GET") return questionsByIds(request, url);
+    if (id === "filtered" && m === "GET") return questionsFiltered(request, url);
     if (id === "by-evaluation" && sub2 && m === "GET")
-      return questionsByEval(sub2);
+      return questionsByEval(request, sub2);
     if (id && !sub2) {
       if (m === "PUT") return updateQuestion(request, id);
       if (m === "DELETE") return deleteQuestion(request, id);
@@ -105,15 +119,15 @@ async function route(
   // ── Results ───────────────────────────────────────────────────────────────
   if (res === "results") {
     if (!id) {
-      if (m === "GET") return listResults();
+      if (m === "GET") return listResults(request);
       if (m === "POST") return createResult(request);
     }
-    if (id === "by-user" && sub2 && m === "GET") return resultsByUser(sub2);
+    if (id === "by-user" && sub2 && m === "GET") return resultsByUser(request, sub2);
     if (id === "by-evaluation" && sub2 && m === "GET")
-      return resultsByEval(sub2);
+      return resultsByEval(request, sub2);
     if (id === "count" && !sub2 && m === "GET") return getResultCount(url);
     if (id && sub2 === "feedback" && m === "POST") return submitResultFeedback(request, id);
-    if (id && !sub2 && m === "GET") return getResult(id);
+    if (id && !sub2 && m === "GET") return getResult(request, id);
   }
 
   // ── Areas ─────────────────────────────────────────────────────────────────
@@ -149,7 +163,7 @@ async function route(
       if (m === "PUT") return updateProgress(request);
       if (m === "DELETE") return deleteProgress(request);
     }
-    if (id && sub2 && m === "GET") return getProgress(id, sub2);
+    if (id && sub2 && m === "GET") return getProgress(request, id, sub2);
   }
 
   // ── Temporary diagnostic endpoint (remove after use) ─────────────────────
@@ -472,13 +486,18 @@ async function deleteEvaluation(request: Request, id: string): Promise<Response>
   return json({ success: true });
 }
 
-async function evalWithQuestions(id: string): Promise<Response> {
+async function evalWithQuestions(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
   const [evaluation] = await db`SELECT * FROM evaluations WHERE id = ${id}`;
   if (!evaluation) return json({ error: "No encontrado" }, 404);
   const questions = await db`
     SELECT * FROM questions WHERE evaluation_id = ${id} ORDER BY created_at ASC
   `;
-  return json({ ...parseEvaluation(evaluation), questions: questions.map(parseQuestion) });
+  const parser = isStaffRole(user.role) ? parseQuestion : parseQuestionForParticipant;
+  return json({ ...parseEvaluation(evaluation), questions: questions.map(parser) });
 }
 
 // ── Evaluation helpers ────────────────────────────────────────────────────────
@@ -509,27 +528,73 @@ function parseQuestion(row: any) {
   };
 }
 
-async function listQuestions(): Promise<Response> {
+// Strips the correct_answer from a question payload so it can never reach a
+// participant mid-exam, while still telling the client whether to render
+// radio buttons or checkboxes via `is_multiple`.
+function parseQuestionForParticipant(row: any) {
+  const { correct_answer, ...rest } = parseQuestion(row);
+  return { ...rest, is_multiple: (correct_answer ?? "").split(",").length > 1 };
+}
+
+async function listQuestions(request: Request): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
   const rows = await db`SELECT * FROM questions ORDER BY created_at DESC`;
   return json(rows.map(parseQuestion));
 }
 
-async function questionsByEval(evalId: string): Promise<Response> {
+async function questionsByEval(request: Request, evalId: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
   const rows = await db`
     SELECT * FROM questions WHERE evaluation_id = ${evalId} ORDER BY created_at ASC
   `;
-  return json(rows.map(parseQuestion));
+  // Only ever consumed while a participant is actively taking the exam —
+  // correct answers must never be revealed here.
+  return json(rows.map(isStaffRole(user.role) ? parseQuestion : parseQuestionForParticipant));
 }
 
-async function questionsByIds(url: URL): Promise<Response> {
+async function questionsByIds(request: Request, url: URL): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
   const raw = url.searchParams.get("ids") ?? "";
   const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
   if (ids.length === 0) return json([]);
   const rows = await db`SELECT * FROM questions WHERE id = ANY(${ids}::uuid[])`;
-  return json(rows.map(parseQuestion));
+
+  if (isStaffRole(user.role)) return json(rows.map(parseQuestion));
+
+  // This endpoint serves both a live exam resume (must hide correct_answer)
+  // and post-submission review of one's own results (must show it). Reveal
+  // only for evaluations the caller has actually completed AND isn't
+  // currently mid-attempt on (covers evaluations with multiple attempts).
+  const evalIds = [...new Set(rows.map((r: any) => r.evaluation_id).filter(Boolean))] as string[];
+  const revealable = new Set<string>();
+  if (evalIds.length > 0) {
+    const [activeRows, doneRows] = await Promise.all([
+      db`SELECT DISTINCT evaluation_id FROM evaluation_progress WHERE user_id = ${user.id} AND evaluation_id = ANY(${evalIds}::uuid[])`,
+      db`SELECT DISTINCT evaluation_id FROM results WHERE user_id = ${user.id} AND evaluation_id = ANY(${evalIds}::uuid[])`,
+    ]);
+    const activeIds = new Set(activeRows.map((r: any) => r.evaluation_id));
+    for (const r of doneRows as any[]) {
+      if (!activeIds.has(r.evaluation_id)) revealable.add(r.evaluation_id);
+    }
+  }
+
+  return json(rows.map((r: any) =>
+    r.evaluation_id && revealable.has(r.evaluation_id) ? parseQuestion(r) : parseQuestionForParticipant(r)
+  ));
 }
 
-async function questionsFiltered(url: URL): Promise<Response> {
+async function questionsFiltered(request: Request, url: URL): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
   const rawCats = url.searchParams.get("categorias") ?? "";
   const dificultad = url.searchParams.get("dificultad") ?? "";
   const cats = rawCats.split(",").map((s) => s.trim()).filter(Boolean);
@@ -554,7 +619,9 @@ async function questionsFiltered(url: URL): Promise<Response> {
   } else {
     rows = await db`SELECT * FROM questions ORDER BY created_at DESC`;
   }
-  return json(rows.map(parseQuestion));
+  // Shared by the admin evaluation preview (staff, needs correct_answer) and
+  // the participant exam fallback when an evaluation has no linked questions.
+  return json(rows.map(isStaffRole(user.role) ? parseQuestion : parseQuestionForParticipant));
 }
 
 async function createQuestion(request: Request): Promise<Response> {
@@ -706,7 +773,20 @@ async function deleteQuestion(request: Request, id: string): Promise<Response> {
 
 // ── Results handlers ──────────────────────────────────────────────────────────
 
-async function listResults(): Promise<Response> {
+async function listResults(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  // Dumps every participant's results — used by the admin evaluations list
+  // (counts) and the results/dashboard pages, never by a plain participant.
+  const [resultsLevel, evalLevel] = await Promise.all([
+    getPermissionLevel(user, "results"),
+    getPermissionLevel(user, "evaluations"),
+  ]);
+  if (resultsLevel === "none" && evalLevel === "none")
+    return json({ error: "No tienes acceso a los resultados" }, 403);
+
   const rows = await db`
     SELECT
       r.id, r.user_id, r.evaluation_id, r.score, r.answers,
@@ -738,7 +818,16 @@ async function listResults(): Promise<Response> {
   );
 }
 
-async function resultsByUser(userId: string): Promise<Response> {
+async function resultsByUser(request: Request, userId: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  if (user.id !== userId) {
+    const level = await getPermissionLevel(user, "results");
+    if (level === "none") return json({ error: "No autorizado" }, 403);
+  }
+
   const rows = await db`
     SELECT
       r.id, r.user_id, r.evaluation_id, r.score, r.answers,
@@ -771,7 +860,14 @@ async function resultsByUser(userId: string): Promise<Response> {
   );
 }
 
-async function resultsByEval(evalId: string): Promise<Response> {
+async function resultsByEval(request: Request, evalId: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
+  const level = await getPermissionLevel(user, "results");
+  if (level === "none") return json({ error: "No autorizado" }, 403);
+
   const rows = await db`
     SELECT
       r.id, r.user_id, r.evaluation_id, r.score, r.answers,
@@ -797,9 +893,20 @@ async function resultsByEval(evalId: string): Promise<Response> {
   );
 }
 
-async function getResult(id: string): Promise<Response> {
+async function getResult(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
   const [row] = await db`SELECT * FROM results WHERE id = ${id}`;
   if (!row) return json({ error: "No encontrado" }, 404);
+
+  if (row.user_id !== user.id) {
+    const level = await getPermissionLevel(user, "results");
+    // 404 rather than 403 so this doesn't confirm another user's result exists.
+    if (level === "none") return json({ error: "No encontrado" }, 404);
+  }
+
   if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   if (typeof row.feedback === 'string') row.feedback = JSON.parse(row.feedback);
   return json(row);
@@ -847,17 +954,81 @@ async function getResultCount(url: URL): Promise<Response> {
   return json({ count: count as number });
 }
 
+// Mirrors calculateQuestionScore in src/lib/services/evaluations.ts — keep in sync.
+// Runs server-side, against the DB's correct_answer, so a participant can
+// never influence their own score by tampering with the client request.
+function scoreQuestion(
+  question: { options: unknown; correct_answer: string },
+  userAnswer: string | string[],
+  weight: number
+): number {
+  const correctAnswers = question.correct_answer.split(",").map((a) => a.trim());
+  const userAnswers = Array.isArray(userAnswer)
+    ? userAnswer.map((a) => String(a).trim())
+    : [String(userAnswer).trim()];
+  const options = typeof question.options === "string" ? JSON.parse(question.options) : (question.options ?? []);
+  const totalOptions = options.length;
+  const correctCount = correctAnswers.length;
+  const userSelectedCount = userAnswers.length;
+
+  if (userSelectedCount === totalOptions && correctCount !== totalOptions) return 0;
+  if (userSelectedCount > correctCount) return 0;
+
+  const hasIncorrectAnswer = userAnswers.some((a) => !correctAnswers.includes(a));
+  if (hasIncorrectAnswer) return 0;
+
+  if (userSelectedCount === correctCount) return weight;
+  return (userSelectedCount / correctCount) * weight;
+}
+
+async function computeEvaluationScore(
+  evaluationId: string,
+  userAnswers: Record<string, string | string[]>
+): Promise<number> {
+  let questions = await db`
+    SELECT id, options, correct_answer FROM questions WHERE evaluation_id = ${evaluationId}
+  ` as any[];
+
+  const knownIds = new Set(questions.map((q) => q.id));
+  const missingIds = Object.keys(userAnswers).filter((id) => !knownIds.has(id));
+  if (missingIds.length > 0) {
+    const missing = await db`
+      SELECT id, options, correct_answer FROM questions WHERE id = ANY(${missingIds}::uuid[])
+    `;
+    questions = [...questions, ...missing];
+  }
+
+  if (questions.length === 0) return 0;
+
+  const weight = 100 / questions.length;
+  let total = 0;
+  for (const q of questions) {
+    const userAnswer = userAnswers[q.id];
+    if (userAnswer === undefined || userAnswer === null) continue;
+    if (Array.isArray(userAnswer) && userAnswer.length === 0) continue;
+    if (typeof userAnswer === "string" && userAnswer === "") continue;
+    total += scoreQuestion(q, userAnswer, weight);
+  }
+  return Math.round(total * 100) / 100;
+}
+
 async function createResult(request: Request): Promise<Response> {
   const userOrErr = await requireAuth(request);
   if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
 
   const body = await request.json();
-  const { user_id, evaluation_id, score, answers, started_at } = body;
+  const { evaluation_id, answers, started_at } = body;
+  if (!evaluation_id || typeof answers !== "object" || answers === null)
+    return json({ error: "Datos incompletos" }, 400);
+
+  // user_id and score always come from the server — never trust the client here.
+  const score = await computeEvaluationScore(evaluation_id, answers);
 
   const [row] = await db`
     INSERT INTO results (user_id, evaluation_id, score, answers, started_at)
     VALUES (
-      ${user_id}, ${evaluation_id}, ${score},
+      ${user.id}, ${evaluation_id}, ${score},
       ${db.json(answers)}, ${started_at ?? null}
     )
     RETURNING *
@@ -979,7 +1150,12 @@ async function unassignParticipant(request: Request): Promise<Response> {
 
 // ── Progress ──────────────────────────────────────────────────────────────────
 
-async function getProgress(userId: string, evalId: string): Promise<Response> {
+async function getProgress(request: Request, userId: string, evalId: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+  if (user.id !== userId) return json({ error: "No autorizado" }, 403);
+
   const [row] = await db`
     SELECT * FROM evaluation_progress
     WHERE user_id = ${userId} AND evaluation_id = ${evalId}
@@ -993,12 +1169,14 @@ async function getProgress(userId: string, evalId: string): Promise<Response> {
 async function createProgress(request: Request): Promise<Response> {
   const userOrErr = await requireAuth(request);
   if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
 
   const body = await request.json();
   const {
     user_id, evaluation_id, current_question_index,
     answers, time_remaining, question_order,
   } = body;
+  if (user_id !== user.id) return json({ error: "No autorizado" }, 403);
 
   const [row] = await db`
     INSERT INTO evaluation_progress
@@ -1018,9 +1196,11 @@ async function createProgress(request: Request): Promise<Response> {
 async function updateProgress(request: Request): Promise<Response> {
   const userOrErr = await requireAuth(request);
   if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
 
   const body = await request.json();
   const { userId, evaluationId, ...rest } = body;
+  if (userId !== user.id) return json({ error: "No autorizado" }, 403);
   const allowed = [
     "current_question_index", "answers", "time_remaining", "question_order",
   ];
@@ -1048,8 +1228,10 @@ async function updateProgress(request: Request): Promise<Response> {
 async function deleteProgress(request: Request): Promise<Response> {
   const userOrErr = await requireAuth(request);
   if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
 
   const { userId, evaluationId } = await request.json();
+  if (userId !== user.id) return json({ error: "No autorizado" }, 403);
   await db`
     DELETE FROM evaluation_progress
     WHERE user_id = ${userId} AND evaluation_id = ${evaluationId}
@@ -1295,6 +1477,7 @@ async function listProfiles(request: Request): Promise<Response> {
 async function updateProfileById(request: Request, id: string): Promise<Response> {
   const adminOrErr = await requireAdmin(request);
   if (adminOrErr instanceof Response) return adminOrErr;
+  const caller = adminOrErr as AuthUser;
 
   const body = await request.json();
   const allowed = ["full_name", "role", "area_id"];
@@ -1303,6 +1486,14 @@ async function updateProfileById(request: Request, id: string): Promise<Response
     if (k in body) patch[k] = body[k];
   }
   if (Object.keys(patch).length === 0) return json({ error: "Sin cambios" }, 400);
+
+  if ("role" in patch) {
+    const [target] = await db`SELECT role FROM profiles WHERE id = ${id}`;
+    if (!target) return json({ error: "No encontrado" }, 404);
+    if (!canActOnRole(caller.role, target.role) || !canActOnRole(caller.role, patch.role as string))
+      return json({ error: "No tienes permiso para asignar ese rol" }, 403);
+  }
+
   patch.updated_at = new Date().toISOString();
 
   const [row] = await db`
@@ -1332,10 +1523,19 @@ async function selfActivate(request: Request): Promise<Response> {
 async function createUser(request: Request): Promise<Response> {
   const adminOrErr = await requireAdmin(request);
   if (adminOrErr instanceof Response) return adminOrErr;
+  const caller = adminOrErr as AuthUser;
 
   const { email, fullName, role, areaId } = await request.json();
   if (!email || !fullName || !role)
     return json({ error: "Campos requeridos faltantes" }, 400);
+  if (!canActOnRole(caller.role, role))
+    return json({ error: "No tienes permiso para asignar ese rol" }, 403);
+
+  // email has a unique constraint, so this can silently upsert an EXISTING
+  // profile's role — apply the same hierarchy check to whatever role it has today.
+  const [existing] = await db`SELECT role FROM profiles WHERE email = ${email}`;
+  if (existing && !canActOnRole(caller.role, existing.role))
+    return json({ error: "No tienes permiso para modificar este usuario" }, 403);
 
   const [profile] = await db`
     INSERT INTO profiles (email, full_name, role, area_id)
@@ -1358,6 +1558,10 @@ async function deleteUser(request: Request): Promise<Response> {
   const { userId } = await request.json();
   if (userId === caller.id)
     return json({ error: "No puedes eliminar tu propia cuenta" }, 400);
+
+  const [target] = await db`SELECT role FROM profiles WHERE id = ${userId}`;
+  if (target && !canActOnRole(caller.role, target.role))
+    return json({ error: "No tienes permiso para eliminar este usuario" }, 403);
 
   await db`DELETE FROM profiles WHERE id = ${userId}`;
   return json({ success: true });
@@ -1429,7 +1633,7 @@ async function getRolePermissions(request: Request): Promise<Response> {
 }
 
 async function setRolePermissions(request: Request): Promise<Response> {
-  const adminOrErr = await requireAdmin(request);
+  const adminOrErr = await requireRolesConfigAccess(request);
   if (adminOrErr instanceof Response) return adminOrErr;
 
   const { matrix, capabilities } = await request.json();

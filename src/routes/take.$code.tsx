@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ArrowLeft, ArrowRight, Clock, FileText, Play, Tag, CheckCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { evaluationsService, questionsService, resultsService, calculateEvaluationScore, evaluationProgressService, evaluationParticipantsService } from "@/lib/services/evaluations";
+import { evaluationsService, questionsService, resultsService, evaluationProgressService, evaluationParticipantsService } from "@/lib/services/evaluations";
 import { useTranslation } from "react-i18next";
 import { renderEscenarioHtml } from "@/lib/sanitizeHtml";
 
@@ -278,8 +278,8 @@ function TakeEvaluationRoute() {
     try {
       setSubmitting(true);
 
-      // Calcular puntaje con reglas anti-gaming, pasando las preguntas mezcladas para mantener consistencia de IDs
-      const score = await calculateEvaluationScore(code, answers, shuffledQuestions);
+      // El puntaje se calcula y valida en el servidor (nunca se confía en un
+      // puntaje calculado en el cliente, que podría ser manipulado).
 
       // Obtener started_at del progreso de evaluación
       const progress = await evaluationProgressService.getByUserAndEvaluation(profile.id, code);
@@ -287,9 +287,7 @@ function TakeEvaluationRoute() {
 
       // Guardar resultado
       const savedResult = await resultsService.create({
-        user_id: profile.id,
         evaluation_id: code,
-        score: Math.round(score),
         answers: answers as any,
         started_at: startedAt
       });
@@ -633,9 +631,9 @@ function QuizRunner({
   // Determine if timer is in warning state (less than 2 minutes)
   const isTimeWarning = tiempoLimite && timeRemaining > 0 && timeRemaining <= 120;
 
-  // Determinar tipo de pregunta (única o múltiple)
-  const isMultipleChoice = q.correct_answer?.includes(',');
-  const correctAnswers = q.correct_answer?.split(',').map((a: string) => a.trim()) || [];
+  // Determinar tipo de pregunta (única o múltiple). El servidor nunca envía
+  // correct_answer durante un examen en curso; usa el flag is_multiple en su lugar.
+  const isMultipleChoice = !!q.is_multiple;
 
   const isLocked = lockedQuestions.has(q.id);
 
