@@ -1004,6 +1004,14 @@ async function computeEvaluationScore(
   return Math.round(total * 100) / 100;
 }
 
+// Thrown from inside the db.begin() callback in createResult to carry an
+// HTTP status back out through the transaction rollback.
+class HttpError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+  }
+}
+
 async function createResult(request: Request): Promise<Response> {
   const userOrErr = await requireAuth(request);
   if (userOrErr instanceof Response) return userOrErr;
@@ -1014,40 +1022,69 @@ async function createResult(request: Request): Promise<Response> {
   if (!evaluation_id || typeof answers !== "object" || answers === null)
     return json({ error: "Datos incompletos" }, 400);
 
-  const [evaluation] = await db`
-    SELECT activa, fecha_vencimiento, intentos_permitidos FROM evaluations WHERE id = ${evaluation_id}
-  `;
-  if (!evaluation) return json({ error: "Evaluación no encontrada" }, 404);
+  let row: any;
+  try {
+    row = await db.begin(async (sql) => {
+      // Serialize concurrent submit attempts from the same user+evaluation
+      // (e.g. the exam timer expiring at the same instant as a manual click)
+      // so the attempts-remaining check below can't race past
+      // intentos_permitidos and create two results for one attempt.
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${user.id + ":" + evaluation_id}::text, 0))`;
 
-  // take.$code.tsx checks these client-side before allowing a submit, but a
-  // direct API call must not be able to bypass them. Staff can always
-  // preview/take any evaluation, mirroring the client's isAdminUser bypass.
-  if (!isStaffRole(user.role)) {
-    if (evaluation.activa === false)
-      return json({ error: "Esta evaluación está desactivada" }, 403);
-    if (evaluation.fecha_vencimiento && new Date(evaluation.fecha_vencimiento) < new Date())
-      return json({ error: "Esta evaluación ha vencido" }, 403);
+      const [evaluation] = await sql`
+        SELECT activa, fecha_vencimiento, intentos_permitidos, area_ids
+        FROM evaluations WHERE id = ${evaluation_id}
+      `;
+      if (!evaluation) throw new HttpError(404, "Evaluación no encontrada");
 
-    const intentosPermitidos = evaluation.intentos_permitidos ?? 1;
-    const [{ count }] = await db`
-      SELECT COUNT(*)::int AS count FROM results
-      WHERE user_id = ${user.id} AND evaluation_id = ${evaluation_id}
-    `;
-    if (count >= intentosPermitidos)
-      return json({ error: "Ya alcanzaste el número de intentos permitidos" }, 403);
+      // take.$code.tsx checks all of this client-side before allowing a
+      // submit, but a direct API call must not be able to bypass it. Staff
+      // can always preview/take any evaluation, mirroring the client's
+      // isAdminUser bypass.
+      if (!isStaffRole(user.role)) {
+        if (evaluation.activa === false)
+          throw new HttpError(403, "Esta evaluación está desactivada");
+        if (evaluation.fecha_vencimiento && new Date(evaluation.fecha_vencimiento) < new Date())
+          throw new HttpError(403, "Esta evaluación ha vencido");
+
+        const areaIds: string[] = typeof evaluation.area_ids === "string"
+          ? JSON.parse(evaluation.area_ids)
+          : (evaluation.area_ids ?? []);
+        const [assignment] = await sql`
+          SELECT 1 FROM evaluation_participants
+          WHERE evaluation_id = ${evaluation_id} AND user_id = ${user.id}
+        `;
+        const isAreaMatch = !!user.area_id && areaIds.includes(user.area_id);
+        if (!assignment && !isAreaMatch)
+          throw new HttpError(403, "No estás autorizado para tomar esta evaluación");
+
+        const intentosPermitidos = evaluation.intentos_permitidos ?? 1;
+        const [{ count }] = await sql`
+          SELECT COUNT(*)::int AS count FROM results
+          WHERE user_id = ${user.id} AND evaluation_id = ${evaluation_id}
+        `;
+        if (count >= intentosPermitidos)
+          throw new HttpError(403, "Ya alcanzaste el número de intentos permitidos");
+      }
+
+      // user_id and score always come from the server — never trust the client here.
+      const score = await computeEvaluationScore(evaluation_id, answers);
+
+      const [inserted] = await sql`
+        INSERT INTO results (user_id, evaluation_id, score, answers, started_at)
+        VALUES (
+          ${user.id}, ${evaluation_id}, ${score},
+          ${sql.json(answers)}, ${started_at ?? null}
+        )
+        RETURNING *
+      `;
+      return inserted;
+    });
+  } catch (err) {
+    if (err instanceof HttpError) return json({ error: err.message }, err.status);
+    throw err;
   }
 
-  // user_id and score always come from the server — never trust the client here.
-  const score = await computeEvaluationScore(evaluation_id, answers);
-
-  const [row] = await db`
-    INSERT INTO results (user_id, evaluation_id, score, answers, started_at)
-    VALUES (
-      ${user.id}, ${evaluation_id}, ${score},
-      ${db.json(answers)}, ${started_at ?? null}
-    )
-    RETURNING *
-  `;
   if (typeof row.answers === 'string') row.answers = JSON.parse(row.answers);
   return json(row, 201);
 }
