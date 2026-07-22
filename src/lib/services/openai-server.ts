@@ -1,5 +1,24 @@
 import { createServerFn } from '@tanstack/react-start';
+import { getRequest } from '@tanstack/react-start/server';
 import OpenAI from 'openai';
+import { getAuthContext, getPermissionLevel, levelAtLeast, isStaffRole, type AuthUser } from '../server-auth';
+
+// These server functions call the (paid) OpenAI API. Unlike src/lib/api-handlers.ts,
+// TanStack Start server functions get no request/auth context by default — without
+// this check, anyone who can reach the RPC endpoint (no session required) could
+// trigger unlimited OpenAI calls and run up the app's API bill.
+async function requireAuthInServerFn(): Promise<AuthUser> {
+  const user = await getAuthContext(getRequest());
+  if (!user) throw new Error('No autenticado');
+  return user;
+}
+
+async function requireModuleAccessInServerFn(module: string, min: 'ver' | 'editar'): Promise<AuthUser> {
+  const user = await requireAuthInServerFn();
+  const level = await getPermissionLevel(user, module);
+  if (!levelAtLeast(level, min)) throw new Error('No tienes permiso para esta acción');
+  return user;
+}
 
 const DEFAULT_SYSTEM_PROMPT = `ROL DEL MODELO
 Actúas como un experto en diseño instruccional, evaluación del aprendizaje y generación de preguntas para exámenes, quizzes interactivos (tipo Kahoot), evaluaciones internas y entrenamientos corporativos.
@@ -768,6 +787,7 @@ type GenerateQuestionsInput = {
 export const generateQuestionsFn = createServerFn({ method: 'POST' })
   .inputValidator((data: GenerateQuestionsInput) => data)
   .handler(async ({ data }) => {
+    await requireModuleAccessInServerFn('generate', 'ver');
     if (data.casosPracticos?.habilitado) {
       return generateCaseQuestionsServer(
         data.extractedText,
@@ -940,6 +960,7 @@ type GenerateForoArticuloInput = {
 export const generateForoArticuloFn = createServerFn({ method: 'POST' })
   .inputValidator((data: GenerateForoArticuloInput) => data)
   .handler(async ({ data }) => {
+    await requireModuleAccessInServerFn('foro', 'editar');
     return generateForoArticuloServer(data.extractedText, data.idioma, data.model, data.temperature, data.maxTokens, data.retries);
   });
 
@@ -950,6 +971,10 @@ type ExtractImageTextInput = {
 export const extractImageTextFn = createServerFn({ method: 'POST' })
   .inputValidator((data: ExtractImageTextInput) => data)
   .handler(async ({ data }) => {
+    // Shared by generate.tsx, evaluations.tsx, and AiArticleGenerator.tsx —
+    // no single module covers all three, so gate on "is staff" instead.
+    const user = await requireAuthInServerFn();
+    if (!isStaffRole(user.role)) throw new Error('No tienes permiso para esta acción');
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY no está configurada en el servidor');
@@ -1178,6 +1203,10 @@ type GenerateResultFeedbackInput = {
 export const generateResultFeedbackFn = createServerFn({ method: 'POST' })
   .inputValidator((data: GenerateResultFeedbackInput) => data)
   .handler(async ({ data }) => {
+    // Any authenticated participant may generate feedback for their own result
+    // (ownership of the underlying result is enforced separately at
+    // submitResultFeedback, which is what actually persists it).
+    await requireAuthInServerFn();
     return generateResultFeedbackServer(
       data.documentoTexto,
       data.breakdown,

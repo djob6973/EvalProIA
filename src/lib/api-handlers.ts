@@ -86,12 +86,12 @@ async function route(
   // ── Evaluations ──────────────────────────────────────────────────────────
   if (res === "evaluations") {
     if (!id) {
-      if (m === "GET") return listEvaluations();
+      if (m === "GET") return listEvaluations(request);
       if (m === "POST") return createEvaluation(request);
     }
-    if (id === "active" && m === "GET") return activeEvaluations();
+    if (id === "active" && m === "GET") return activeEvaluations(request);
     if (id && !sub2) {
-      if (m === "GET") return getEvaluation(id);
+      if (m === "GET") return getEvaluation(request, id);
       if (m === "PUT") return updateEvaluation(request, id);
       if (m === "DELETE") return deleteEvaluation(request, id);
     }
@@ -125,7 +125,7 @@ async function route(
     if (id === "by-user" && sub2 && m === "GET") return resultsByUser(request, sub2);
     if (id === "by-evaluation" && sub2 && m === "GET")
       return resultsByEval(request, sub2);
-    if (id === "count" && !sub2 && m === "GET") return getResultCount(url);
+    if (id === "count" && !sub2 && m === "GET") return getResultCount(request, url);
     if (id && sub2 === "feedback" && m === "POST") return submitResultFeedback(request, id);
     if (id && !sub2 && m === "GET") return getResult(request, id);
   }
@@ -133,7 +133,7 @@ async function route(
   // ── Areas ─────────────────────────────────────────────────────────────────
   if (res === "areas") {
     if (!id) {
-      if (m === "GET") return listAreas();
+      if (m === "GET") return listAreas(request);
       if (m === "POST") return createArea(request);
     }
     if (id && !sub2) {
@@ -143,7 +143,7 @@ async function route(
   }
 
   // ── Participants ──────────────────────────────────────────────────────────
-  if (res === "participants" && !id && m === "GET") return listParticipants();
+  if (res === "participants" && !id && m === "GET") return listParticipants(request);
 
   // ── Evaluation participants ───────────────────────────────────────────────
   if (res === "eval-participants") {
@@ -152,8 +152,8 @@ async function route(
       if (m === "DELETE") return unassignParticipant(request);
     }
     if (id === "by-user" && sub2 && m === "GET")
-      return evalParticipantsByUser(sub2);
-    if (id && !sub2 && m === "GET") return evalParticipantsByEval(id);
+      return evalParticipantsByUser(request, sub2);
+    if (id && !sub2 && m === "GET") return evalParticipantsByEval(request, id);
   }
 
   // ── Progress ──────────────────────────────────────────────────────────────
@@ -166,50 +166,26 @@ async function route(
     if (id && sub2 && m === "GET") return getProgress(request, id, sub2);
   }
 
-  // ── Temporary diagnostic endpoint (remove after use) ─────────────────────
-  if (res === "diag" && m === "GET") {
-    const key = url.searchParams.get("key");
-    if (key !== "DATAICO_DIAG_2026") return json({ error: "Forbidden" }, 403);
-    const evalId = url.searchParams.get("eval");
-    if (!evalId) return json({ error: "eval param required" }, 400);
-    const results = await db`
-      SELECT r.id, r.score, r.answers, r.completed_at,
-             p.full_name, p.email,
-             (SELECT COUNT(*) FROM jsonb_object_keys(r.answers)) AS answered_count
-      FROM results r
-      LEFT JOIN profiles p ON p.id = r.user_id
-      WHERE r.evaluation_id = ${evalId}
-      ORDER BY r.score DESC
-    `;
-    const questions = await db`
-      SELECT q.id, q.question_text, q.correct_answer,
-             array_length(string_to_array(q.correct_answer, ','), 1) AS correct_count
-      FROM questions q
-      WHERE q.evaluation_id = ${evalId}
-      ORDER BY q.created_at
-    `;
-    return json({ results, questions });
-  }
 
 
   // ── System settings ──────────────────────────────────────────────────────
   if (res === "settings") {
-    if (!id && m === "GET") return getSettings();
+    if (!id && m === "GET") return getSettings(request);
     if (id === "brand-logo" && m === "POST") return setBrandLogo(request);
     if (id === "brand-logo" && m === "DELETE") return deleteBrandLogo(request);
   }
 
   // ── Etiquetas ─────────────────────────────────────────────────────────────
   if (res === "etiquetas") {
-    if (!id && m === "GET") return listEtiquetas();
+    if (!id && m === "GET") return listEtiquetas(request);
     if (!id && m === "POST") return createEtiqueta(request);
   }
 
   // ── Categories ────────────────────────────────────────────────────────────
-  if (res === "categories" && !id && m === "GET") return listCategories();
+  if (res === "categories" && !id && m === "GET") return listCategories(request);
 
   // ── Question areas (distinct 'area' values on questions, not the org 'areas' table) ──
-  if (res === "question-areas" && !id && m === "GET") return listQuestionAreas();
+  if (res === "question-areas" && !id && m === "GET") return listQuestionAreas(request);
 
   // ── Notifications ─────────────────────────────────────────────────────────
   if (res === "notifications") {
@@ -219,8 +195,8 @@ async function route(
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   if (res === "stats") {
-    if (id === "dashboard" && m === "GET") return dashboardStats();
-    if (id === "activity" && m === "GET") return activityFeed(url);
+    if (id === "dashboard" && m === "GET") return dashboardStats(request);
+    if (id === "activity" && m === "GET") return activityFeed(request, url);
   }
 
   // ── Profiles (users admin page) ───────────────────────────────────────────
@@ -314,7 +290,10 @@ async function publishForoArticuloIfDeactivated(evaluationId: string): Promise<v
   `;
 }
 
-async function listEvaluations(): Promise<Response> {
+async function listEvaluations(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`
     SELECT id, title, description, created_by, area_ids, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
@@ -324,7 +303,10 @@ async function listEvaluations(): Promise<Response> {
   return json(rows.map(parseEvaluation));
 }
 
-async function activeEvaluations(): Promise<Response> {
+async function activeEvaluations(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`
     SELECT id, title, description, created_by, area_ids, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
@@ -337,7 +319,10 @@ async function activeEvaluations(): Promise<Response> {
   return json(rows.map(parseEvaluation));
 }
 
-async function getEvaluation(id: string): Promise<Response> {
+async function getEvaluation(request: Request, id: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const [row] = await db`
     SELECT e.*,
       (SELECT fa.id FROM foro_articulos fa
@@ -943,10 +928,17 @@ async function submitResultFeedback(request: Request, id: string): Promise<Respo
   return json(typeof row.feedback === 'string' ? JSON.parse(row.feedback) : row.feedback, 201);
 }
 
-async function getResultCount(url: URL): Promise<Response> {
+async function getResultCount(request: Request, url: URL): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+
   const userId = url.searchParams.get("userId");
   const evalId = url.searchParams.get("evalId");
   if (!userId || !evalId) return json({ error: "Parámetros faltantes" }, 400);
+  if (userId !== user.id && !isStaffRole(user.role))
+    return json({ error: "No autorizado" }, 403);
+
   const [{ count }] = await db`
     SELECT COUNT(*)::int AS count FROM results
     WHERE user_id = ${userId} AND evaluation_id = ${evalId}
@@ -1062,7 +1054,10 @@ async function createResult(request: Request): Promise<Response> {
 
 // ── Areas handlers ────────────────────────────────────────────────────────────
 
-async function listAreas(): Promise<Response> {
+async function listAreas(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`SELECT * FROM areas ORDER BY name ASC`;
   return json(rows);
 }
@@ -1113,7 +1108,13 @@ async function deleteArea(request: Request, id: string): Promise<Response> {
 
 // ── Participants ──────────────────────────────────────────────────────────────
 
-async function listParticipants(): Promise<Response> {
+async function listParticipants(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
+  // Any authenticated user needs this for @mention search in Foro comments,
+  // not just admins — but it must still require a session, since it lists
+  // every user's email/name/role.
   const rows = await db`
     SELECT id, email, full_name, area_id, role
     FROM profiles
@@ -1124,14 +1125,23 @@ async function listParticipants(): Promise<Response> {
 
 // ── Eval-participants ─────────────────────────────────────────────────────────
 
-async function evalParticipantsByEval(evalId: string): Promise<Response> {
+async function evalParticipantsByEval(request: Request, evalId: string): Promise<Response> {
+  const adminOrErr = await requireAdmin(request);
+  if (adminOrErr instanceof Response) return adminOrErr;
+
   const rows = await db`
     SELECT user_id FROM evaluation_participants WHERE evaluation_id = ${evalId}
   `;
   return json(rows.map((r: any) => r.user_id));
 }
 
-async function evalParticipantsByUser(userId: string): Promise<Response> {
+async function evalParticipantsByUser(request: Request, userId: string): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+  if (user.id !== userId && !isStaffRole(user.role))
+    return json({ error: "No autorizado" }, 403);
+
   const rows = await db`
     SELECT evaluation_id FROM evaluation_participants WHERE user_id = ${userId}
   `;
@@ -1300,7 +1310,10 @@ async function markAllNotificationsRead(request: Request): Promise<Response> {
 
 // ── Etiquetas ─────────────────────────────────────────────────────────────────
 
-async function listEtiquetas(): Promise<Response> {
+async function listEtiquetas(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`SELECT id, nombre, created_at FROM etiquetas ORDER BY nombre ASC`;
   return json(rows);
 }
@@ -1324,7 +1337,10 @@ async function createEtiqueta(request: Request): Promise<Response> {
 
 // ── Categories ────────────────────────────────────────────────────────────────
 
-async function listCategories(): Promise<Response> {
+async function listCategories(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`
     SELECT DISTINCT categoria FROM questions WHERE categoria IS NOT NULL
   `;
@@ -1335,7 +1351,10 @@ async function listCategories(): Promise<Response> {
   return json(cats);
 }
 
-async function listQuestionAreas(): Promise<Response> {
+async function listQuestionAreas(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`
     SELECT DISTINCT area FROM questions WHERE area IS NOT NULL
   `;
@@ -1348,7 +1367,13 @@ async function listQuestionAreas(): Promise<Response> {
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
-async function dashboardStats(): Promise<Response> {
+async function dashboardStats(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+  const level = await getPermissionLevel(user, "dashboard");
+  if (level === "none") return json({ error: "No autorizado" }, 403);
+
   const [
     [{ count: totalEvaluations }],
     recentEvalsRaw,
@@ -1439,7 +1464,13 @@ async function dashboardStats(): Promise<Response> {
   });
 }
 
-async function activityFeed(url: URL): Promise<Response> {
+async function activityFeed(request: Request, url: URL): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+  const user = userOrErr as AuthUser;
+  const level = await getPermissionLevel(user, "dashboard");
+  if (level === "none") return json({ error: "No autorizado" }, 403);
+
   const limit = parseInt(url.searchParams.get("limit") ?? "50", 10);
 
   const [recentResultsRaw, recentEvalsRaw] = await Promise.all([
@@ -1600,7 +1631,10 @@ async function deleteUser(request: Request): Promise<Response> {
 
 // ── System settings ───────────────────────────────────────────────────────────
 
-async function getSettings(): Promise<Response> {
+async function getSettings(request: Request): Promise<Response> {
+  const userOrErr = await requireAuth(request);
+  if (userOrErr instanceof Response) return userOrErr;
+
   const rows = await db`SELECT key, value FROM system_settings`;
   const settings: Record<string, string> = {};
   for (const row of rows as any[]) settings[row.key] = row.value;
