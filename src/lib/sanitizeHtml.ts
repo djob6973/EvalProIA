@@ -73,5 +73,12 @@ export function renderEscenarioHtml(raw: string | null | undefined): string {
 /** Extrae solo el texto (sin markup) — usado para pasarle el escenario al prompt de feedback IA. */
 export function stripHtmlToText(html: string | null | undefined): string {
   if (!html) return '';
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }).trim();
+  // DOMPurify con ALLOWED_TAGS: [] concatena el texto de bloques adyacentes sin
+  // espacio (ej. "<li>Item uno</li><li>Item dos</li>" -> "Item unoItem dos").
+  // Insertamos un salto de línea donde terminan los bloques antes de despojar
+  // las etiquetas, para que el texto resultante conserve una separación legible.
+  const withBreaks = html.replace(/<\/(p|li|h1|h2|h3|blockquote|tr)>|<br\s*\/?>/gi, '\n');
+  return DOMPurify.sanitize(withBreaks, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }

@@ -46,6 +46,11 @@ type Question = {
   /** Narrativa del caso práctico, si esta pregunta pertenece a uno. */
   escenario?: string;
   tipoCaso?: string;
+  /** Fuente de verdad para "es caso práctico" — no inferir desde `escenario`,
+   *  que puede quedar con markup vacío (ej. "<p></p>") tras vaciar el editor. */
+  esCasoPractico?: boolean;
+  /** Clave de agrupación de "caso práctico" compartida entre preguntas hermanas. */
+  casoId?: string | null;
 };
 
 const DEFAULT_CATEGORIES = [
@@ -193,6 +198,8 @@ function QuestionBankPage() {
           justificacion: q.justificacion || '',
           escenario: q.escenario || '',
           tipoCaso: q.tipo_caso || '',
+          esCasoPractico: !!q.es_caso_practico,
+          casoId: q.caso_id ?? null,
         }));
 
         setItems(mappedItems);
@@ -441,6 +448,21 @@ function QuestionBankPage() {
       setAreas((prev) => [...prev, newAreaName.trim()].sort());
     }
 
+    // Única fuente de verdad para "es caso práctico", calculada una vez y
+    // reutilizada tanto en el payload guardado como en el estado local — así
+    // el badge de la lista nunca queda desincronizado del texto real del
+    // escenario (ej. si se vacía el editor pero queda "<p></p>" truthy).
+    const esCasoPractico = !!stripHtmlToText(form.escenario).trim();
+    // Una pregunta que se vuelve caso práctico necesita su propio caso_id o el
+    // agrupamiento de "hermanas" en evaluations.tsx/take.$code.tsx calcula un
+    // grupo vacío ("Pregunta 0 de 0"). Solo se asigna uno nuevo si todavía no
+    // pertenece a un grupo — si ya tiene caso_id (definido desde otro flujo),
+    // se preserva tal cual.
+    const needsNewCasoId = esCasoPractico && !form.casoId;
+    const casoIdPatch = needsNewCasoId
+      ? { caso_id: crypto.randomUUID(), caso_orden: 0 }
+      : {};
+
     setIsSaving(true);
     try {
       if (editing) {
@@ -457,9 +479,11 @@ function QuestionBankPage() {
           justificacion: form.justificacion,
           escenario: form.escenario || '',
           tipo_caso: form.tipoCaso || '',
-          es_caso_practico: !!stripHtmlToText(form.escenario).trim(),
+          es_caso_practico: esCasoPractico,
+          ...casoIdPatch,
         });
-        setItems((p) => p.map((q) => (q.id === editing.id ? { ...form, id: editing.id } : q)));
+        const casoId = needsNewCasoId ? casoIdPatch.caso_id : form.casoId;
+        setItems((p) => p.map((q) => (q.id === editing.id ? { ...form, id: editing.id, esCasoPractico, casoId } : q)));
         showToast(t('questionBank.updated'));
       } else {
         // Crear nueva pregunta en Supabase (sin evaluation_id para banco de preguntas)
@@ -476,7 +500,8 @@ function QuestionBankPage() {
           justificacion: form.justificacion,
           escenario: form.escenario || '',
           tipo_caso: form.tipoCaso || '',
-          es_caso_practico: !!stripHtmlToText(form.escenario).trim(),
+          es_caso_practico: esCasoPractico,
+          ...casoIdPatch,
         });
 
         // Optimistic insert — avoids a full getAll() round-trip after every create
@@ -495,6 +520,8 @@ function QuestionBankPage() {
           justificacion: created.justificacion || '',
           escenario: created.escenario || '',
           tipoCaso: created.tipo_caso || '',
+          esCasoPractico,
+          casoId: created.caso_id ?? null,
         };
         setItems((prev) => [mappedItem, ...prev]);
         showToast(t('questionBank.created'));
@@ -732,7 +759,7 @@ function QuestionBankPage() {
                           >
                             {q.estado === "activa" ? "ACTIVA" : q.estado === "borrador" ? "BORRADOR" : "INACTIVA"}
                           </span>
-                          {!!q.escenario && (
+                          {q.esCasoPractico && (
                             <span className="rounded-lg px-2.5 py-1 text-[10px] font-medium transition-all duration-300 hover:shadow-sm" style={{ background: "var(--coral-soft)", color: "var(--coral-text)" }}>
                               📋 {t('questionBank.caseBadge')}{q.tipoCaso ? ` · ${q.tipoCaso}` : ''}
                             </span>
@@ -744,7 +771,7 @@ function QuestionBankPage() {
                             <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.context')}</strong> {q.contexto}
                           </p>
                         )}
-                        {!!q.escenario && (
+                        {q.esCasoPractico && !!q.escenario && (
                           <div className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
                             <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.scenario')}</strong>
                             <div
