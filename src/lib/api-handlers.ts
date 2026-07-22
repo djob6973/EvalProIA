@@ -1022,6 +1022,29 @@ async function createResult(request: Request): Promise<Response> {
   if (!evaluation_id || typeof answers !== "object" || answers === null)
     return json({ error: "Datos incompletos" }, 400);
 
+  const [evaluation] = await db`
+    SELECT activa, fecha_vencimiento, intentos_permitidos FROM evaluations WHERE id = ${evaluation_id}
+  `;
+  if (!evaluation) return json({ error: "Evaluación no encontrada" }, 404);
+
+  // take.$code.tsx checks these client-side before allowing a submit, but a
+  // direct API call must not be able to bypass them. Staff can always
+  // preview/take any evaluation, mirroring the client's isAdminUser bypass.
+  if (!isStaffRole(user.role)) {
+    if (evaluation.activa === false)
+      return json({ error: "Esta evaluación está desactivada" }, 403);
+    if (evaluation.fecha_vencimiento && new Date(evaluation.fecha_vencimiento) < new Date())
+      return json({ error: "Esta evaluación ha vencido" }, 403);
+
+    const intentosPermitidos = evaluation.intentos_permitidos ?? 1;
+    const [{ count }] = await db`
+      SELECT COUNT(*)::int AS count FROM results
+      WHERE user_id = ${user.id} AND evaluation_id = ${evaluation_id}
+    `;
+    if (count >= intentosPermitidos)
+      return json({ error: "Ya alcanzaste el número de intentos permitidos" }, 403);
+  }
+
   // user_id and score always come from the server — never trust the client here.
   const score = await computeEvaluationScore(evaluation_id, answers);
 
@@ -1077,6 +1100,13 @@ async function deleteArea(request: Request, id: string): Promise<Response> {
   const adminOrErr = await requireAdmin(request);
   if (adminOrErr instanceof Response) return adminOrErr;
 
+  // area_ids is a JSONB array with no foreign key, so deleting an area would
+  // otherwise leave a dangling id on every evaluation that had it assigned —
+  // permanently invisible to any area filter with no way to clean it up from the UI.
+  await db`
+    UPDATE evaluations SET area_ids = area_ids - ${id}
+    WHERE area_ids ? ${id}
+  `;
   await db`DELETE FROM areas WHERE id = ${id}`;
   return json({ success: true });
 }

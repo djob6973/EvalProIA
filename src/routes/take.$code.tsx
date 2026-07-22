@@ -272,8 +272,17 @@ function TakeEvaluationRoute() {
 
   const [quizInitialState, setQuizInitialState] = useState<any>(null);
 
+  // Guarda contra doble envío: el timer de expiración llama a handleSubmit
+  // directamente (sin pasar por el estado `submitting`/disabled del botón),
+  // así que un clic manual justo cuando el tiempo se agota podría disparar
+  // dos submits en paralelo. Un ref se lee/escribe de forma síncrona, a
+  // diferencia de `submitting` (estado de React, actualizado de forma asíncrona).
+  const isSubmittingRef = useRef(false);
+
   const handleSubmit = async (answers: Record<string, string | string[]>) => {
     if (!profile?.id || !code) return;
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     try {
       setSubmitting(true);
@@ -300,6 +309,7 @@ function TakeEvaluationRoute() {
     } catch (err) {
       console.error('Error submitting evaluation:', err);
       setError(t('take.submitError'));
+      isSubmittingRef.current = false; // permitir reintentar tras un error
     } finally {
       setSubmitting(false);
     }
