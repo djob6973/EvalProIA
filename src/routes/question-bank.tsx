@@ -748,7 +748,7 @@ function QuestionBankPage() {
                           <div className="mb-3 rounded-lg border-l-2 px-3 py-2 text-xs leading-relaxed transition-all duration-300" style={{ borderColor: "var(--accent)", background: "var(--secondary)", color: "var(--muted-foreground)" }}>
                             <strong className="transition-colors duration-300" style={{ color: "var(--foreground)" }}>{t('questionBank.scenario')}</strong>
                             <div
-                              className="prose prose-sm mt-1 max-w-none dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                              className="prose prose-sm mt-1 max-w-none dark:prose-invert [&_img]:block [&_img]:mx-auto [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:mx-auto [&_iframe]:block [&_iframe]:aspect-video [&_iframe]:h-auto [&_iframe]:w-full [&_iframe]:max-w-full [&_iframe]:rounded-lg"
                               dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
                             />
                           </div>

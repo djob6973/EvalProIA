@@ -170,7 +170,7 @@ export function RichTextField({ value, onChange, placeholder }: RichTextFieldPro
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none dark:prose-invert min-h-[160px] focus:outline-none [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg",
+          "prose prose-sm max-w-none dark:prose-invert min-h-[160px] focus:outline-none [&_img]:block [&_img]:mx-auto [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:mx-auto [&_iframe]:block [&_iframe]:aspect-video [&_iframe]:h-auto [&_iframe]:w-full [&_iframe]:max-w-full [&_iframe]:rounded-lg",
       },
       handleDrop: (view, event) => {
         const file = event.dataTransfer?.files?.[0];

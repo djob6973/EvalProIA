@@ -741,7 +741,7 @@ function QuizRunner({
                 📋 {t('common.caseStudy')}{q.tipo_caso ? ` · ${q.tipo_caso}` : ''}
               </div>
               <div
-                className="prose prose-sm max-w-none text-[15px] leading-relaxed dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                className="prose prose-sm max-w-none text-[15px] leading-relaxed dark:prose-invert [&_img]:block [&_img]:mx-auto [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:mx-auto [&_iframe]:block [&_iframe]:aspect-video [&_iframe]:h-auto [&_iframe]:w-full [&_iframe]:max-w-full [&_iframe]:rounded-lg"
                 style={{ color: "var(--foreground)" }}
                 dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
               />
@@ -765,7 +765,7 @@ function QuizRunner({
                   </button>
                   {showFullScenario && (
                     <div
-                      className="prose prose-sm mt-[8px] max-w-none rounded-[12px] p-[14px] text-[13px] leading-relaxed dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                      className="prose prose-sm mt-[8px] max-w-none rounded-[12px] p-[14px] text-[13px] leading-relaxed dark:prose-invert [&_img]:block [&_img]:mx-auto [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:mx-auto [&_iframe]:block [&_iframe]:aspect-video [&_iframe]:h-auto [&_iframe]:w-full [&_iframe]:max-w-full [&_iframe]:rounded-lg"
                       style={{ background: "var(--coral-soft)", borderLeft: "3px solid var(--accent)", color: "var(--foreground)" }}
                       dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
                     />

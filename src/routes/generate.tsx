@@ -1107,7 +1107,7 @@ function GeneratePage() {
                           </span>
                         </div>
                         <div
-                          className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:max-w-full [&_iframe]:rounded-lg"
+                          className="prose prose-sm max-w-none text-foreground dark:prose-invert [&_img]:block [&_img]:mx-auto [&_img]:max-w-full [&_img]:rounded-lg [&_iframe]:mx-auto [&_iframe]:block [&_iframe]:aspect-video [&_iframe]:h-auto [&_iframe]:w-full [&_iframe]:max-w-full [&_iframe]:rounded-lg"
                           dangerouslySetInnerHTML={{ __html: renderEscenarioHtml(q.escenario) }}
                         />
                       </div>
