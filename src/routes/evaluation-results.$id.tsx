@@ -513,7 +513,10 @@ function EvaluationResultsPage() {
           resultsService.getByEvaluationId(id),
         ]);
         setEvaluation(evalData);
-        setArea(areasData.find((a: any) => a.id === evalData.area_id) ?? null);
+        const areaNames = (evalData.area_ids ?? [])
+          .map((aid: string) => areasData.find((a: any) => a.id === aid)?.name)
+          .filter(Boolean);
+        setArea(areaNames.length > 0 ? { name: areaNames.join(", ") } : null);
         setResults(resultsData);
 
         const allQuestionIds = new Set<string>();

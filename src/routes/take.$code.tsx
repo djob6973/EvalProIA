@@ -113,7 +113,7 @@ function TakeEvaluationRoute() {
         if (!isAdminUser) {
           const assignedIds = await evaluationParticipantsService.getByUserId(profile.id);
           const isDirectlyAssigned = assignedIds.includes(code);
-          const isAreaMatch = evalData.area_id && evalData.area_id === profile.area_id;
+          const isAreaMatch = !!profile.area_id && !!evalData.area_ids?.includes(profile.area_id);
 
           if (!isDirectlyAssigned && !isAreaMatch) {
             setError(t('take.noAuth'));

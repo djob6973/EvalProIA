@@ -302,7 +302,7 @@ async function publishForoArticuloIfDeactivated(evaluationId: string): Promise<v
 
 async function listEvaluations(): Promise<Response> {
   const rows = await db`
-    SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
+    SELECT id, title, description, created_by, area_ids, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
            feedback_trigger, feedback_documento_nombre, etiqueta_id, detalle_respuestas_trigger
     FROM evaluations ORDER BY created_at DESC
@@ -312,7 +312,7 @@ async function listEvaluations(): Promise<Response> {
 
 async function activeEvaluations(): Promise<Response> {
   const rows = await db`
-    SELECT id, title, description, created_by, area_id, activa, tiempo_limite, intentos_permitidos,
+    SELECT id, title, description, created_by, area_ids, activa, tiempo_limite, intentos_permitidos,
            categorias, config, fecha_vencimiento, created_at, updated_at,
            feedback_trigger, feedback_documento_nombre, etiqueta_id, detalle_respuestas_trigger
     FROM evaluations
@@ -340,7 +340,7 @@ async function createEvaluation(request: Request): Promise<Response> {
 
   const body = await request.json();
   const {
-    title, description, created_by, area_id, activa,
+    title, description, created_by, area_ids, activa,
     tiempo_limite, intentos_permitidos, categorias, config, fecha_vencimiento,
     feedback_trigger, feedback_documento_texto, feedback_documento_nombre, feedback_documento_idioma,
     etiqueta_id, detalle_respuestas_trigger,
@@ -352,15 +352,16 @@ async function createEvaluation(request: Request): Promise<Response> {
   const detalleRespuestasTriggerFinal = ["ninguno", "al_finalizar", "inactiva"].includes(detalle_respuestas_trigger)
     ? detalle_respuestas_trigger
     : "ninguno";
+  const areaIdsFinal: string[] = Array.isArray(area_ids) ? area_ids : [];
 
   const [row] = await db`
     INSERT INTO evaluations
-      (title, description, created_by, area_id, activa, tiempo_limite,
+      (title, description, created_by, area_ids, activa, tiempo_limite,
        intentos_permitidos, categorias, config, fecha_vencimiento,
        feedback_trigger, feedback_documento_texto, feedback_documento_nombre, etiqueta_id,
        detalle_respuestas_trigger)
     VALUES
-      (${title}, ${description ?? null}, ${created_by ?? null}, ${area_id ?? null},
+      (${title}, ${description ?? null}, ${created_by ?? null}, ${db.json(areaIdsFinal)},
        ${activa ?? true}, ${tiempo_limite ?? null}, ${intentos_permitidos ?? 1},
        ${db.json(categorias ?? [])}, ${db.json(config ?? {})},
        ${fecha_vencimiento ?? null},
@@ -369,11 +370,11 @@ async function createEvaluation(request: Request): Promise<Response> {
     RETURNING *
   `;
 
-  // Auto-assign and notify all users in the area when evaluation has an area_id
-  if (area_id) {
+  // Auto-assign and notify all users in any of the evaluation's areas
+  if (areaIdsFinal.length > 0) {
     const areaUsers = await db`
       SELECT id FROM profiles
-      WHERE area_id = ${area_id}
+      WHERE area_id = ANY(${areaIdsFinal}::uuid[])
     `;
     if (areaUsers.length > 0) {
       await db`
@@ -386,7 +387,7 @@ async function createEvaluation(request: Request): Promise<Response> {
         SELECT id, 'evaluation_assigned', 'Nueva evaluación disponible',
                ${"Tienes una nueva evaluación disponible: \"" + title + "\""}
         FROM profiles
-        WHERE area_id = ${area_id}
+        WHERE area_id = ANY(${areaIdsFinal}::uuid[])
       `;
     }
   }
@@ -411,7 +412,7 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
   const body = await request.json();
   const allowed = [
     "title", "description", "activa", "tiempo_limite",
-    "intentos_permitidos", "categorias", "config", "area_id",
+    "intentos_permitidos", "categorias", "config", "area_ids",
     "fecha_vencimiento", "created_by",
     "feedback_trigger", "feedback_documento_texto", "feedback_documento_nombre",
     "etiqueta_id", "detalle_respuestas_trigger",
@@ -419,7 +420,7 @@ async function updateEvaluation(request: Request, id: string): Promise<Response>
   const patch: Record<string, unknown> = {};
   for (const k of allowed) {
     if (k in body) {
-      if (k === "categorias" || k === "config") {
+      if (k === "categorias" || k === "config" || k === "area_ids") {
         patch[k] = db.json(body[k]);
       } else if (k === "feedback_trigger" || k === "detalle_respuestas_trigger") {
         patch[k] = ["ninguno", "al_finalizar", "inactiva"].includes(body[k]) ? body[k] : "ninguno";
@@ -489,6 +490,9 @@ function parseEvaluation(row: any) {
     categorias: typeof row.categorias === "string"
       ? JSON.parse(row.categorias)
       : (row.categorias ?? []),
+    area_ids: typeof row.area_ids === "string"
+      ? JSON.parse(row.area_ids)
+      : (row.area_ids ?? []),
     config: typeof row.config === "string"
       ? JSON.parse(row.config)
       : (row.config ?? {}),
@@ -708,7 +712,7 @@ async function listResults(): Promise<Response> {
       r.id, r.user_id, r.evaluation_id, r.score, r.answers,
       r.started_at, r.completed_at, r.created_at,
       e.title  AS eval_title,
-      e.area_id AS eval_area_id,
+      e.area_ids AS eval_area_ids,
       p.full_name AS profile_full_name,
       p.email     AS profile_email
     FROM results r
@@ -725,7 +729,10 @@ async function listResults(): Promise<Response> {
       answers: typeof r.answers === 'string' ? JSON.parse(r.answers) : r.answers,
       started_at: r.started_at,
       completed_at: r.completed_at,
-      evaluations: { title: r.eval_title, area_id: r.eval_area_id },
+      evaluations: {
+        title: r.eval_title,
+        area_ids: typeof r.eval_area_ids === 'string' ? JSON.parse(r.eval_area_ids) : (r.eval_area_ids ?? []),
+      },
       profiles: { full_name: r.profile_full_name, email: r.profile_email },
     }))
   );

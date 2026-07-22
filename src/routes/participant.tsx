@@ -56,8 +56,8 @@ function ParticipantHome() {
         // activa and fecha_vencimiento already filtered by DB — only apply area/assignment logic
         const activeEvaluations = allEvaluations.filter((ev: any) => {
           if (directSet.has(ev.id)) return true;
-          if (!ev.area_id) return false;
-          if (ev.area_id !== userAreaId) return false;
+          if (!ev.area_ids?.length) return false;
+          if (!userAreaId || !ev.area_ids.includes(userAreaId)) return false;
           return true;
         });
 

@@ -29,7 +29,7 @@ type RawResult = {
   score: number;
   completed_at: string;
   started_at: string;
-  evaluations: { title: string; area_id: string | null };
+  evaluations: { title: string; area_ids: string[] };
   profiles: { full_name: string | null; email: string };
 };
 
@@ -50,6 +50,13 @@ function matchesAreaFilter(areaId: string | null | undefined, filterValue: strin
   if (filterValue === "all") return true;
   if (filterValue === "none") return !areaId;
   return areaId === filterValue;
+}
+
+// Same as matchesAreaFilter but for an evaluation's multiple areas (area_ids)
+function matchesAreaFilterMulti(areaIds: string[] | null | undefined, filterValue: string): boolean {
+  if (filterValue === "all") return true;
+  if (filterValue === "none") return !areaIds?.length;
+  return !!areaIds?.includes(filterValue);
 }
 
 function getTrendBucket(date: Date, view: TrendView, locale: string): { sortKey: string; label: string } {
@@ -195,7 +202,7 @@ function ResultsPageContent() {
   // Metrics tab: results filtered by the shared filter bar
   const metricsFiltered = useMemo(() => {
     return allResults.filter((r) => {
-      if (!matchesAreaFilter(r.evaluations?.area_id, mtFilterAreaId)) return false;
+      if (!matchesAreaFilterMulti(r.evaluations?.area_ids, mtFilterAreaId)) return false;
       if (!matchesAreaFilter(participantsById.get(r.user_id)?.area_id, mtFilterParticipantAreaId)) return false;
       if (mtFilterEvaluationId !== "all" && r.evaluation_id !== mtFilterEvaluationId) return false;
       if (mtFilterUserId !== "all" && r.user_id !== mtFilterUserId) return false;
@@ -210,7 +217,7 @@ function ResultsPageContent() {
     const relevantUserIds = new Set(
       allResults
         .filter((r) => {
-          if (!matchesAreaFilter(r.evaluations?.area_id, mtFilterAreaId)) return false;
+          if (!matchesAreaFilterMulti(r.evaluations?.area_ids, mtFilterAreaId)) return false;
           if (!matchesAreaFilter(participantsById.get(r.user_id)?.area_id, mtFilterParticipantAreaId)) return false;
           if (mtFilterEvaluationId !== "all" && r.evaluation_id !== mtFilterEvaluationId) return false;
           if (mtFilterDateFrom && new Date(r.completed_at) < new Date(mtFilterDateFrom)) return false;
@@ -379,12 +386,15 @@ function ResultsPageContent() {
       t('results.csvArea'), t('results.csvScore'), t('results.csvStatus'), t('results.csvDate'),
     ];
     const rows = allResults.map((r) => {
-      const area = areas.find((a) => a.id === r.evaluations?.area_id);
+      const areaNames = (r.evaluations?.area_ids ?? [])
+        .map((id) => areas.find((a) => a.id === id)?.name)
+        .filter(Boolean)
+        .join(", ");
       return [
         r.profiles?.full_name || "",
         r.profiles?.email || "",
         r.evaluations?.title || "",
-        area?.name || "",
+        areaNames,
         String(r.score),
         r.score >= 60 ? t('common.approved') : t('common.failed'),
         new Date(r.completed_at).toLocaleString("es-ES"),

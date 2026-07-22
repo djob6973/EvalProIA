@@ -353,5 +353,13 @@ export async function runMigrations(): Promise<void> {
       CHECK (detalle_respuestas_trigger IN ('ninguno','al_finalizar','inactiva'))
   `;
 
+  // Soporte multi-área: reemplaza el area_id (FK simple) por un arreglo de áreas
+  await db`ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS area_ids JSONB NOT NULL DEFAULT '[]'`;
+  await db`
+    UPDATE evaluations
+    SET area_ids = jsonb_build_array(area_id)
+    WHERE area_id IS NOT NULL AND area_ids = '[]'::jsonb
+  `;
+
   done = true;
 }

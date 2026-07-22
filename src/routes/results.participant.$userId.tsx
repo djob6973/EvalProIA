@@ -30,7 +30,7 @@ type ResultRow = {
   answers: Record<string, string | string[]>;
   completed_at: string;
   started_at: string;
-  evaluations: { title: string; area_id: string | null };
+  evaluations: { title: string; area_ids: string[] };
   profiles: { full_name: string | null; email: string };
 };
 
@@ -126,9 +126,10 @@ function ParticipantDetailPage() {
         const evalGroups = Array.from(byEval.entries()).map(([evalId, results]) => ({
           evalId,
           evalTitle: results[0].evaluations.title,
-          areaName: results[0].evaluations.area_id
-            ? (areaMap[results[0].evaluations.area_id] ?? null)
-            : null,
+          areaName: (results[0].evaluations.area_ids ?? [])
+            .map((id) => areaMap[id])
+            .filter(Boolean)
+            .join(", ") || null,
           results: [...results].sort(
             (a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime()
           ),

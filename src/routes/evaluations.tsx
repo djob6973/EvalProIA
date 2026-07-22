@@ -74,7 +74,7 @@ type Evaluation = {
   config: Config;
   created_at?: string;
   fecha_vencimiento?: string;
-  area_id?: string | null;
+  area_ids: string[];
   feedback_trigger: FeedbackTrigger;
   feedback_documento_texto: string;
   feedback_documento_nombre: string;
@@ -769,7 +769,9 @@ const EvaluationCard = memo(function EvaluationCard({
 }: EvaluationCardProps) {
   const { t } = useTranslation();
   const expired = isExpired(ev);
-  const areaName = ev.area_id ? areas.find((a) => a.id === ev.area_id)?.name : null;
+  const areaNames = ev.area_ids
+    .map((id) => areas.find((a) => a.id === id)?.name)
+    .filter((name): name is string => !!name);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -844,11 +846,11 @@ const EvaluationCard = memo(function EvaluationCard({
             <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
               {ev.intentos_permitidos} {ev.intentos_permitidos !== 1 ? t('common.attemptsPlural') : t('common.attempt')}
             </span>
-            {areaName && (
-              <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}>
-                <Layers className="size-3" />{areaName}
+            {areaNames.map((name) => (
+              <span key={name} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "rgba(109,40,217,.12)", color: "#A78BFA" }}>
+                <Layers className="size-3" />{name}
               </span>
-            )}
+            ))}
             {ev.categorias.slice(0, 3).map((c) => (
               <span key={c} className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: "var(--surface-2)", color: "var(--muted-foreground)" }}>
                 <Tag className="size-3" />{c}
@@ -1019,7 +1021,8 @@ function GroupedCards({ items, areas, groupBy, duplicatingId, resultCounts, onPr
   items.forEach((ev) => {
     let key: string;
     if (groupBy === "area") {
-      key = ev.area_id ? (areas.find((a) => a.id === ev.area_id)?.name ?? t('evaluations.noArea')) : t('evaluations.noArea');
+      const names = ev.area_ids.map((id) => areas.find((a) => a.id === id)?.name).filter(Boolean);
+      key = names.length > 0 ? names.join(", ") : t('evaluations.noArea');
     } else {
       key = ev.created_at ? `${t('evaluations.weekLabel')} ${getISOWeek(new Date(ev.created_at))}` : t('evaluations.noGroup');
     }
@@ -1105,6 +1108,13 @@ function EvaluationsPage() {
           } else if (typeof rawCats === 'string' && rawCats) {
             try { categorias = JSON.parse(rawCats); } catch { categorias = []; }
           }
+          const rawAreaIds = evaluation.area_ids;
+          let area_ids: string[] = [];
+          if (Array.isArray(rawAreaIds)) {
+            area_ids = rawAreaIds;
+          } else if (typeof rawAreaIds === 'string' && rawAreaIds) {
+            try { area_ids = JSON.parse(rawAreaIds); } catch { area_ids = []; }
+          }
           return {
           id: evaluation.id,
           nombre: evaluation.title,
@@ -1116,7 +1126,7 @@ function EvaluationsPage() {
           config: evaluation.config || DEFAULT_CONFIG,
           created_at: evaluation.created_at,
           fecha_vencimiento: evaluation.fecha_vencimiento ?? undefined,
-          area_id: evaluation.area_id ?? null,
+          area_ids,
           feedback_trigger: evaluation.feedback_trigger ?? 'ninguno',
           feedback_documento_texto: evaluation.feedback_documento_texto ?? '',
           feedback_documento_nombre: evaluation.feedback_documento_nombre ?? '',
@@ -1185,7 +1195,7 @@ function EvaluationsPage() {
     categorias: [],
     config: DEFAULT_CONFIG,
     fecha_vencimiento: "",
-    area_id: null,
+    area_ids: [],
     feedback_trigger: "ninguno",
     feedback_documento_texto: "",
     feedback_documento_nombre: "",
@@ -1196,6 +1206,7 @@ function EvaluationsPage() {
   const [extractingFeedbackDoc, setExtractingFeedbackDoc] = useState(false);
   const [docIdioma, setDocIdioma] = useState(() => defaultIdioma(i18n.language));
   const [catFilter, setCatFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
   const [etiquetaFilter, setEtiquetaFilter] = useState("");
   const [newEtiquetaInput, setNewEtiquetaInput] = useState("");
   const [creatingEtiqueta, setCreatingEtiqueta] = useState(false);
@@ -1227,7 +1238,7 @@ function EvaluationsPage() {
           (filterEstado === "activa" ? e.activa : !e.activa);
         const matchArea =
           filterArea === "todas" ||
-          (filterArea === "sin_area" ? !e.area_id : e.area_id === filterArea);
+          (filterArea === "sin_area" ? e.area_ids.length === 0 : e.area_ids.includes(filterArea));
         return matchQuery && matchCat && matchEstado && matchArea;
       }),
     [items, debouncedQuery, filterCategoria, filterEstado, filterArea],
@@ -1263,11 +1274,12 @@ function EvaluationsPage() {
       config: { ...DEFAULT_CONFIG, ...ev.config },
       categorias: [...ev.categorias],
       fecha_vencimiento: ev.fecha_vencimiento ? toLocalDateTimeInput(ev.fecha_vencimiento) : "",
-      area_id: ev.area_id ?? null,
+      area_ids: [...ev.area_ids],
       etiqueta_id: ev.etiqueta_id ?? null,
     });
     setEtiquetaFilter("");
     setNewEtiquetaInput("");
+    setAreaFilter("");
     setShowModal(true);
   };
 
@@ -1298,7 +1310,7 @@ function EvaluationsPage() {
           categorias: form.categorias,
           config: form.config,
           fecha_vencimiento: fechaVencimientoISO,
-          area_id: form.area_id ?? null,
+          area_ids: form.area_ids,
           feedback_trigger: form.feedback_trigger,
           feedback_documento_texto: form.feedback_documento_texto || null,
           feedback_documento_nombre: form.feedback_documento_nombre || null,
@@ -1324,7 +1336,7 @@ function EvaluationsPage() {
           categorias: form.categorias,
           config: form.config,
           fecha_vencimiento: fechaVencimientoISO,
-          area_id: form.area_id ?? null,
+          area_ids: form.area_ids,
           feedback_trigger: form.feedback_trigger,
           feedback_documento_texto: form.feedback_documento_texto || null,
           feedback_documento_nombre: form.feedback_documento_nombre || null,
@@ -1347,7 +1359,7 @@ function EvaluationsPage() {
           config: form.config,
           created_at: newEvaluation.created_at,
           fecha_vencimiento: form.fecha_vencimiento || undefined,
-          area_id: form.area_id ?? null,
+          area_ids: form.area_ids,
           feedback_trigger: form.feedback_trigger,
           feedback_documento_texto: form.feedback_documento_texto,
           feedback_documento_nombre: form.feedback_documento_nombre,
@@ -1459,7 +1471,7 @@ function EvaluationsPage() {
         categorias: [...ev.categorias],
         config: { ...ev.config },
         fecha_vencimiento: null,
-        area_id: ev.area_id ?? null,
+        area_ids: [...ev.area_ids],
         feedback_trigger: ev.feedback_trigger,
         feedback_documento_texto: ev.feedback_documento_texto || null,
         feedback_documento_nombre: ev.feedback_documento_nombre || null,
@@ -1477,7 +1489,7 @@ function EvaluationsPage() {
         categorias: [...ev.categorias],
         config: { ...ev.config },
         created_at: newEvaluation.created_at,
-        area_id: ev.area_id ?? null,
+        area_ids: [...ev.area_ids],
         feedback_trigger: ev.feedback_trigger,
         feedback_documento_texto: ev.feedback_documento_texto,
         feedback_documento_nombre: ev.feedback_documento_nombre,
@@ -1517,6 +1529,15 @@ function EvaluationsPage() {
       categorias: f.categorias.includes(cat)
         ? f.categorias.filter((c) => c !== cat)
         : [...f.categorias, cat],
+    }));
+  };
+
+  const toggleArea = (areaId: string) => {
+    setForm((f) => ({
+      ...f,
+      area_ids: f.area_ids.includes(areaId)
+        ? f.area_ids.filter((id) => id !== areaId)
+        : [...f.area_ids, areaId],
     }));
   };
 
@@ -1703,7 +1724,7 @@ function EvaluationsPage() {
       {shareEval && (
         <ShareModal
           ev={shareEval}
-          areaName={shareEval.area_id ? areas.find((a) => a.id === shareEval.area_id)?.name ?? null : null}
+          areaName={shareEval.area_ids.length > 0 ? shareEval.area_ids.map((id) => areas.find((a) => a.id === id)?.name).filter(Boolean).join(", ") || null : null}
           onClose={() => setShareEval(null)}
         />
       )}
@@ -1941,23 +1962,79 @@ function EvaluationsPage() {
                 </div>
                 {areas.length > 0 && (
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    <label className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                       {t('evaluations.areaLabel')}
+                      {form.area_ids.length > 0 && (
+                        <span className="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+                          {t('evaluations.areasSelectedCount', { count: form.area_ids.length })}
+                        </span>
+                      )}
                     </label>
-                    <select
-                      value={form.area_id || ""}
-                      onChange={(e) =>
-                        setForm({ ...form, area_id: e.target.value || null })
-                      }
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-                    >
-                      <option value="">{t('evaluations.noAreaOption')}</option>
-                      {areas.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                    </select>
+                    <p className="mb-2 text-xs text-muted-foreground">{t('evaluations.areasHint')}</p>
+
+                    {form.area_ids.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-1.5">
+                        {form.area_ids.map((id) => {
+                          const name = areas.find((a) => a.id === id)?.name ?? id;
+                          return (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => toggleArea(id)}
+                              className="flex items-center gap-1 rounded-full border border-accent bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
+                            >
+                              {name}
+                              <X className="size-3" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={areaFilter}
+                          onChange={(e) => setAreaFilter(e.target.value)}
+                          placeholder={t('evaluations.areasSearchPlaceholder')}
+                          className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-2 text-xs focus:outline-none focus:ring-2 focus:ring-accent"
+                        />
+                      </div>
+                      {form.area_ids.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, area_ids: [] })}
+                          className="whitespace-nowrap text-xs text-muted-foreground hover:text-destructive"
+                        >
+                          {t('evaluations.areasClearAll')}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mt-2 max-h-48 space-y-0.5 overflow-y-auto rounded-md border border-border p-1.5">
+                      {areas
+                        .filter((a) => a.name.toLowerCase().includes(areaFilter.trim().toLowerCase()))
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((a) => {
+                          const active = form.area_ids.includes(a.id);
+                          return (
+                            <label
+                              key={a.id}
+                              className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-accent/10"
+                            >
+                              <input type="checkbox" checked={active} onChange={() => toggleArea(a.id)} />
+                              {a.name}
+                            </label>
+                          );
+                        })}
+                      {areas.filter((a) => a.name.toLowerCase().includes(areaFilter.trim().toLowerCase())).length === 0 && (
+                        <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                          {t('evaluations.areasNoResults')}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -24,7 +24,7 @@ export interface Evaluation {
   categorias?: string[]
   config?: any
   fecha_vencimiento?: string | null
-  area_id?: string | null
+  area_ids?: string[]
   feedback_trigger?: FeedbackTrigger
   feedback_documento_texto?: string | null
   feedback_documento_nombre?: string | null
@@ -222,7 +222,7 @@ export const questionsService = {
 // ── Results CRUD ──────────────────────────────────────────────────────────────
 
 export const resultsService = {
-  async getAll(): Promise<(Result & { evaluations: { title: string; area_id: string | null }, profiles: { full_name: string | null, email: string } })[]> {
+  async getAll(): Promise<(Result & { evaluations: { title: string; area_ids: string[] }, profiles: { full_name: string | null, email: string } })[]> {
     return apiFetch('/api/data/results');
   },
 
