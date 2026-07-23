@@ -160,7 +160,7 @@ export function RichTextField({ value, onChange, placeholder }: RichTextFieldPro
     extensions: [
       StarterKit,
       Underline,
-      Image,
+      Image.configure({ allowBase64: true }),
       Placeholder.configure({ placeholder: placeholder ?? "" }),
       VideoEmbed,
     ],

@@ -156,7 +156,7 @@ export function ArticleEditor({ open, initial, saving, onClose, onSave }: Articl
     extensions: [
       StarterKit.configure({ link: { openOnClick: false } }),
       Highlight,
-      Image,
+      Image.configure({ allowBase64: true }),
       Placeholder.configure({ placeholder: t("forum.contentPlaceholder") }),
       Table.configure({ resizable: true }),
       TableRow,
