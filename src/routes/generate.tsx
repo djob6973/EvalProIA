@@ -91,6 +91,13 @@ function getCaseLengthLabels(t: (key: string) => string): Record<string, string>
   };
 }
 
+// Estimación barata (sin NLP) de cuántas preguntas realmente distintas puede dar un
+// documento: un mínimo de caracteres de texto fuente por pregunta. Calibrada contra
+// pruebas manuales con documentos reales de distinta longitud — es una guía, no un límite
+// exacto, así que el usuario puede ignorar el aviso y generar igualmente.
+const CHARS_PER_QUESTION_ESTIMATE = 250;
+const MIN_RECOMMENDED_QUESTIONS = 3;
+
 function GeneratePage() {
   const { t } = useTranslation();
   const TYPE_LABELS = getTypeLabels(t);
@@ -157,7 +164,11 @@ function GeneratePage() {
   const [partialWarning, setPartialWarning] = useState<{ generated: number; requested: number } | null>(null);
 
   const total = Object.values(distribucion).reduce((s, v) => s + v, 0);
-  
+  const recommendedMaxQuestions = extractedText
+    ? Math.max(MIN_RECOMMENDED_QUESTIONS, Math.floor(extractedText.length / CHARS_PER_QUESTION_ESTIMATE))
+    : null;
+  const lowContentWarning = recommendedMaxQuestions !== null && numPreguntas > recommendedMaxQuestions;
+
   useEffect(() => {
     getUniqueCategories().then(setCategorias).catch(console.error);
     getUniqueAreas().then(setAreas).catch(console.error);
@@ -786,6 +797,26 @@ function GeneratePage() {
                   </select>
                 </Field>
               </div>
+
+              {lowContentWarning && (
+                <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 animate-slide-down">
+                  <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="size-4" />
+                  </div>
+                  <div className="flex-1 text-sm">
+                    <p className="font-semibold text-amber-700 dark:text-amber-400">
+                      {t('generate.lowContentWarningTitle')}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      {t('generate.lowContentWarning', {
+                        length: extractedText.length,
+                        recommended: recommendedMaxQuestions,
+                        requested: numPreguntas,
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-6 space-y-4 p-5 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-fade-in">
                 <div className="flex items-center justify-between">

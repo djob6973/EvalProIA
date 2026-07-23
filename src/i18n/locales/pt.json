@@ -498,6 +498,8 @@
     "generateError": "Erro ao gerar perguntas: {{error}}",
     "partialGenerationTitle": "Geração incompleta",
     "partialGeneration": "Foram geradas {{generated}} das {{requested}} perguntas solicitadas. O documento não parece ter conteúdo suficientemente distinto para gerar mais perguntas únicas sem repetir enunciados.",
+    "lowContentWarningTitle": "O documento pode não ter conteúdo suficiente",
+    "lowContentWarning": "O texto extraído tem {{length}} caracteres. Para esse tamanho recomendamos solicitar no máximo {{recommended}} perguntas; solicitar {{requested}} aumenta o risco de perguntas repetidas ou incompletas.",
     "saveError": "Erro ao salvar perguntas: {{error}}",
     "cancelEditing": "Cancelar edição",
     "selectQuestion": "Selecionar pergunta"

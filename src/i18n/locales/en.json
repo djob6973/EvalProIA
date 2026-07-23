@@ -500,6 +500,8 @@
     "generateError": "Error generating questions: {{error}}",
     "partialGenerationTitle": "Incomplete generation",
     "partialGeneration": "{{generated}} of the {{requested}} requested questions were generated. The document doesn't seem to have enough distinct content to generate more unique questions without repeating statements.",
+    "lowContentWarningTitle": "This document might not have enough content",
+    "lowContentWarning": "The extracted text has {{length}} characters. For that size we recommend requesting at most {{recommended}} questions; requesting {{requested}} increases the risk of repeated or incomplete questions.",
     "saveError": "Error saving questions: {{error}}",
     "cancelEditing": "Cancel editing",
     "selectQuestion": "Select question",
