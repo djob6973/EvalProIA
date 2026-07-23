@@ -210,11 +210,11 @@ function buildPrompt(
   distribucion: Record<QuestionType, number>,
   extractedText: string,
   idioma = "Español",
-  previousQuestions: string[] = [],
+  previousQuestions: PreviousQuestion[] = [],
   escenarioFijo?: string
 ): string {
   const previousQuestionsBlock = previousQuestions.length > 0
-    ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
+    ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p.pregunta}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
     : '';
 
   const escenarioFijoBlock = escenarioFijo
@@ -279,7 +279,7 @@ async function generateBatch(
   maxTokens: number,
   retries: number,
   idioma = "Español",
-  previousQuestions: string[] = [],
+  previousQuestions: PreviousQuestion[] = [],
   escenarioFijo?: string
 ): Promise<GeneratedQuestion[]> {
   const prompt = buildPrompt(numPreguntas, dificultad, categoria, area, distribucion, extractedText, idioma, previousQuestions, escenarioFijo);
@@ -333,6 +333,37 @@ function normalizeQuestionText(text: string): string {
     .trim();
 }
 
+/** Pregunta ya generada, con sus opciones, usada para detectar duplicados exactos y por similitud. */
+type PreviousQuestion = { pregunta: string; opciones: string[] };
+
+// Dos preguntas con >=50% de solapamiento de tokens (pregunta + opciones) se consideran
+// la misma pregunta reformulada (mismo hecho evaluado con enunciado/opciones parafraseadas).
+// Heurística barata (sin llamadas a un modelo de embeddings), calibrada contra duplicados
+// reales observados en pruebas manuales: preguntas legítimamente distintas del mismo
+// documento solapan ~0.05-0.18 por el vocabulario de dominio compartido, muy por debajo
+// de este umbral.
+const SIMILARITY_THRESHOLD = 0.5;
+
+function tokenize(text: string): Set<string> {
+  return new Set(normalizeQuestionText(text).split(' ').filter((t) => t.length > 2));
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let intersection = 0;
+  for (const token of a) if (b.has(token)) intersection++;
+  const union = a.size + b.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+function questionSignature(pregunta: string, opciones: string[]): Set<string> {
+  return tokenize(`${pregunta} ${opciones.join(' ')}`);
+}
+
+function isSimilarToAny(signature: Set<string>, knownSignatures: Set<string>[]): boolean {
+  return knownSignatures.some((known) => jaccardSimilarity(signature, known) >= SIMILARITY_THRESHOLD);
+}
+
 const MAX_DEDUPE_ATTEMPTS = 3;
 
 // Genera `numPreguntas` preguntas nuevas evitando duplicar `previousQuestions`.
@@ -352,10 +383,11 @@ async function generateUniqueBatch(
   maxTokens: number,
   retries: number,
   idioma: string,
-  previousQuestions: string[],
+  previousQuestions: PreviousQuestion[],
   escenarioFijo?: string
 ): Promise<GeneratedQuestion[]> {
-  const seen = new Set(previousQuestions.map(normalizeQuestionText));
+  const seen = new Set(previousQuestions.map((p) => normalizeQuestionText(p.pregunta)));
+  const seenSignatures = previousQuestions.map((p) => questionSignature(p.pregunta, p.opciones));
   const knownQuestions = [...previousQuestions];
   const accepted: GeneratedQuestion[] = [];
 
@@ -370,8 +402,11 @@ async function generateUniqueBatch(
     for (const q of batch) {
       const key = normalizeQuestionText(q.pregunta);
       if (seen.has(key)) continue;
+      const signature = questionSignature(q.pregunta, q.opciones);
+      if (isSimilarToAny(signature, seenSignatures)) continue;
       seen.add(key);
-      knownQuestions.push(q.pregunta);
+      seenSignatures.push(signature);
+      knownQuestions.push({ pregunta: q.pregunta, opciones: q.opciones });
       accepted.push(q);
     }
   }
@@ -392,7 +427,7 @@ export async function generateQuestionsServer(
   maxTokens = 8192,
   retries = 3,
   idioma = "Español",
-  previousQuestions: string[] = [],
+  previousQuestions: PreviousQuestion[] = [],
   escenarioFijo?: string
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -423,7 +458,7 @@ export async function generateQuestionsServer(
       customSystemPrompt, model, temperature, maxTokens, retries, idioma, knownQuestions
     );
     allQuestions.push(...batchQuestions);
-    knownQuestions = knownQuestions.concat(batchQuestions.map((q) => q.pregunta));
+    knownQuestions = knownQuestions.concat(batchQuestions.map((q) => ({ pregunta: q.pregunta, opciones: q.opciones })));
   }
 
   return allQuestions.map((q, i) => ({ ...q, id: i + 1 }));
@@ -485,10 +520,10 @@ function buildCasePrompt(
   idioma: string,
   tipo: CaseType,
   longitud: CaseLength,
-  previousQuestions: string[] = []
+  previousQuestions: PreviousQuestion[] = []
 ): string {
   const previousQuestionsBlock = previousQuestions.length > 0
-    ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
+    ? `\nPREGUNTAS YA GENERADAS EN LOTES ANTERIORES (NO REPETIR)\nEstas preguntas ya fueron generadas para esta misma evaluación. NO generes preguntas iguales, ni reformulaciones del mismo enunciado, ni preguntas que evalúen exactamente el mismo punto específico del documento:\n${previousQuestions.map((p, i) => `${i + 1}. ${p.pregunta}`).join('\n')}\n\nGenera contenido NUEVO: explora otras secciones, detalles, procesos o matices del documento que aún no hayan sido evaluados por las preguntas anteriores.\n`
     : '';
 
   const casosDescripcion = caseSizes
@@ -599,7 +634,7 @@ async function generateCaseBatch(
   idioma: string,
   tipo: CaseType,
   longitud: CaseLength,
-  previousQuestions: string[] = []
+  previousQuestions: PreviousQuestion[] = []
 ): Promise<CaseGroup[]> {
   const prompt = buildCasePrompt(caseSizes, dificultad, categoria, area, distribucion, extractedText, idioma, tipo, longitud, previousQuestions);
   let lastError: Error = new Error('Error desconocido al generar casos prácticos');
@@ -661,9 +696,10 @@ async function generateUniqueCaseBatch(
   idioma: string,
   tipo: CaseType,
   longitud: CaseLength,
-  previousQuestions: string[]
+  previousQuestions: PreviousQuestion[]
 ): Promise<CaseGroup[]> {
-  const seen = new Set(previousQuestions.map(normalizeQuestionText));
+  const seen = new Set(previousQuestions.map((p) => normalizeQuestionText(p.pregunta)));
+  const seenSignatures = previousQuestions.map((p) => questionSignature(p.pregunta, p.opciones));
   const knownQuestions = [...previousQuestions];
   const accepted: CaseGroup[] = [];
   let remainingSizes = [...caseSizes];
@@ -677,11 +713,15 @@ async function generateUniqueCaseBatch(
 
     let acceptedCount = 0;
     for (const group of groups) {
-      const hasDuplicate = group.questions.some((q) => seen.has(normalizeQuestionText(q.pregunta)));
+      const hasDuplicate = group.questions.some((q) => {
+        if (seen.has(normalizeQuestionText(q.pregunta))) return true;
+        return isSimilarToAny(questionSignature(q.pregunta, q.opciones), seenSignatures);
+      });
       if (hasDuplicate) continue;
       group.questions.forEach((q) => {
         seen.add(normalizeQuestionText(q.pregunta));
-        knownQuestions.push(q.pregunta);
+        seenSignatures.push(questionSignature(q.pregunta, q.opciones));
+        knownQuestions.push({ pregunta: q.pregunta, opciones: q.opciones });
       });
       accepted.push(group);
       acceptedCount++;
@@ -710,7 +750,7 @@ export async function generateCaseQuestionsServer(
   maxTokens = 8192,
   retries = 3,
   idioma = "Español",
-  previousQuestions: string[] = []
+  previousQuestions: PreviousQuestion[] = []
 ): Promise<GeneratedQuestion[]> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -754,7 +794,7 @@ export async function generateCaseQuestionsServer(
       const caso_id = `caso-${caseCounter++}`;
       const taggedQuestions = group.questions.map((q) => ({ ...q, caso_id }));
       allQuestions.push(...taggedQuestions);
-      knownQuestions = knownQuestions.concat(taggedQuestions.map((q) => q.pregunta));
+      knownQuestions = knownQuestions.concat(taggedQuestions.map((q) => ({ pregunta: q.pregunta, opciones: q.opciones })));
     }
   }
 
@@ -774,7 +814,7 @@ type GenerateQuestionsInput = {
   maxTokens?: number;
   retries?: number;
   idioma?: string;
-  previousQuestions?: string[];
+  previousQuestions?: PreviousQuestion[];
   casosPracticos?: {
     habilitado: boolean;
     tipo: string;

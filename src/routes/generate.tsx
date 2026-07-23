@@ -296,7 +296,7 @@ function GeneratePage() {
             maxTokens,
             retries,
             idioma,
-            previousQuestions: allQuestions.map((q) => q.pregunta),
+            previousQuestions: allQuestions.map((q) => ({ pregunta: q.pregunta, opciones: q.opciones })),
             casosPracticos,
           },
         });
@@ -373,7 +373,9 @@ function GeneratePage() {
           temperature,
           maxTokens,
           retries,
-          previousQuestions: questions.filter((item) => item.id !== q.id).map((item) => item.pregunta),
+          previousQuestions: questions
+            .filter((item) => item.id !== q.id)
+            .map((item) => ({ pregunta: item.pregunta, opciones: item.opciones })),
           // Si la pregunta pertenece a un caso práctico, el escenario no se reinventa:
           // se le pide al modelo una pregunta nueva atada al mismo caso ya existente.
           escenarioFijo: q.es_caso_practico ? q.escenario : undefined,
